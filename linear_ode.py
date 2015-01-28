@@ -3,6 +3,8 @@ import scipy.optimize as opt
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+from mpl_toolkits.mplot3d import Axes3D
+import util_fns as uf
 
 ## numerically integrates ode
 # returns values of ode evaluated at different times
@@ -66,7 +68,7 @@ def find_min():
     data = integrate(f, x0, epsilon, times)
 
     # generate initial points uniformly distributed +/- "max_offset" around true value
-    ntrials = 10
+    ntrials = 2
     max_offset = 0.5
     init_offsets = max_offset*np.random.uniform(low=-1, high=1, size=(ntrials,3))
     true_val = np.hstack((x0, epsilon))
@@ -77,6 +79,9 @@ def find_min():
         out = opt.leastsq(lsq_error, init_guess, args=(times, data), full_output=True)
         opt_vals[i] = out[0]
         errs[i] = np.sum(out[2]['fvec'])
+        uf.progress_bar(i+1, ntrials)
+    np.savetxt('./data/optvals.csv', opt_vals, delimiter=',')
+    np.savetxt('./data/errs.csv', errs, delimiter=',')
     # testing
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -87,8 +92,11 @@ def find_min():
         min_prof = integrate(f, opt_vals[i][:2], opt_vals[i][2], times)
         ax.scatter(min_prof[:,0], min_prof[:,1], lw=0, c=colormap.to_rgba(i), label=str(errs[i]))
     ax.legend()
-    plt.show(fig)
-    
+    plt.savefig('./figs/output_traj.png')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(opt_vals[:,0], opt_vals[:,1], opt_vals[:,2])
+    plt.savefig('./figs/threedim_params.png')
 
 if __name__=="__main__":
     find_min()
