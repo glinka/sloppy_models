@@ -94,20 +94,21 @@ def sloppy_newton_init(data, times, contour, beta0, alpha0):
         error = np.sum(np.linalg.norm(data - get_sloppy_traj(beta, alpha, times), axis=0)**2) - contour
         iters = iters + 1
     if iters == maxiters:
+        print '****************************************'
+        print '** initial point on contour not found **'
+        print '****************************************'
         print 'failed to converge to tolerance:', tol, 'within', maxiters, 'iters'
         return False
     return beta
     
 
-def sloppy_continuation(data, times, contour, ds):
+def sloppy_continuation(data, times, contour, ds, beta_true, alpha_true):
     # find first two points on contour to establish betaprime, alphaprime
     # insert initialization code here
-    k1 = 0.1
-    k1inv = 0.1
-    k2 = 10000.0
-    alpha = k1*k1/(k1inv*k1inv + k2)
-    beta0 = k2/(k1inv*k1inv + k2) + 0.001
-    beta = sloppy_newton_init(data, times, contour, beta0, alpha)
+    alpha = alpha_true
+    # got to add some noise
+    beta = beta_true + 1e-3*beta_true
+    beta = sloppy_newton_init(data, times, contour, beta, alpha)
     # arbitrary direction/scaling at first
     xprime = np.dot(np.linalg.inv(f_lsq_jacobian(data, times, beta, alpha, 0, 1)), np.array((0,1)))
     xprime = xprime/np.linalg.norm(xprime)
@@ -116,7 +117,7 @@ def sloppy_continuation(data, times, contour, ds):
     betaprime = xprime[0]
     alphaprime = xprime[1]
     # continue along contour both forwards and backwards nsteps
-    nsteps = 500
+    nsteps = 5000
     # forward
     contour_points = np.empty(((2*nsteps), 2))
     for k in range(2):
@@ -139,31 +140,38 @@ def sloppy_continuation(data, times, contour, ds):
     return contour_points
 
 def plot_contours():
-    k1 = 0.1
-    k1inv = 0.1
-    k2 = 10000.0
+    # def works:
+    # k1 = 0.1
+    # k1inv = 0.1
+    # k2 = 10000.0
+    k1 = 10.0
+    k1inv = 10.0
+    k2 = 100.0
     beta = k2/(k1inv*k1inv + k2)
     alpha = k1*k1/(k1inv*k1inv + k2)
     times = np.linspace(1, 5, 10)
     data = get_sloppy_traj(beta, alpha, times)
-    ds = 1e-3
-    ncontours = 6
-    contours = np.logspace(1, 2, ncontours)
+    ds = 1e-6
+    ncontours = 3
+    contours = np.logspace(-6, -3, ncontours)
     gspec = gs.GridSpec(6,6)
     fig = plt.figure()
     ax = fig.add_subplot(gspec[:,:5])
     ax_cb = fig.add_subplot(gspec[:,5])
     colornorm = colors.Normalize(vmin=np.log10(contours[0]), vmax=np.log10(contours[-1]))
     colormap = cm.ScalarMappable(norm=colornorm, cmap='jet')
+    # fig3d = plt.figure()
+    # ax3d = fig3d.add_subplot(projection='3d')
     for i in range(ncontours):
         contour_val = contours[i]
-        contour_pts = sloppy_continuation(data, times, contour_val, ds)
+        contour_pts = sloppy_continuation(data, times, contour_val, ds, beta, alpha)
         ax.scatter(contour_pts[:,1], contour_pts[:,0], c=colormap.to_rgba(np.log10(contours[i])), s=20)
     ax.set_xlabel(r'$\alpha$')
     ax.set_ylabel(r'$\beta$')
     cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical')
     cb.set_label('log(obj. fn. value)')
-    plt.show(fig)
+    plt.show()
+    # plt.savefig('./contours.png', bbox_inches='tight')
 
 def of_contours():
     # set values of reaction rate constants and initial concentrations
