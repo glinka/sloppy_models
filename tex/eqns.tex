@@ -1,0 +1,63 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, lscape}
+\usepackage[top=0.8in, bottom=0.8in, left=1in, right=1in]{geometry}
+\graphicspath{ {./figs/} }
+\pagestyle{plain}
+\begin{document}
+\title{Objective function contours}
+\author{}
+\date{}
+\maketitle
+
+Given the system
+
+\begin{align}
+  \label{eq1}
+  \frac{d}{dt} \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} = \begin{bmatrix} -1 & 0 \\ 0 & -\sigma \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \end{bmatrix}
+\end{align}
+
+we generate ten points of noise-free data, shown in Fig. (\ref{fig1}) below.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=1.0\textwidth]{phase_plot_sigma1000}
+  \caption{Phase plot of Eq. (\ref{eq1}) with $\sigma=1000$}
+  \label{fig1}
+\end{figure}
+
+We fit this data to Eq. (\ref{eq1}) through a least-squares fit parameter fit with objective function
+
+\begin{align}
+  \label{eq2}
+  f(x_2(0), \sigma) = \sum\limits_{i=1}^N \| \hat{x}(t_i; x_2(0), \sigma) - x(t_i) \|^2
+\end{align}
+
+in which $\hat{x}(t_i; x_2(0), \sigma)$ is the state of the system at time $t_i$ given parameters $x_2(0)$ and $\sigma$. Note that we consider $x_1(0)$ a fixed parameter.
+
+We are then interested in contours of Eq. (\ref{eq2}) which we find by solving
+
+\begin{align}
+  \label{eq3}
+  f(x_2(0), \sigma) - c = 0
+\end{align}
+
+using a Newton-Rhapson scheme with a Poincare cut. Once a value has been converged to, we use simple parameter continuation to enumerate further points on the contour $f = c$. These are given in Fig. (\ref{fig2}) below.
+
+\begin{landscape}
+\begin{figure}[h!]
+  \centering
+  \centering
+  \includegraphics[width=1.5\textwidth]{contours_nofillb}
+  \caption{Contours of $f$}
+  \label{fig2}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=1.5\textwidth]{contours_fill}
+  \caption{Contours of $f$}
+  \label{fig3}
+\end{figure}
+\end{landscape}
+
+\end{document}

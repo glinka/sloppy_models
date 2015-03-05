@@ -1,0 +1,77 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, lscape}
+\usepackage[top=0.8in, bottom=0.8in, left=1in, right=1in]{geometry}
+\graphicspath{ {../figs/} }
+\pagestyle{plain}
+\setlength\parindent{0pt}
+\begin{document}
+\title{DMAPS on sloppy parameters}
+\maketitle
+
+The motivation for studying this system initally arose from the following set of reactions
+
+\begin{align*}
+  A \underset{k_{-1}}{\stackrel{k_1}{\rightleftharpoons}} B \; \; \; \; \; \; B \stackrel{k_2}{\rightarrow} C
+\end{align*}
+
+When either $k_{-1} \gg k_1$ or $k_2 \; \gg k_1$ (or both), we find a QSSA-based reduction of the system with an effective rate constants of
+
+\begin{align*}
+  k_{eff} = \frac{k_1 k_2}{k_{-1} + k_2}
+\end{align*}
+
+and another scalar parameter $c = \frac{k_2}{k_{-1} + k_2}$. \\
+
+\textbf{The data below does not arise from such a setup}, as the resulting ``sloppy manifolds'' are uninteresting planes. However, as the below system grew out of the one presented above, the rate constant notation $k_i$ is preserved. \\
+
+\hrulefill \\
+
+Defining $\alpha = \frac{k_1^2}{k_{-1}^2 + k_2}$ and $\beta = \frac{k_2}{k_{-1}^2 + k_2}$ we investigate the three-dimensional system
+
+\begin{align*}
+  y(t) = \begin{bmatrix} e^{-\alpha t} \\ \beta e^{-\alpha t} \\ 1 - e^{-\alpha t} \end{bmatrix}
+\end{align*}
+
+For large $k_2$ and small $k_1$, $k_{-1}$ we see that $\alpha \rightarrow 0$ and $\beta \rightarrow 1$, thus we can expect sloppiness when $k_2 \gg 1$ and small $k_1$, $k_{-1} \approx 1$. \\ \\
+
+For the data below, $k_2 = 10,000$ and $k_1$, $k_{-1} = 0.1$. We sample the exponentials at ten evenly spaced times in the interval $[1, 5]$, leading to the trajectories shown below.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{qssa_traj}
+  \caption{Trajectories of $y(t)$. Data collected at marked circles.}
+\end{figure}
+
+\newpage
+
+We then fit the dataset with least squares. To find a sloppy two-dimensional set of parameters, we isolated the parameter values for which the least squares objective function had a value of approximately $1e-5$. Then we performed DMAPS on this set of parameters. The plots below color the parameter set by DMAP coordinates.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{qssa_dmaps1}
+  \caption{Coloring the contour by the first nontrivial DMAP coordinate. Note that axes are logarithmically scaled.}
+\end{figure}
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{qssa_dmaps2}
+  \caption{Coloring the contour by the second nontrivial DMAP coordinate. Note that axes are logarithmically scaled.}
+\end{figure}
+
+\newpage
+
+Another way of visualizing the DMAPS output is to plot the embedding of the data itself, and color by parameter value. The following three figures illustrate this. Each point in the embedding represents a data point, i.e. a set of $k_1$, $k_{-1}$ and $k_2$. DMAPS shows that this three-dimensional set of parameters actually populates only a two-dimensional manifold as expected.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{qssa_dmaps_embedk1}
+  \caption{Coloring DMAP embedding by $k_1$}
+\end{figure}
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{qssa_dmaps_embedkminus}
+  \caption{Coloring DMAP embedding by $k_{-1}$}
+\end{figure}
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{qssa_dmaps_embedk2}
+  \caption{Coloring DMAP embedding by $k_2$}
+\end{figure}
+
+\end{document}

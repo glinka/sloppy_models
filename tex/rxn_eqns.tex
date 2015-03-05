@@ -1,0 +1,28 @@
+\documentclass[24pt]{article}
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, lscape}
+\usepackage[top=0.8in, bottom=0.8in, left=1in, right=1in]{geometry}
+\graphicspath{ {./figs/} }
+\pagestyle{plain}
+\begin{document}
+\title{}
+\author{}
+\date{}
+\maketitle
+
+\huge
+
+\noindent QSSA reaction:
+
+\begin{align*}
+  A \underset{k_{-1}}{\stackrel{k_1}{\rightleftharpoons}} B \; \; \; \; \; \; B \stackrel{k_2}{\rightarrow} C
+\end{align*}
+\\
+in which either $k_{-1} \gg k_1$ or $k_2 \; \gg k_1$ or both. \\
+
+\noindent QSSA assumption on B yields an effective rate constant of 
+
+\begin{align*}
+  k_{eff} = \frac{k_1 k_2}{k_{-1} + k_2}
+\end{align*}
+
+\end{document}

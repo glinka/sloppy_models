@@ -1,0 +1,100 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, lscape}
+\usepackage[top=0.8in, bottom=0.8in, left=1in, right=1in]{geometry}
+\graphicspath{ {../figs/} }
+\pagestyle{plain}
+\setlength\parindent{0pt}
+\begin{document}
+\title{}
+\author{}
+\date{}
+\maketitle
+
+We investigate the least-squares fitting of a decaying exponential with and without noise. Specifically, given a set of $n$ points sampled from an exponential curve
+
+\begin{align*}
+  y_i = e^{-\hat{\sigma} t_i} \;, \; i=1,...,n
+\end{align*}
+
+where $\hat{\sigma} \gg 0$ and the $t_i$'s are chosen such that the exponential has already decayed, i.e. $y_i < \epsilon$. $n$ is typically around 10. A representative dataset is shown in Fig. (\ref{data}). 
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{onedim_data}
+  \caption{Typical set of points sampled with $\hat{\sigma} = 1e3$}
+  \label{data}
+\end{figure}
+
+
+We fit the data to an exponential curve with a least-squares objective
+
+\begin{align*}
+  \min\limits_\sigma f(\sigma) =  \sum\limits_i (y_i - e^{-\sigma t_i})^2
+\end{align*}
+
+Certainly, without noise $f$ obtains a unique minimum at $f(\hat{\sigma})= 0$. Also, note that as
+
+\begin{align*}
+  \lim\limits_{\sigma \rightarrow \infty} f(\sigma) \leq n \epsilon^2
+\end{align*}
+
+and $f$ increases monotonically when $\sigma \geq \hat{\sigma}$
+
+\begin{align*}
+  f(\sigma) \leq n \epsilon^2 \; \; \forall \; \sigma > \hat{\sigma}
+\end{align*}
+
+thereby exhibiting sloppy sensitivity to $\sigma$. This objective function is illustrated in Fig. (\ref{of}) below.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{onedim_of}
+  \caption{Values of objective function with $\hat{\sigma} = 1e3$}
+  \label{of}
+\end{figure}
+
+Now we add Gaussian noise to the data so that
+
+\begin{align*}
+  y_i = e^{-\hat{\sigma} t_i} + \mathcal{N}(0,\alpha) \;, \; i=1,...,n
+\end{align*}
+
+in which $\alpha \approx \epsilon$. A representative noisy dataset is shown in Fig. (\ref{noisydata})
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{onedim_noisydata}
+  \caption{Noisy data with $\hat{\sigma} = 1e3$ and $\alpha = 5e-4$.}
+  \label{noisydata}
+\end{figure}
+
+Intuitively, adding noise to the data might introduce many local minima to the now-noisy objective function. Seeing this behavior has proven challenging. The objective function corresponding to Fig. (\ref{noisydata})'s data is given below.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{onedim_noisyof}
+  \caption{Objective function for Fig. (\ref{noisydata})'s noisy data}
+  \label{noisyof}
+\end{figure}
+
+As we see, the presence of a single minimum is not lost with the addition of noise.
+
+\pagebreak
+
+Additionally, we have looked at two-dimensional fitting of data in the form of 
+
+\begin{align*}
+  y_i = \hat{\beta} e^{-\hat{\sigma} t_i} \;, \; i=1,...,n
+\end{align*}
+
+in which an unkown scaling $\hat{\beta}$ is introduced. The objective function is then
+
+\begin{align*}
+  \min\limits_{\sigma, \beta} f(\sigma, \beta) =  \sum\limits_i (y_i - \beta e^{-\sigma t_i})^2
+\end{align*}
+
+Contours of $f$ are given below.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{contours_fill}
+  \caption{Objective function with $\hat{\sigma} = 1e3$ and $\hat{\beta} = 4$.}
+\end{figure}
+
+
+\end{document}
