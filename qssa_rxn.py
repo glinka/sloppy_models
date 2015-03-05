@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.colors as colors
+import matplotlib.cm as cm
 import matplotlib.colorbar as colorbar
+import matplotlib.gridspec as gs
 import dmaps
 
 def get_exact_traj(k1, k1inv, k2, times, ca0):
@@ -146,16 +149,20 @@ def plot_contours():
     ds = 1e-3
     ncontours = 6
     contours = np.logspace(1, 2, ncontours)
+    gspec = gs.GridSpec(6,6)
     fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cs = ['r', 'b', 'g', 'c', 'm','y']
+    ax = fig.add_subplot(gspec[:,:5])
+    ax_cb = fig.add_subplot(gspec[:,5])
+    colornorm = colors.Normalize(vmin=np.log10(contours[0]), vmax=np.log10(contours[-1]))
+    colormap = cm.ScalarMappable(norm=colornorm, cmap='jet')
     for i in range(ncontours):
         contour_val = contours[i]
         contour_pts = sloppy_continuation(data, times, contour_val, ds)
-        ax.scatter(contour_pts[:,1], contour_pts[:,0], c=cs[i], s=20, label='f=' + str(contours[i]))
+        ax.scatter(contour_pts[:,1], contour_pts[:,0], c=colormap.to_rgba(np.log10(contours[i])), s=20)
     ax.set_xlabel(r'$\alpha$')
     ax.set_ylabel(r'$\beta$')
-    ax.legend(loc=2, fontsize=24)
+    cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical')
+    cb.set_label('log(obj. fn. value)')
     plt.show(fig)
 
 def of_contours():
