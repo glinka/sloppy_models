@@ -1,0 +1,57 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, lscape}
+\usepackage[top=0.8in, bottom=0.8in, left=1in, right=1in]{geometry}
+\graphicspath{ {../figs/} }
+\pagestyle{plain}
+\setlength\parindent{0pt}
+\providecommand{\e}[1]{\ensuremath{\times 10^{#1}}}
+\begin{document}
+\title{Contours of sloppy model}
+\maketitle
+
+For completeness, our system is defined as
+
+\begin{align*}
+  y(t) = \begin{bmatrix} e^{-\alpha t} \\ \beta e^{-\alpha t} \\ 1 - e^{-\alpha t} \end{bmatrix}
+\end{align*}
+
+where $\alpha = \frac{k_1^2}{k_{-1}^2 + k_2}$ and $\beta = \frac{k_2}{k_{-1}^2 + k_2}$. \\
+
+We investigate contours of the least squares objective function
+
+\begin{align*}
+  f(\hat{\alpha}, \hat{\beta}) = \sum \limits_{i=1}^N \| y(t_i) - \hat{y}(t_i) \|^2
+\end{align*}
+
+where we have sampled our function without noise at $N$ evenly spaced times. In particular, we are interested in contours of $f$, i.e. level sets for which $f(\hat{\alpha}, \hat{\beta}) = c$. These are traced out using pseudo-arclength continuation, after which the curves in the $\alpha$-$\beta$ plane are mapped back to the three-dimensional ``$k$-space'' of $k_1$, $k_{-1}$ and $k_2$. One thing worth noting is the possibility of reaching physically infeasible values of $\alpha$ and $\beta$ when working in their plane. This is illustrated below in Fig (1), where contours are plotted for $k_1 = k_{-1} = 0.01$ and $k_2 = 1,000$, and ten evenly spaced sampling times in $[1,5]$. This corresponds to $\alpha = 9.9999\e{-6}$ and $\beta = 0.99999$. \\
+
+\begin{figure}[H]
+  \includegraphics[width=\textwidth]{sloppy_contours}
+  \caption{Contours of the least-squares objective function}
+\end{figure}
+
+Because the true value of $\beta$ is nearly one, the contours quickly extend into $\beta$ values greater than unity. However, this is inconsistent with $\beta = \frac{k_2}{k_{-1}^2 + k_2}$, which must be between zero and one. Thus, to explore a larger range of contour values, a new dataset was created with $k_1 = k_{-1} = 10$ and $k_2 = 100$, corresponding to $\alpha =  \beta = 0.5$. These contours are shown below in Fig (2) \\
+
+\begin{figure}[H]
+  \includegraphics[width=\textwidth]{contours}
+  \caption{Contours of the least-squares objective function, lack of closed curves is simply due to too few arclength steps.}
+\end{figure}
+
+When the outermost level set shown in Fig (2) of $f = 0.1$ was mapped back into $k$-space, the curves shown in Figs (3), (4) and (5) were found, matching Antonios' predictions. \\
+
+\begin{figure}[H]
+  \includegraphics[width=\textwidth]{sloppy_contour_3d}
+  \caption{3d contour surface.}
+\end{figure}
+
+\begin{figure}[H]
+  \includegraphics[width=\textwidth]{sloppy_contour_3d_k2k1}
+  \caption{3d contour surface, projected along $k_{-1}$ axis. The quadratic relationship appears as expected.}
+\end{figure}
+
+\begin{figure}[H]
+  \includegraphics[width=\textwidth]{sloppy_contour_3d_k2kinv}
+  \caption{3d contour surface, projected along $k_{2}$ axis. Here the relationship is linear, also as expected.}
+\end{figure}
+
+\end{document}
