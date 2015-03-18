@@ -5,64 +5,10 @@ import matplotlib.colors as colors
 import matplotlib.cm as cm
 import matplotlib.colorbar as colorbar
 import matplotlib.gridspec as gs
-from sympy import *
-from sympy.utilities.autowrap import ufuncify
+import sympy
 import dmaps
-
-class ObjectiveFunction:
-    """A class representing an objective function and its corresponding gradient and Hessian
-
-    Attributes:
-    _f: underlying objective function being represented by this class as a binary lambda function
-    _x: arguments to function _f represented by sympy symbols
-    _gradient: gradient of _f  represented as a binary lambda function
-    _hessian: hessian of _f represented as a binary lambda function
-
-    >>> x,y = symbols('x,y')
-    >>> of = ObjectiveFunction(x*x+y, [x,y])
-    >>> print of.f([1,1]), of.gradient([1,1]), of.hessian([1,1])
-    """
-
-    def __init__(self, f, x):
-        """Converts sympy input objective function to a compiled binary lambda function and creates corresponding gradient and Hessian
-
-        Args:
-        f (sympy function): symbolic representation of objectice function
-        x (sympy symbols): list of symbols which constitute arguments to f
-        .. note::
-        'f' must be a scalar-valued function, but may certainly accept an arbitrary number of arguments
-        """
-
-        # set object's private members
-        self._x = x
-        # after symbolically differentiating, convert functions to compiled lambda functions with 'ufuncify' for increased performance with function evaluation
-        self._f = ufuncify(self._x, f)
-        self._gradient = [diff(f, i) for i in self._x]
-        self._hessian = [[diff(i, j) for j in self._x] for i in self._gradient]
-        self._gradient = [ufuncify(self._x, i) for i in self._gradient]
-        self._hessian = [[ufuncify(self._x, i) for i in j] for j in self._hessian]
-
-    def f(self, x):
-        """Evaluate objective function
-        Returns:
-        Objective function '_f' evaluated at 'x'
-        """
-        return np.array(self._f(*x))
-
-    def gradient(self, x):
-        """Evaluate objective function's gradient
-        Returns:
-        Gradient '_gradient' evaluated at 'x', a vector
-        """
-        return np.array([f(*x) for f in self._gradient])
-
-    def hessian(self, x):
-        """Evaluate objective function's Hessian
-        Returns:
-        Gradient '_hessian' evaluated at 'x', a matrix
-        """
-        return np.array([[f(*x) for f in row] for row in self._hessian])
-
+import PseudoArclengthContinuation as PSA
+import ObjectiveFunction as of
 
 # """ Basic pseudo-arclength continuation, requires analytic expression for Jacobian """
 # class PSA:
@@ -79,6 +25,49 @@ class ObjectiveFunction:
         
 # """
 
+class ab_fn:
+    def __init__(self, data, times, contour):
+        self._data = data
+        self._times = times
+        self._contour = contour
+
+    def f(self, alpha, beta):
+        return np.array((np.sum(np.linalg.norm(self._data - get_sloppy_traj(beta, alpha, self._times), axis=0)**2) - self._contour,))
+
+    def Df(self, alpha, beta):
+        expalpha = np.exp(-alpha*self._times)
+        a11 = 2*np.sum(self._times*expalpha*(2*(self._data[0,:] - expalpha) + beta*(self._data[1,:] - beta*expalpha)))
+        a12 = 2*np.sum(expalpha*(beta*expalpha - self._data[1,:]))
+        return np.array(((a11, a12),))
+        
+def test_psa():
+    k1_true = 0.1
+    kinv_true = 0.1
+    k2_true = 10000.0
+    alpha_true = k1_true*k1_true/(kinv_true*kinv_true + k2_true)
+    beta_true = k2_true/(kinv_true*kinv_true + k2_true)
+    alpha_true = np.array((alpha_true,))
+    beta_true = np.array((beta_true,))
+    times = np.linspace(1, 5, 10)
+    data = get_sloppy_traj(beta_true, alpha_true, times)
+    ncontours = 5
+    contours = np.logspace(-2, 0, ncontours)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ds = 1e-4
+    for i in range(ncontours):
+        myfn = ab_fn(data, times, contours[i])
+        psa_solver = PSA.PSA(myfn.f, myfn.Df)
+        # perturb beta to ensure nonsingular jacobian in psa routine
+        beta_perturbed = 1.001*beta_true
+        ab_contour = psa_solver.find_branch(alpha_true, beta_perturbed, ds, nsteps=50000)
+        ax.scatter(ab_contour[:,0], ab_contour[:,1])
+    ax.set_xlabel(r'$\alpha$')
+    ax.set_ylabel(r'$\beta$')
+    plot_contours(ax)
+    plt.show(fig)
+
+
 def run_dmaps():
     k1_true = 100.0
     kinv_true = 0.1
@@ -89,11 +78,11 @@ def run_dmaps():
     # create sympy matrix from numpy array
     times = np.linspace(1, 5, 10)
     ntimes = times.shape[0]
-    data = Matrix(get_sloppy_traj(beta_true, alpha_true, times))
-    x,y,z = symbols('x,y,z', real=True)
+    data = sympy.Matrix(get_sloppy_traj(beta_true, alpha_true, times))
+    x,y,z = sympy.symbols('x,y,z', real=True)
     # convert times array to sympy type, then take element-wise exponential
-    times = Matrix(times).transpose()
-    k1,k2,kinv = symbols('k1,k2,kinv')
+    times = sympy.Matrix(times).transpose()
+    k1,k2,kinv = sympy.symbols('k1,k2,kinv')
     ks = [k1,k2,kinv]
     # redefine beta to include (0,40)
     beta = 40*k2/(kinv*kinv + k2)
@@ -107,7 +96,7 @@ def run_dmaps():
     # make the sympy obj. fn., essentially the squared frobenius norm of the matrix created by stacking vectors
     # at different sampling times together
     f = sum((ys - data).applyfunc(lambda x: x*x))
-    of = ObjectiveFunction(f, ks)
+    sloppy_of = of.ObjectiveFunction(f, ks)
     # print of.gradient([k1_true, k2_true, kinv_true]), of.hessian([k1_true, k2_true, kinv_true])
     # ought to be a smarter way by converting from sympy to numpy instead of redefining
     # data = np.array(data)
@@ -149,7 +138,7 @@ def run_dmaps():
     ax3d.set_ylabel(r'$k_2$')
     ax3d.set_zlabel(r'$k_{-1}$')
     # do dmaps
-    eigvals, eigvects = sloppy_dmaps(dmaps_data, np.copy(of.hessian([k1_true, k2_true, kinv_true])))
+    eigvals, eigvects = sloppy_dmaps(dmaps_data, np.copy(sloppy_of.hessian([k1_true, k2_true, kinv_true])))
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.scatter(eigvects[:,1], eigvects[:,2])
@@ -215,30 +204,6 @@ def get_qssa_traj(k1, k1inv, k2, times, ca0):
     # cbs = ca0*kscale*exp_kexp
     # ccs = ca0*(1 - exp_kexp)
     # return [cas, cbs, ccs]
-
-def lsq_jacobian(k1, k2, kinv, times):
-    beta = k2/(k1inv*k1inv + k2)
-    alpha = k1*k1/(k1inv*k1inv + k2)
-    # partial derivative with respective to k1
-    df_dk1 = np.sum((4*np.exp(-2*alpha*times)*k1*(-(2 + beta)*k2 - 2*kinv**2 + np.exp(alpha*times)*(B*k2 + 2*A*(k2 + kinv**2)))*times)/(k2 + kinv**2)**2)
-    # partial derivative with respective to k2
-    df_dk2 = np.sum((1/((k2 + kinv**2)**3))*2*np.exp(-2*alpha*times)*(-2*(-1 + A*np.exp(alpha*times))*k1**2*(k2 + kinv**2)*times - B*np.exp(alpha*times)*(k2*kinv**2 + kinv**4 + k1**2*k2*times) + beta*(kinv**4 + k2*(kinv**2 + k1**2*times))))
-    # partial derivative with respective to kinv
-    df_dkinv = np.sum((1/((k2 + kinv**2)**3))*4*np.exp(-2*alpha*times)*kinv*(-2*(-1 + A*np.exp(alpha*times))*k1**2*(k2 + kinv**2)*times - beta*k2*(k2 + kinv**2 - k1**2*times) + B*np.exp(alpha*times)*k2*(k2 + kinv**2 - k1**2*times)))
-
-def lsq_hessian(k1, k2, kinv, times):
-    beta = k2/(k1inv*k1inv + k2)
-    alpha = k1*k1/(k1inv*k1inv + k2)
-    h11 = np.sum((4*np.exp(-2*alpha*times)*(-(2 + beta)*k2 - 2*kinv**2 + np.exp(alpha*times)*(B*k2 + 2*A*(k2 + kinv**2)))*times)/(k2 + kinv**2)**2)
-    h12 = np.sum((4*np.exp(-2*alpha*times)*k1*((2 + beta - (2*A + B)*np.exp(alpha*times))*k2 - (-2 + beta + (2*A - B)*np.exp(alpha*times))*kinv**2)*times)/(k2 + kinv**2)**3)
-    h13 = np.sum((16*np.exp(-2*alpha*times)*k1*kinv*(k2 + beta*k2 + kinv**2 - np.exp(alpha*times)*(B*k2 + A*(k2 + kinv**2)))*times)/(k2 + kinv**2)**3)
-    h21 = np.sum((4*np.exp(-2*alpha*times)*k1*((2 + beta)*k2 + 2*kinv**2 - np.exp(alpha*times)*(B*k2 + 2*A*(k2 + kinv**2)))*times)/(k2 + kinv**2)**3)
-    h22 = np.sum((1/((k2 + kinv**2)**4))*np.exp(-2*alpha*times)*(-4*beta*kinv**2*(k2 + kinv**2) - 2*k1**2*(2*(2 + beta)*k2 - (-4 + beta)*kinv**2)*times + 2*np.exp(alpha*times)*(2*B*kinv**2*(k2 + kinv**2) + k1**2*(B*(2*k2 - kinv**2) + 4*A*(k2 + kinv**2))*times)))
-    h23 = np.sum((1/((k2 + kinv**2)**4))*4*np.exp(-2*alpha*times)*kinv*(4*(-1 + A*np.exp(alpha*times))*k1**2*(k2 + kinv**2)*times + beta*(k2**2 - kinv**4 - 3*k1**2*k2*times) - B*np.exp(alpha*times)*(k2**2 - kinv**4 - 3*k1**2*k2*times)))
-    h31 = np.sum((8*np.exp(-2*alpha*times)*k1*kinv*((2 + beta)*k2 + 2*kinv**2 - np.exp(alpha*times)*(B*k2 + 2*A*(k2 + kinv**2)))*times)/(k2 + kinv**2)**3)
-    h32 = np.sum((1/((k2 + kinv**2)**4))*4*np.exp(-2*alpha*times)*kinv*(4*(-1 + A*np.exp(alpha*times))*k1**2*(k2 + kinv**2)*times + beta*(k2**2 - kinv**4 - 2*k1**2*k2*times + k1**2*kinv**2*times) - B*np.exp(alpha*times)*(k2**2 - kinv**4 - 2*k1**2*k2*times + k1**2*kinv**2*times)))
-    h33 = np.sum((1/((k2 + kinv**2)**4))*4*np.exp(-2*alpha*times)*(-2*(-1 + A*np.exp(alpha*times))*k1**2*(k2 - 3*kinv**2)*(k2 + kinv**2)*times + B*np.exp(alpha*times)*k2*(k2**2 - 2*k2*kinv**2 - 3*kinv**4 - k1**2*(k2 - 5*kinv**2)*times) + beta*k2*(-k2**2 + 2*k2*kinv**2 + 3*kinv**4 + k1**2*(k2 - 5*kinv**2)*times)))
-    return np.array(((a11, a12),(a12, a22)))
 
 def get_sloppy_traj(beta, alpha, times):
     exp_alpha = np.exp(-alpha*times)
@@ -341,28 +306,30 @@ def sloppy_continuation(data, times, contour, ds, beta_true, alpha_true, nsteps=
             contour_points[k*nsteps+i,:] = np.copy(xnew)
     return contour_points
 
-def plot_contours():
+def plot_contours(ax):
     # def works:
-    # k1 = 0.1
-    # k1inv = 0.1
-    # k2 = 10000.0
-    k1 = 10.0
-    k1inv = 10.0
-    k2 = 100.0
+    k1 = 0.1
+    k1inv = 0.1
+    k2 = 10000.0
+    # k1 = 10.0
+    # k1inv = 10.0
+    # k2 = 100.0
     beta = k2/(k1inv*k1inv + k2)
     alpha = k1*k1/(k1inv*k1inv + k2)
     times = np.linspace(1, 5, 10)
     data = get_sloppy_traj(beta, alpha, times)
-    ds = 5e-4
-    ncontours = 2
-    contours = np.logspace(-2, -1, ncontours)
+    ds = 1e-4
+    ncontours = 5
+    contours = np.logspace(-2, 0, ncontours)
     gspec = gs.GridSpec(6,6)
     fig = plt.figure()
-    ax = fig.add_subplot(gspec[:,:5])
+    # ax = fig.add_subplot(gspec[:,:5])
     ax_cb = fig.add_subplot(gspec[:,5])
     colornorm = colors.Normalize(vmin=np.log10(contours[0]), vmax=np.log10(contours[-1]))
     colormap = cm.ScalarMappable(norm=colornorm, cmap='jet')
 
+    # perturb beta
+    beta = beta*1.001
     for i in range(ncontours):
         contour_val = contours[i]
         contour_pts = sloppy_continuation(data, times, contour_val, ds, beta, alpha)
@@ -579,7 +546,8 @@ def of_contours():
     
 
 if __name__=='__main__':
-    run_dmaps()
+    test_psa()
+    # run_dmaps()
     # plot_contours()
     # of_contours()
              
