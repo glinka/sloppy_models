@@ -1,3 +1,9 @@
+"""
+.. module:: PseudoArclengthContinuation
+   :platform: Unix, Windows, Mac
+   :synopsis: Basic implementation of pseudo-arclength continuation algorithm
+"""
+
 import numpy as np
 import scipy.sparse.linalg as spla
 import Newton
@@ -6,10 +12,11 @@ class PSA:
     """Basic pseudo-arclength continuation which requires an analytic expression for Jacobian
     
     Attributes:
-    _f: function :math:'f(x, k)' from :math:'R^{n+1} \rightarrow R^n' on which continuation will be performed, and in which :math:'k' is the continuation parameter
-    _Df: the Jacobian of '_f', a function :math:'Df(x, k)' from :math:'R^{n+1} \rightarrow R^{n(n+1)}'
+        _f (function): function :math:`f(x, k)` from :math:`R^{n+1} \\rightarrow R^n` on which continuation will be performed, and in which :math:`k` is the continuation parameter
+        _Df (array): the Jacobian of '_f', a function :math:`Df(x, k)` from :math:`R^{n+1} \\rightarrow R^{n(n+1)}`
 
     .. note::
+
     _Df is not a square matrix due to the continuation parameter
 
     >>> insert example code here
@@ -19,8 +26,8 @@ class PSA:
         """Assigns function and Jacobian to private member variables
 
         Args:
-        f (function): function along which to continue, accepting two arguments: the x-vector and scalar continuation parameter at which to evaluate the function
-        Df (function): Jacobian of 'f', called in the same manner as 'f'
+            f (function): function along which to continue, accepting two arguments: the x-vector and scalar continuation parameter at which to evaluate the function
+            Df (function): Jacobian of 'f', called in the same manner as 'f'
         """
 
         # set private variables
@@ -31,14 +38,15 @@ class PSA:
         """Evaluates extended Jacobian which incorprates arclength parameter in bottom row
         
         .. note::
+
         The variable 'x' contains both the length-n vector specifying the system's state and the scalar 'k' specifying the parameter value. This is the true "arclength x" value used our continuation scheme. **It has shape (n+1,).**
 
         Args:
-        x (array): the shape (n+1,) vector containing arclength continuation's x value
-        xprime (array): value of arclength :math:'\frac{dx}{ds}'
+            x (array): the shape (n+1,) vector containing arclength continuation's x value
+            xprime (array): value of arclength :math:`\\frac{dx}{ds}`
 
         Returns:
-        Array of shape (n+1, n+1) containing the evaluation of the extended, square Jacobian
+            Df_arclength (array): shape (n+1, n+1) array containing the evaluation of the extended, square Jacobian
         """
         # again, the number of state variables 'n' is one less than the length of x because we have appended the scalar parameter value
         # TODO: it would be clearer to define locally "k = x[n]...", but is there a speed difference?        
@@ -49,19 +57,20 @@ class PSA:
         return Df_arclength
 
     def _f_arclength(self, x, xprev, xprime, ds):
-        """Evaluates extended :math:'f_{ext} \in R^{n+1}' which incorprates arclength parameters in final entry
+        """Evaluates extended :math:`f_{ext} \\in R^{n+1}` which incorprates arclength parameters in final entry
         
         .. note::
+
         The variable 'x' contains both the length-n vector specifying the system's state and the scalar 'k' specifying the parameter value. This is the true "arclength x" value used our continuation scheme. **It has shape (n+1,).**
         
         Args:
-        x (array): the shape (n+1,) vector containing arclength continuation's x value
-        xprev (array): value of arclength x from previous point on branch
-        xprime (array): value of arclength :math:'\frac{dx}{ds}'
-        ds (float): length of arclength step
+            x (array): the shape (n+1,) vector containing arclength continuation's x value
+            xprev (array): value of arclength x from previous point on branch
+            xprime (array): value of arclength :math:`\\frac{dx}{ds}`
+            ds (float): length of arclength step
         
         Returns:
-        Array of shape (n+1,) containing the evaluation of :math:'f_{ext}'
+            f (array): shape (n+1,) array containing the evaluation of :math:`f_{ext}`
         """
         
         # again, the number of state variables 'n' is one less than the length of x because we have appended the scalar parameter value
@@ -74,19 +83,20 @@ class PSA:
 
 
     def find_branch(self, x0, k0, ds, nsteps):
-        """Continues along the branch of values for which :math:'f(x,k)=0' via pseudo-arclength continuation
+        """Continues along the branch of values for which :math:`f(x,k)=0` via pseudo-arclength continuation
 
         Args:
-        x0 (array): the initial x vector
-        k0 (float): the initial parameter value
-        ds (float): the arclength step size
-        nsteps (int): the total number of arclength steps to take
+            x0 (array): the initial x vector
+            k0 (float): the initial parameter value
+            ds (float): the arclength step size
+            nsteps (int): the total number of arclength steps to take
 
         Returns:
-        Numpy array of dimension (nsteps, n+1), each row of which contains first the length-n value of x and then the scalar parameter value at which a point on the branch was found
+            Numpy array of dimension (nsteps, n+1), each row of which contains first the length-n value of x and then the scalar parameter value at which a point on the branch was found
 
         .. note::
-        If :math:'f(x_0,k_0) \neq 0', this method automatically searches for an appropriate starting point via a Newton iteration at :math:'k=k_0'
+
+        If :math:`f(x_0,k_0) \\neq 0`, this method automatically searches for an appropriate starting point via a Newton iteration at :math:`k=k_0`
         """
         # TODO: faster method than defining lambda fn?
         n = x0.shape[0]

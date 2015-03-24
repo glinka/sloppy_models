@@ -8,8 +8,11 @@ Documentation for sloppy_models
 
 Contents:
 
+.. toctree::
+   :maxdepth: 2
 
-
-=========================================
-.. automodule:: qssa_rxn
-   :members:
+   PseudoArclengthContinuation
+   Newton
+   ObjectiveFunction
+   
+   **Some** of this *works*
