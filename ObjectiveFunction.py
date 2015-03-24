@@ -1,5 +1,6 @@
 import numpy as np
 import sympy
+import sympy.utilities.autowrap
 import dmaps
 
 class ObjectiveFunction:
