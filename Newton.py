@@ -2,11 +2,11 @@ import numpy as np
 import scipy.sparse.linalg as spla
 
 class Newton:
-    """Solves :math:'f(x) = 0' using Newton's method with an analytical Jacobian and scipy's GMRES linear solver
+    """Solves :math:`f(x) = 0` using Newton's method with an analytical Jacobian and scipy`s GMRES linear solver
 
     Attributes:
-    _f: the function to find the zero of, :math:'f: R^n \rightarrow R^n'
-    _Df: the Jacobian of '_f', :math:'Df: R^n \rightarrow R^{n*n}'
+        _f: the function to find the zero of, :math:`f: R^n \\rightarrow R^n`
+        _Df: the Jacobian of '_f', :math:`Df: R^n \\rightarrow R^{n*n}`
 
     >>> example code here
     """
@@ -15,10 +15,10 @@ class Newton:
         """Assigns function and Jacobian to private member variables
 
         Args:
-        f (function): function which accepts and returns a length-n numpy array
-        Df (function): Jacobian function which accepts a length-n numpy array, returns an array of dimension (n, n)
-        fargs (list): optional arguments that will be passed to f
-        Dfargs (list): optional arguments that will be passed to Df
+            f (function): function which accepts and returns a length-n numpy array
+            Df (function): Jacobian function which accepts a length-n numpy array, returns an array of dimension (n, n)
+            fargs (list): optional arguments that will be passed to f
+            Dfargs (list): optional arguments that will be passed to Df
         """
         self._f = f
         self._Df = Df
@@ -26,18 +26,18 @@ class Newton:
         self._Dfargs = Dfargs
 
     def find_zero(self, x0, abstol=1e-7, reltol=1e-7, maxiters=100000):
-        """Attempts to find a zero of 'f' through Newton-GMRES, terminating when :math:'\|F(x_k)\| \leq reltol*\|F(x_0)\| + abs
-tol'
+        """Attempts to find a zero of 'f' through Newton-GMRES, terminating when :math:`\\|F(x_k)\\| \\leq reltol*\\|F(x_0)\\| + abstol`
 
         Args:
-        x0 (array): initial guess for solution
+            x0 (array): initial guess for solution
         
         Kwargs:
-        abstol (float): absolute tolerance for Newton iteration 
-        reltol (float): relative tolerance **both for Newton iteration and inner GMRES iteration**
-        maxiters (int): maximum number of iterations to attempt
+            abstol (float): absolute tolerance for Newton iteration 
+            reltol (float): relative tolerance **both for Newton iteration and inner GMRES iteration**
+            maxiters (int): maximum number of iterations to attempt
 
         .. note::
+
         scipy's implementation of GMRES exits after 20 iterations by default, and when either the absolute **or** relative errors are less than the input kwarg 'tol'
 
         """
@@ -69,8 +69,8 @@ tol'
         """Updates the optional arguments to both f and Df
 
         Args:
-        fargs (list): new optional arguments to pass to f
-        Dfargs (list): new optional arguments to pass to f
+            fargs (list): new optional arguments to pass to f
+            Dfargs (list): new optional arguments to pass to f
         """
         self._fargs = fargs
         self._Dfargs = Dfargs
@@ -79,7 +79,7 @@ tol'
         """Updates the optional arguments to f
 
         Args:
-        fargs (list): new optional arguments to pass to f
+            fargs (list): new optional arguments to pass to f
         """
         self._fargs = fargs
 
@@ -87,6 +87,6 @@ tol'
         """Updates the optional arguments to Df
 
         Args:
-        Dfargs (list): new optional arguments to pass to f
+            Dfargs (list): new optional arguments to pass to f
         """
         self._Dfargs = Dfargs

@@ -4,3 +4,4 @@
 *data
 *.pdf
 *conf.py
+build*
