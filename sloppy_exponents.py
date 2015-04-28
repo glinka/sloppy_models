@@ -105,10 +105,16 @@ def test_psa():
 
 
 def run_dmaps():
-    k1_true = 0.1
-    kinv_true = 0.1
-    k2_true = 10000.0
-    beta_true = 40*k2_true/(kinv_true*kinv_true + k2_true)
+    # k1_true = 0.1
+    # kinv_true = 0.1
+    # k2_true = 1000.0
+    # k1_true = 10.0
+    # kinv_true = 10.0
+    # k2_true = 100.0
+    k1_true = 1.0
+    kinv_true = 1.0
+    k2_true = 100.0
+    beta_true = k2_true/(kinv_true*kinv_true + k2_true)
     alpha_true = k1_true*k1_true/(kinv_true*kinv_true + k2_true)
     # define objective function using sympy
     # create sympy matrix from numpy array
@@ -121,7 +127,7 @@ def run_dmaps():
     k1,k2,kinv = sympy.symbols('k1,k2,kinv')
     ks = [k1,k2,kinv]
     # redefine beta to include (0,40), jk
-    beta = 40*k2/(kinv*kinv + k2)
+    beta = k2/(kinv*kinv + k2)
     alpha = k1*k1/(kinv*kinv + k2)
     exp_alpha = -alpha*times
     exp_alpha = exp_alpha.applyfunc(sympy.exp)
@@ -138,19 +144,19 @@ def run_dmaps():
     # data = np.array(data)
     # times = np.array(times)
 
-    contour = 1e-3
+    # contour = 6e-2 w/ ks = [10,10,100]
+    contour = 1e-2
     beta_true = np.array((beta_true,))
     alpha_true = np.array((alpha_true,))
     times = np.linspace(1, 5, 10)
     data = get_sloppy_traj(beta_true, alpha_true, times)
-    ds = 1e-6
+    ds = 5e-4
     altof = ab_fn(data, times, contour, ds)
     # set up psa solver
     psa_solver = PSA.PSA(altof.f, altof.Df)
     # perturb beta to ensure nonsingular jacobian in psa routine
     beta_perturbed = 1.001*beta_true
-    ab_contour = psa_solver.find_branch(alpha_true, beta_perturbed, ds, nsteps=1000)
-    print ab_contour
+    ab_contour = psa_solver.find_branch(alpha_true, beta_perturbed, ds, nsteps=400)
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.scatter(ab_contour[:,1], ab_contour[:,0])
@@ -162,27 +168,41 @@ def run_dmaps():
     alphas = ab_contour[:,1]
     betas = ab_contour[:,0]
     nks = 10
-    # fig3d = plt.figure()
-    # ax3d = fig3d.add_subplot(111, projection='3d')
+    fig3d = plt.figure()
+    ax3d = fig3d.add_subplot(111, projection='3d')
     npts_toplot = 100
     spacing = npts/npts_toplot
     # for each sampled alpha/beta pair, of which there will be 'npts_toplot + 1', we find 'nks' values of k1, k2, kinv
     dmaps_data = np.empty(((npts_toplot+1)*nks, 3))
     for i in range(npts):
         if i % spacing == 0:
-            k1s = np.linspace(0.1, 10, nks) + np.random.normal(size=nks)
-            k2s = betas[i]*k1s*k1s/(alphas[i]*40)
-            kinvs = np.sqrt((1 - betas[i]/40.0)/(alphas[i]*betas[i]))*k1s
+            k1s = np.abs(np.logspace(0.1, 100, nks) + np.random.normal(size=nks))
+            k2s = betas[i]*k1s*k1s/(alphas[i])
+            kinvs = np.sqrt((1 - betas[i])/(alphas[i]*betas[i]))*k1s
             dmaps_data[nks*i/spacing:nks*(i/spacing+1),:] = np.array((k1s, k2s, kinvs)).T
-            # ax3d.scatter(k1s, k2s, kinvs, c='b')
+            # try log to scale
+            # dmaps_data[nks*i/spacing:nks*(i/spacing+1),:] = np.log(np.array((k1s, k2s, kinvs)).T)
+            ax3d.scatter(k1s, k2s, kinvs, c='b')
     # # see what data set looks like
-    # ax3d.set_xlabel(r'$k_1$')
-    # ax3d.set_ylabel(r'$k_2$')
-    # ax3d.set_zlabel(r'$k_{-1}$')
+    # ax3d.set_xscale('log')
+    # ax3d.set_yscale('log')
+    # ax3d.set_zscale('log')
+    ax3d.set_xlim(left=0)
+    ax3d.set_ylim(bottom=0)
+    ax3d.set_zlim(bottom=0)
+    ax3d.set_xlabel(r'$k_1$')
+    ax3d.set_ylabel(r'$k_2$')
+    ax3d.set_zlabel(r'$k_{-1}$')
+    # ax3d.set_xlabel(r'$log(k_1)$')
+    # ax3d.set_ylabel(r'$log(k_2)$')
+    # ax3d.set_zlabel(r'$log(k_{-1})$')
+    plt.show(fig3d)
+    # plt.savefig('./figs/ks_3d.png')
     # do dmaps
     k = 6
     # add tiny amount to ensure all-positive eigenvalues
     H = sloppy_of.hessian([k1_true, k2_true, kinv_true]) + 1e-16*np.identity(3)
+    H_inv = np.linalg.inv(H)
     print 'eigvals of hessian at min:', np.linalg.eigvals(H)
     # use metric defined by sqrt(xAx) where A is pos. def.
     metric = lambda x,y: np.sqrt(np.dot(x-y, np.dot(H, x-y)))
@@ -192,8 +212,9 @@ def run_dmaps():
     for i in range(1, k):
         for j in range(i+1, k):
             ax.cla()
-            ax.scatter(eigvects[:,i], eigvects[:,j])
-            plt.show()
+            ax.scatter(eigvects[:,i], eigvects[:,j], c=dmaps_data[:,2])
+            # plt.show()
+            plt.savefig('./figs/embeddings/dmaps/qssa_' + str(i) + '_' + str(j) + '.png')
 
 def get_sloppy_traj(beta, alpha, times):
     exp_alpha = np.exp(-alpha*times)

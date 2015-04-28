@@ -114,7 +114,7 @@ class PSA:
         # note that tempslopes is also rhs of initial slope calc (see Auto notes)
         xprime = spla.gmres(self._Df_arclength(xstart, tempslopes), tempslopes)[0]
         # normalize
-        xprime = xprime/np.linalg.norm(xprime)
+        xprime_start = xprime/np.linalg.norm(xprime)
         # update newton to new functions
         newton_solver = Newton.Newton(self._f_arclength, self._Df_arclength)
         halfnsteps = nsteps/2
@@ -125,7 +125,8 @@ class PSA:
             # flip ds to continue in both directions
             ds = -ds
             # move x back to "center" of branch
-            x = xstart
+            x = np.copy(xstart)
+            xprime = np.copy(xprime_start)
             for i in range(halfnsteps):
                 # initial guess for next point on branch
                 x0 = x + xprime*ds
@@ -135,8 +136,7 @@ class PSA:
                 newton_solver.change_parameters([xprev, xprime, ds], [xprime])
                 x = newton_solver.find_zero(x0)
                 # use finite diff approx for xprime
-                # TODO: ds or np.abs(ds)?
-                xprime = (x - xprev)/np.abs(ds)
+                xprime = (x - xprev)/ds
                 # normalize
                 xprime = xprime/np.linalg.norm(xprime)
                 branch_pts[k*halfnsteps + i] = np.copy(x)

@@ -40,5 +40,36 @@ def shit_plot():
     # ax.set_zlabel(r'$\epsilon$')
     # plt.show(fig)
 
+def committee_meeting_sloppiness():
+    p = 5
+    n = 10
+    k1s = np.logspace(-2, 3, n)
+    k2s = p/k1s
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(k1s, k2s)
+    ax.set_xlabel(r'$k_1$')
+    ax.set_ylabel(r'$k_2$')
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    plt.tight_layout()
+    plt.savefig('./figs/committee/ks.png')
+    # add noise as if finding from optimization
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    n = 100
+    k = 5
+    ps = np.linspace(4, 5, k)
+    for p in enumerate(ps):
+        k1s = np.logspace(-1, 1, n) + np.random.uniform(size=n)
+        k2s = p[1]/k1s
+        ax.scatter(k1s, k2s)
+    ax.set_xlabel(r'$k_1$')
+    ax.set_ylabel(r'$k_2$')
+    plt.tight_layout()
+    plt.savefig('./figs/committee/noisey_ks.png')
+    
+
 if __name__=="__main__":
-    shit_plot()
+    committee_meeting_sloppiness()
+    # shit_plot()

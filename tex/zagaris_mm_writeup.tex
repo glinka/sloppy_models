@@ -1,0 +1,568 @@
+\documentclass{article}
+\title{Enzyme kinetics as a model \\ of multiscale sloppiness}
+
+\usepackage{amsmath, amssymb, amsfonts, reaction, chemarr, xcolor}
+
+\newcommand{\R}{\mathrm{R}}
+\newcommand{\N}{\mathrm{N}}
+\newcommand{\T}{\mathrm{T}}
+\newcommand{\X}{\mathrm{X}}
+\newcommand{\D}{\mathrm{D}}
+\newcommand{\V}{\mathcal{V}}
+\newcommand{\M}{\mathcal{M}}
+\newcommand{\ip}[2]{\langle#1,#2\rangle}
+\newcommand{\abs}[1]{\vert#1\vert}
+\newcommand{\nv}[1]{\vert#1\vert}
+\newcommand{\nx}[1]{\vert\vert#1\vert\vert}
+\newcommand{\dv}[2]{d(#1,#2)}
+\newcommand{\eps}{\varepsilon}
+
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\dst}{\displaystyle}
+
+\author{}
+
+\begin{document}
+\maketitle
+
+\section{The model}
+
+Consider the chemical pathway
+%
+\[
+ {\rm S + E}
+\
+ \xrightleftharpoons[k_{-1}]{k_1}
+\
+ {\rm C}
+\
+ \xrightarrow{k_2}
+\
+ {\rm P + E} .
+\label{s2c2p}
+\]
+%
+The initial concentrations are
+$S_0$, $E_0$, $C_0$ and $P_0$,
+and the system has two exact conservation laws,
+%
+\[
+ S+C+P = S_0+C_0+P_0 = S_T
+\quad\mbox{and}\quad
+ C+E = C_0+E_0 = E_T .
+\]
+%
+The ODEs describing the evolution of the constituents are
+%
+\be
+\begin{array}{rclcl}
+ S' &=& -k_1 E S + k_{-1} C ,
+\\
+ C' &=& \ \ \, k_1 E S - (k_{-1} + k_2) C ,
+\\
+ E' &=& -k_1 E S + (k_{-1} + k_2) C ,
+\\
+ P' &=& \ \ \, k_2 C .
+\end{array}
+\label{SCEP-ODE}
+\ee
+%
+Two of these may be eliminated by virtue of the conservation laws.
+These are traditionally the equations for $E$ and $P$,
+so that
+%
+\be
+\begin{array}{rclcl}
+ S' &=& -k_1 (E_T-C) S + k_{-1} C ,
+\\
+ C' &=& \ \ \, k_1 (E_T-C) S - (k_{-1} + k_2) C .
+\end{array}
+\label{SC-ODE}
+\ee
+%
+Typically, $C_0$ and $P_0$ equal zero,
+so that $S_0$ and $E_0$ fully determine $S_T$ and $E_T$,
+%
+\be
+ S_0 = S_T
+\quad\mbox{and}\quad
+ C_0 = 0 .
+\label{SC-IP}
+\ee
+%
+We will follow this convention here,
+and thus consider a problem with five parameters:
+the three kinetic constants $k_{-1}$, $k_1$ and $k_2$,
+on one hand, and the total concentrations (initial conditions)
+$S_T$ and $E_T$ on the other.
+For future reference, we also remark that $P$ evolves under
+%
+\be
+ P' = k_2 C ,
+\quad\mbox{subject to}\
+ P_0 = 0 .
+\label{P-IVP}
+\ee
+%
+
+
+\subsection{New parameters}
+%
+Adapting ideas from \cite{SS89},
+we define the new parameters
+%
+\be
+\begin{array}{rclcl}
+ K_M &=& \dst\frac{k_{-1} + k_2}{k_1} ,
+\vspace{2mm}\\
+ V_M &=& k_2 E_T ,
+\vspace{2mm}\\
+ \sigma &=& \dst\frac{S_T}{K_M} ,
+\vspace{2mm}\\
+ \kappa &=& \dst\frac{k_{-1}}{k_2} ,
+\vspace{2mm}\\
+ \eps &=& \dst\frac{E_T}{S_T + K_M} .
+\end{array}
+\label{params-new}
+\ee
+%
+Here, $K_M$ has the units of concentration
+and $V_M$ of concentration per unit of time;
+the remaining parameters are non-dimensional.
+Transformation~\eqref{params-new} is invertible, with
+%
+\be
+\begin{array}{rclcl}
+ k_{-1} &=& \dst\frac{\kappa V_M}{\eps (\sigma+1) K_M} ,
+\vspace{2mm}\\
+ k_1 &=& \dst\frac{(\kappa+1) V_M}{\eps (\sigma+1) K_M^2} ,
+\vspace{2mm}\\
+ k_2 &=& \dst\frac{V_M}{\eps (\sigma+1) K_M} ,
+\vspace{2mm}\\
+ S_T &=& \dst\sigma K_M ,
+\vspace{2mm}\\
+ E_T &=& \dst\eps (\sigma+1) K_M .
+\end{array}
+\label{params-old}
+\ee
+%
+Expressed in terms of these new parameters,
+the IVP~\eqref{SC-ODE} becomes
+%
+\be
+\begin{array}{rclcl}
+ S'
+&=&
+\dst
+ \frac{(\kappa+1)V_M}{K_M}
+\left[
+ -S
++
+ \frac{1}{\eps(\sigma+1)K_M} C S
++
+ \frac{\kappa}{\eps(\sigma+1)(\kappa+1)} C
+\right] ,
+\vspace{2mm}\\
+ C'
+&=&
+\dst
+ \frac{(\kappa+1)V_M}{K_M}
+\left[
+\ \ \,
+ S
+-
+ \frac{1}{\eps(\sigma+1)K_M} C S
+-
+ \frac{1}{\eps(\sigma+1)} C
+\right] .
+\end{array}
+\label{SC-ODE-new}
+\ee
+%
+The full system dynamics are informed
+by \textit{all} five parameters,
+and the initial conditions are
+%
+\be
+ S_0 = \sigma K_M
+\quad\mbox{and}\quad
+ C_0 = 0 .
+\label{SC-IC-new}
+\ee
+%
+Note, also, that $P$ evolves under the law
+%
+\be
+ P' = \frac{V_M}{\eps (\sigma+1) K_M} C ,
+\quad\mbox{subject to}\
+ P_0 = 0 .
+\label{P-IVP-new}
+\ee
+%
+
+\subsection{Slow and fast dynamics}
+%
+Fast and slow evolution laws are properly derived
+by first non-dimensionalizing \eqref{SC-ODE} or \eqref{SC-ODE-new}
+and then analyzing asymptotically the resulting, non-dimensional system.
+At leading order, we can work with the dimensional system instead.
+
+The slow invariant manifold (SIM) is obtained
+as the nullcline of $C$ (always at leading order),
+%
+\be
+ C = \eps (\sigma + 1) K_M \frac{S}{S + K_M} .
+\label{C-SIM-new}
+\ee
+%
+The leading order dynamics on the SIM (\textit{slow dynamics})
+are found by substituting this expression in the ODE for $S$,
+%
+\be
+ S' = -V_M \frac{S}{S + K_M} ,
+\quad\mbox{subject to}\
+ S_0 = \sigma K_M .
+\label{S-IVP-new-red}
+\ee
+%
+Note carefully that these leading order, slow dynamics
+are only influenced by three (new) parameters:
+$K_M$, $V_M$ and $\sigma$.
+The remaining two (new) parameters,
+$\eps$ and $\kappa$,
+influence the fast dynamics
+and higher order terms in the slow dynamics.
+
+This fast dynamics is found, at leading order,
+by fixing $S$ to its initial value $\sigma K_M$.
+Substituting into the ODE for $C$,
+we resolve the transient at leading order:
+%
+\[
+ C'
+=
+ -\frac{(\kappa+1)V_M}{\eps K_M} (C - \eps\sigma K_M) .
+\]
+%
+Note that these dynamics are informed by the entire quintuple
+$(K_M,V_M,\sigma,\kappa,\eps)$.
+
+The above suggests strongly that observations of the slow dynamics
+leads to good fits for $(K_M,V_M,\sigma)$
+but \emph{not} for $(\eps,\kappa)$.
+These two last variables act as
+\emph{regular perturbation parameters} for the slow dynamics,
+which should demonstrate itself as sloppiness in fitting.
+In this sense, the transformation~\eqref{params-new}
+straightens out the sloppy directions in parameter space
+(i.e. identifies them with $\eps$ and $\kappa$).
+
+\section{Numerical experiments}
+%
+Typically, an experimentalist will monitor product levels
+and deduce $K_M$ and $V_M$ (both in the new parameter set)
+by some form of curve fitting \cite{JG11,LB34,MM13}.
+These two parameters are characteristic
+of the enzymatic reaction at hand
+and viewed as effectively describing it.
+Indeed, in the slow phase,
+the constraint~\eqref{C-SIM-new} is leading order valid,
+and renders the evolution law \eqref{P-IVP-new}
+%
+\be
+ P' = V_M \frac{S}{S + K_M} ,
+\quad\mbox{subject to}\
+ P_0 = 0 .
+\label{P-ODE-new-red}
+\ee
+%
+Here, $S$ evolves under \eqref{S-IVP-new-red}.
+This dynamic law is the reduced system description and,
+indeed, it involves $K_M$ and $V_M$ only.
+
+In a laboratory setting,
+the experiment is initialized with $C_0 = P_0 = 0$
+and known original concentrations $S_0=S_T$ and $E_0=E_T$.
+Note carefully that these initial conditions
+belong to the \emph{original parameter set}.
+Since measurements are made in the slow phase,
+product is effectively produced
+according to \eqref{S-IVP-new-red}--\eqref{P-ODE-new-red}.
+It is important to understand here that,
+once these \emph{original} parameters have been fixed
+(i.e., initial conditions assigned),
+$K_M$ and $\sigma$ become \emph{constrained} due to \eqref{params-new}.
+This has important consequences
+for the experimental design below.
+
+\subsection{Experiment \#1}
+%
+We will first work with the system
+\textit{expressed in the new parameter set},
+so as to verify that fitting for $K_M$, $V_M$ and $\sigma$
+is \textit{not} sloppy.
+(Working with the new parameters circumvents the problem
+of having $K_M$ and $\sigma$ constrained on each other,
+because we specify values of the new---not the original---parameters.)
+
+To that end, the simulation protocol can be the following.
+
+\noindent{\bf 1.}
+Fix values $K^*_M$, $V^*_M$ and $\sigma^*$ for the three parameters
+(e.g., close to one).
+
+\noindent{\bf 2.}
+Fix a value of $\eps$ (e.g. $10^{-2}$) and a value of $\kappa$
+(e.g. close to $10$).
+
+\noindent{\bf 3.}
+Specify the time instants at which the product will be measured.
+An appropriate timescale for slow motion
+is $t_s = (\sigma^*+1)K^*_M/V^*_M$ \cite{SS89},
+so these instants could be $\{t_i = i t_s/5\}_{i=1:N}$
+for $N \approx 20$.
+
+\noindent{\bf 4.}
+Simulate the system \eqref{SC-ODE-new}--\eqref{P-IVP-new}
+for these parameter values and monitor the product $P$
+at $\{t_i\}_{i=1:N}$.
+This set of values (possibly with some noise)
+forms the data set$\{P^*_i\}_{i=1:N}$ we will fit to.
+
+\noindent{\bf 5.}
+Run your minimization algorithm,
+with the cost function set to
+%
+\[
+ \mathcal{C}(K_M,V_M,\sigma)
+=
+ \sum_{i=1}^N
+ \vert
+ P(t_i ; K_M,V_M,\sigma,\eps^*,\kappa^*)
+-
+ P^*_i
+ \vert^2 .
+\]
+%
+Plainly, $P(t ; K_M,V_M,\sigma,\eps^*,\kappa^*)$
+is generated by \eqref{SC-ODE-new}--\eqref{P-IVP-new}.
+
+\noindent{\bf 6.}
+Check the results for sloppiness (e.g. use Hessian);
+hopefully find none.
+
+\subsection{Experiment \#2}
+%
+The second experiment is similar to \#1,
+but the optimization is done over all five (new) parameters:
+$K_M$, $V_M$, $\sigma$, $\kappa$ and $\eps$.
+To that end, steps $1-4$ remain the same.
+At step $5$, the optimization procedure is adapted
+to include $(\eps,\kappa)$.
+Sloppiness should be evident here, including at the Hessian level:
+the sloppy directions are contained in
+the $(\eps,\kappa)-$coordinate plane.
+
+\subsection{Experiment \#3}
+%
+The third experiment goes back to the original variables.
+Since an experimentalist typically knows
+the concentrations $S_0=S_T$ and $E_0=E_T$ in advance,
+the unknowns are the kinetic constants $(k_{-1},k_1,k_2)$.
+These kinetic constants \textit{cannot} be deduced
+by extracting $(K_M,V_M,\sigma)$ from data because,
+as we remarked, $K_M$ and $\sigma$ are constrained.
+In other words, although optimizing for $(K_M,V_M,\sigma)$
+is not a sloppy procedure (or so we hope),
+we must necessarily expect
+the estimation of $k-$values \textit{to be sloppy}.
+Equation~\eqref{params-new} suggests that
+%
+\[
+ K_M \textcolor{teal}{k_1} - \textcolor{teal}{k_{-1}}
+=
+ \frac{V_M}{E_T}
+\quad\mbox{and}\quad
+ \textcolor{teal}{k_2}
+=
+ \frac{V_M}{E_T} ,
+\]
+%
+showing one-dimensional sloppiness:
+$k_1$ and $k_{-1}$ are linearly constrained,
+whereas $k_2$ is deducible from the data
+(because $V_M$ is, while $E_T$ is known).
+
+The simulation protocol here can be as follows.
+
+\noindent{\bf 1--3.}
+Same as in experiment~\#1.
+
+\noindent{\bf 4.}
+Use \eqref{params-old} to derive values
+$(k_{-1}^*,k_1^*,k_2^*,S_T^*,E_T^*)$
+of the old parameters
+from the new parameters you selected in steps 1--2.
+(You can skip steps~1--2 and choose values
+for the original parameters instead,
+but initializing the new parameters
+allows you to retain control over your experiment.)
+
+\noindent{\bf 5.}
+Use the values from step~4 to simulate 
+the original system \eqref{SC-ODE}--\eqref{P-IVP},
+and monitor the product $P$ at the chosen time instants.
+This set of values (possibly with some noise)
+forms the data set $\{P^*_i\}_{i=1:N}$ we will fit to.
+(Sanity check: you should get precisely the same data set
+if you just simulate \eqref{SC-ODE-new}--\eqref{P-IVP-new}
+with the values chosen in steps~1--2.)
+
+\noindent{\bf 5.}
+Run your minimization algorithm,
+with the cost function set to
+%
+\[
+ \mathcal{C}(k_{-1},k_1,k_2)
+=
+ \sum_{i=1}^N
+ \vert
+ P(t_i ; k_{-1},k_1,k_2,S_T^*,E_T^*)
+-
+ P^*_i
+ \vert^2 .
+\]
+%
+
+\noindent{\bf 6.}
+The outcome, in this case, should be sloppy,
+with the points spanning a line (thin tube)
+parallel to the $(k_{-1},k_1)-$coordinate plane.
+(This, of course, is contingent on showing that
+experiment~\#1 is not sloppy.)
+Effectively, the line is parameterized by $\kappa$,
+while $\eps$ is constant on it; recall~\eqref{params-new}.
+(Sanity check:
+all points on this line should give roughly
+the same values of $(K_M,V_M,\sigma)$.)
+
+\subsection{Experiment \#4}
+%
+Once the above has been done,
+we can discuss including $(\eps,\kappa)$
+into the optimization procedure.
+
+%We then choose the following scalings:
+%%
+%\[
+% s = \frac{S}{S_T} ,
+%\quad
+% c = \frac{C}{\bar{C}}
+%\quad\mbox{and}\quad
+% \tau = \frac{t}{t_f} ,
+%\quad\mbox{with}\
+% \bar{C} = E_T \frac{S_T}{S_T + K_M}
+%\ \mbox{and} \
+% t_f = \frac{1}{k_1(S_T+K_M)} .
+%\]
+%%
+%Under these, the new system (with $k_{-2}=0$) reads
+%%
+%\be
+%\begin{array}{rclcl}
+% \dot{s}
+%&=&
+%\eps\left[
+% -s + \frac{\sigma}{\sigma+1} c s + \frac{\kappa}{(\kappa+1)(\sigma+1)} c
+%\right] ,
+%\\
+% \dot{c}
+%&=&
+%\ \
+%  s - \frac{\sigma}{\sigma+1} c s - \frac{1}{\sigma+1} c .
+%\end{array}
+%\ee
+%%
+%A further rescale of time by $\eps$, $T = \eps\tau$,
+%would yield the system
+%%
+%\be
+%\begin{array}{rclcl}
+% \mathring{s}
+%&=&
+% -s + \frac{\sigma}{\sigma+1} c s + \frac{\kappa}{(\kappa+1)(\sigma+1)} c ,
+%\\
+% \eps\mathring{c}
+%&=&
+%\ \
+%  s - \frac{\sigma}{\sigma+1} c s - \frac{1}{\sigma+1} c .
+%\end{array}
+%\ee
+%%
+
+%\subsection{Leading order slow dynamics}
+%%
+%The SIM is parameterized by $s$ and, at leading order, is given by
+%%
+%\[
+% c = \left(1+\frac{1}{\sigma}\right) \frac{s}{s+1/\sigma} .
+%\]
+%%
+%The slow dynamics on it are
+%%
+%\[
+% \mathring{s} = -\frac{1}{(\kappa+1)\sigma} \frac{s}{s+1/\sigma} .
+%\]
+%%
+%Measurements are performed in dimensional units,
+%and what is actually measured is the product concentration $P$.
+%This evolves, at leading order, under
+%%
+%\[
+% P' = V_M \frac{S}{S+K_M}
+%\quad\mbox{subject to}\
+% P(0) = P_0 ,
+%\]
+%%
+%where (also at leading order)
+%%
+%\[
+% S' = -V_M \frac{S}{S+K_M}
+%\quad\mbox{subject to}\
+% S(0) = S_0 .
+%\]
+%%
+%
+%This makes it plain that the \emph{leading order dynamics of $P$
+%are influenced strongly by $S_0$, $P_0$ and the parameter combinations
+%$V_M$ and $K_M$.}
+
+\begin{thebibliography}{99}
+
+\bibitem{JG11}
+K.~A.~Johnson and R.~S.~Goody,
+The original Michaelis constant:
+translation of the 1913 Michaelis--Menten paper,
+{\it Biochem.} \textbf{50} 8264--8269, 2011.
+
+\bibitem{LB34}
+H.~Lineweaver and D.~Burk,
+The Determination of Enzyme Dissociation Constants,
+{\it J. Am. Chem. Soc.} \textbf{56} 658--666, 1934.
+
+\bibitem{MM13}
+L.~Michaelis and M.~L.~Menten,
+Die Kinetik der Invertinwirkung,
+{\it Biochem. Z.} \textbf{49} 333--369, 1913.
+
+\bibitem{SS89}
+L.~A.~Segel and M.~Slemrod,
+The Quasi-Steady-State Assumption:
+A Case Study in Perturbation,
+{\it SIAM Review} \textbf{31(3)} 446--477, 1989.
+
+\end{thebibliography}
+
+
+\end{document}
