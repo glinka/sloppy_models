@@ -3,8 +3,11 @@
 *figs
 *data
 *.pdf
-*conf.py
 build*
 *#
 *.m
 *.mat
+*.csv
+*.png
+*.cmd
+*.out

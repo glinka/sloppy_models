@@ -70,9 +70,9 @@ def _enzyme_rhs(Cs, t, K, V, sigma, epsilon, kappa):
         """Function passed to scipy integrate routine to find concentration profile
 
         Args:
-        Cs (array): shape (3,) array containing concentrations of (S, C, P)
-        t (float): time
-        K, V, sigma, epsilon, kappa (floats): model params
+            Cs (array): shape (3,) array containing concentrations of (S, C, P)
+            t (float): time
+            K, V, sigma, epsilon, kappa (floats): model params
 
         >>> params = np.array((1.0, 1.0, 1.0, 1e-2, 10.0))  # params = (K, V, sigma, epsilon, kappa)
         >>> Cs0 = np.array((params[0]*params[2], 0, 0)) #  Cs0 = np.array((S0, C0, P0))
@@ -95,9 +95,9 @@ def hessian(f, x, h=1e-4):
     """Evaluates a centered finite-difference approximation of the Hessian of 'f' at 'x' using stepsize 'h'
 
     Args:
-    f (function): function :math:`R^n \rightarrow R` for which we approximate the Hessian
-    x (array): shape (n,) vector at which to approximate the Hessian
-    h (float): stepsize to be used in approximation
+        f (function): function :math:`R^n \rightarrow R` for which we approximate the Hessian
+        x (array): shape (n,) vector at which to approximate the Hessian
+        h (float): stepsize to be used in approximation
 
     >>> f = lambda x: x[0]**2 + x[1]**2 + x[2]**2 + x[0]*x[1] + x[1]*x[2] # x**2 + y**2 + z**2 + x*y + y*z
     >>> x = np.zeros(3)

@@ -11,8 +11,16 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   PseudoArclengthContinuation
-   Newton
-   ObjectiveFunction
-   
-   **Some** of this *works*
+   Algorithms:
+   -----------------------------------------
+      PseudoArclengthContinuation
+      Newton
+      ObjectiveFunction
+
+Models:
+-----------------------------------------
+   brynildsen_model
+   enzyme_sloppiness
+   linear_ode
+   sloppy_exponents
+**Some** of this *works*
