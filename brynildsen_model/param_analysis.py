@@ -42,28 +42,63 @@ def main(of_filename, params_filename):
     # # investigate proper epsilon value
     # dmaps.epsilon_plot(np.logspace(-1, 7, 50), params_data, fraction_kept=0.05)
     # embed data
-    # ? epsilon val ?
-    # perform DMAPS over range of possible epsilons as determined from the plot above
-    nepsilons = 6
-    epsilons = np.logspace(1,6,nepsilons)
-    eigvals = np.empty((nepsilons, p))
-    eigvects = np.empty((nepsilons, n, p))
-    for eps in enumerate(epsilons):
-        eigvals[eps[0]], eigvects[eps[0]] = dmaps.embed_data(params_data, k=p, epsilon=eps[1])
-    # save eigvals for analysis
-    np.savetxt('./brynildsen_model/dmaps_eigvals.csv', eigvals, delimiter=',')
+    # # perform DMAPS over range of possible epsilons as determined from the plot above
+    # nepsilons = 6
+    # epsilons = np.logspace(4,6,nepsilons)
+    # # nepsilons = 1
+    # # epsilons = [1e4]
+    # ndims = 25
+    # eigvals = np.empty((nepsilons, ndims))
+    # eigvects = np.empty((nepsilons, n, ndims))
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+
+    # for eps in enumerate(epsilons):
+    #     # eigvals[eps[0]], eigvects[eps[0]] = dmaps.embed_data(params_data, k=ndims, epsilon=eps[1])
+
+    #     eigvals, eigvects = dmaps.embed_data(params_data, k=ndims, epsilon=eps[1])
+    #     ax.plot(range(1,ndims+1), eigvals, label=r'$\epsilon=' + str(eps[1]) + '$')
+    # ax.set_xlabel('index')
+    # ax.set_ylabel('eigenvalue')
+    # ax.set_yscale('log')
+    # ax.set_xlim((1,ndims))
+    # ax.legend()
+    # plt.show()
+
+    # # save eigvals for analysis
+    # np.savetxt('./brynildsen_model/dmaps_eigvals.csv', eigvals, delimiter=',')
     # # perform DMAPS with customized kernel taken from Lafone's thesis which incorporates obj. fn. info
     # # combine both into one array to pass to DMAPS
-    # full_data = np.empty((n, p+1))
-    # full_data[:,:p] = params_data
-    # full_data[:,p] = of_data
-    # dmaps_kernel = custom_kernel(1e4)
-    # eigvals, eigvects = dmaps.embed_data_customkernel(full_data, p+3, dmaps_kernel.dmaps_of_kernel)
+    full_data = np.empty((n, p+1))
+    full_data[:,:p] = params_data
+    full_data[:,p] = of_data
+    nepsilons = 6
+    epsilons = np.logspace(4,6,nepsilons)
+    # nepsilons = 1
+    # epsilons = [1e4]
+    ndims = 25
+    eigvals = np.empty((nepsilons, ndims))
+    eigvects = np.empty((nepsilons, n, ndims))
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    for eps in enumerate(epsilons):
+        dmaps_kernel = custom_kernel(eps[1])
+        eigvals, eigvects = dmaps.embed_data_customkernel(full_data, ndims, dmaps_kernel.dmaps_of_kernel)
+        ax.plot(range(1,ndims+1), eigvals, label=r'$\epsilon=' + str(eps[1]) + '$')
+    ax.set_xlabel('index')
+    ax.set_ylabel('eigenvalue')
+    ax.set_yscale('log')
+    ax.set_xlim((1,ndims))
+    ax.legend()
+    plt.show()
     # print eigvals
     # print 'dmaps eigvals:', eigvals
     # # PCA with correlation matrix
     # pcs, variances = pca.pca(params_data, p, corr=True)
     # print 'singular values:', variances
+    # np.savetxt('./brynildsen_model/pca_eigvals.csv', variances, delimiter=',')
 
 if __name__=="__main__":
     main('./brynildsen_model/of_vals.csv', './brynildsen_model/params.csv')

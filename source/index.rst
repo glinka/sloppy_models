@@ -3,24 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Documentation for sloppy_models
+Documentation for Michaelis Menten Sloppiness Project
 =========================================
 
-Contents:
 
-.. toctree::
-   :maxdepth: 2
 
-   Algorithms:
-   -----------------------------------------
-      PseudoArclengthContinuation
-      Newton
-      ObjectiveFunction
-
-Models:
+Model:
 -----------------------------------------
-   brynildsen_model
-   enzyme_sloppiness
-   linear_ode
-   sloppy_exponents
-**Some** of this *works*
+.. toctree::
+   Michaelis Menten helper class and functions <MM>
+   Michaelis Menten sloppiness testing <mm_sloppiness>
+
+
+Algorithms:
+-----------------------------------------
+.. toctree::
+   Numerical evaluation of the Hessian <Hessian>
+

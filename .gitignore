@@ -11,3 +11,4 @@ build*
 *.png
 *.cmd
 *.out
+*.rst

@@ -1,4 +1,4 @@
-import util_fns
+import util_fns as uf
 import pca
 import numpy as np
 import matplotlib.pyplot as plt
@@ -69,7 +69,23 @@ def committee_meeting_sloppiness():
     plt.tight_layout()
     plt.savefig('./figs/committee/noisey_ks.png')
     
+def plot_eigvals(eigvals, **kwargs):
+    """Plots eigenvalues. Done."""
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    n = eigvals.shape[0]
+    ax.plot(range(1,n+1), np.sort(eigvals)[::-1], **kwargs)
+    ax.scatter(range(1,n+1), np.sort(eigvals)[::-1], zorder=2, lw=2, **kwargs)
+    ax.set_xlabel('index')
+    ax.set_ylabel('eigenvalue')
+    ax.set_xlim((1,n))
+    ax.set_yscale('log')
+    ax.legend()
+    plt.show()
+    
 
 if __name__=="__main__":
-    committee_meeting_sloppiness()
+    pca_eigvals = uf.get_data('./brynildsen_model/pca_eigvals.csv')
+    plot_eigvals(pca_eigvals)
+    # committee_meeting_sloppiness()
     # shit_plot()

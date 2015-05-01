@@ -1,0 +1,59 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, lscape}
+\usepackage[top=0.8in, bottom=0.8in, left=1in, right=1in]{geometry}
+\graphicspath{ {../brynildsen_model/} }
+\pagestyle{plain}
+\setlength\parindent{0pt}
+\begin{document}
+\title{Analysis of a biological parameter set}
+\maketitle
+
+The 4,000 suitable parameter sets obtained from model fitting were analyzed using PCA and DMAPS. \\ \\
+
+\textbf{PCA}
+
+Applying a traditional PCA using the data covariance matrix yielded misleading results due to the disparate scales at which variable measurements were made. Those parameters measured on the $10^{-3}$ scale naturally have, in absolute terms, far smaller variances than those measured on a $10^2$ scale. Thus we turned to the data correlation matrix. The difference between the two is shown in the following formulas:
+
+
+\begin{align*}
+  Cov_{ij} = cov(x_i, x_j)
+\end{align*}
+
+\begin{align*}
+  Corr_{ij} = \frac{cov(x_i, x_j)}{\sigma_{x_i} \sigma_{x_j}}
+\end{align*}
+
+By scaling each entry by standard deviations, the correlation matrix is better able to account for the natural differences in parameter scales. The singular values obtained by decomposing the corresponding 14x14 matrix are shown below. \\
+
+This method essentially tries to find linear combinations of parameters that best fit the data in the sense that the variance along these new coordinate is as high as possible. The variances along these new directions are given by the squares of the corresponding singular values, thus as the singular values decrease in magnitude, the directions become ``less important'' and could be considered to capture successively less information about the dataset. \\
+
+In the context of our collection of good-fitting parameters, this means that PCA will in fact map out the sloppy directions first. This is the result of the sloppy directions being poorly constrained, and thus exhibiting high variance in the dataset. The important parameter combinations will be fairly constant throughout, and thus have low variance and a small singular value. Looking at the singular values in the figure below, we see that the last two appear to drop off. This suggests that these directions are the most important in determining model behavior. However, it is important to consider that these results assume some sort of linear parameter combination, while the data almost certainly live on a nonlinear manifold.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{pca_eigvals}
+  \caption{Singular values of the correlation matrix.}
+\end{figure}
+
+\textbf{DMAPS}
+
+DMAPS is able to uncover nonlinear structure in datasets: a significant advantage over PCA. Before applying it, a relative scale, $\epsilon$, for the data manifold must be chosen. This user-defined parameter sets the size of the neighborhood of each data point. Chosen too small, the neighborhood will shrink to include just the data point itself. Too large, and the neighborhood will grow to include every point. Thus we select from a value in between these extremes. The $\sum W_{ij}$ on the y-axis of the following figure is a measure of how many points are included in each neighborhood. 
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{dmaps_epsilonselection}
+  \caption{$\epsilon$ values were chosen in the region of positive slope}
+\end{figure}
+
+DMAPS was then performed over a range of $\epsilon$ values spanning the region of increasing slope in the figure above. The following figures show the eigenvalues of the resulting embeddings. Large eigenvalues tend to correspond to ``important'' directions in the dataset, which, as with PCA, would mean that the large eigenvalues map out the sloppy parameter combinations. The sudden drop in the eigenvalues suggests a lower-dimensional embedding may be possible.
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{dmaps_eigvals}
+  \caption{Eigenvalues of DMAPS embedding}
+\end{figure}
+
+\begin{figure}[h!]
+  \includegraphics[width=\textwidth]{dmaps_eigvals_customkernel}
+  \caption{Eigenvalues of DMAPS embedding incorporating objective function data}
+\end{figure}
+
+
+\end{document}
