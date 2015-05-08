@@ -12,3 +12,6 @@ build*
 *.cmd
 *.out
 *.rst
+.depend
+*.o
+dmap_params
