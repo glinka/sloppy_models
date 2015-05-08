@@ -6,6 +6,7 @@ import numpy as np
 from sympy import Function, dsolve, Eq, Derivative, symbols
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import os
 
 def check_sloppiness():
     """Checks for sloppiness in the model by printing the Hessian's eigenvalues when evaluated at the minimum of least-squares objective fn."""
@@ -47,7 +48,11 @@ def check_sloppiness():
         ax.set_ylabel('Eigenvalue ' + str(i + 1), fontsize=18)
         ax.set_xlabel('Finite difference approximation stepsize', fontsize=16)
         plt.tight_layout()
-        plt.savefig('../figs/hessian/all_eigs' + str(i) + '.png')
+        # save in special directory if exists
+        if os.path.isdir('../figs/hessian'):
+            plt.savefig('../figs/hessian/all_eigs' + str(i) + '.png')
+        else:
+            plt.savefig('./all_eigs' + str(i) + '.png')
 
     # # use transformed ob. fn. here, of_t, which is given in terms of the original parameters
     # hessian_eval = hessian(enzyme_of.of_t, params, h=0.007)
