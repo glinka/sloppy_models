@@ -1,17 +1,39 @@
+# emacs backups
 *~
-*.pyc
-*figs
-*data
-*.pdf
-build*
 *#
-*.m
-*.mat
+
+# pdfs
+*.pdf
+
+# csv data
 *.csv
+
+# images
 *.png
+*.jpeg
+
+# slurm commands and output
 *.cmd
 *.out
+
+# by default, ignore restructed text files
 *.rst
-.depend
+
+# "compiled" python
+*.pyc
+
+# c/c++ object files
 *.o
+
+# .depend file from Makefile
+.depend
+
+# specific c++ executables
 dmap_params
+
+# other
+*figs
+*data
+build*
+*.m
+*.mat

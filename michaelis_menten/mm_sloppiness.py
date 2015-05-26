@@ -1,6 +1,8 @@
 """Uses modules :py:mod:`MM` and :py:mod:`Hessian` to investigate the sloppiness Michaelis Menten parameters"""
 
 import MM
+import dmaps
+import dmaps_kernel
 from Hessian import hessian
 import numpy as np
 from sympy import Function, dsolve, Eq, Derivative, symbols
@@ -8,32 +10,90 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os
 
+def dmap_sloppy_params():
+    """Perform DMAPs on a set of sloppy parameters, attempt to capture sloppy directions"""
+    # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
+    # each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
+    npts_per_axis = 10
+    Ks = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    Vs = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    Sts = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    epsilons = np.logspace(-7, 1, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    kappas = np.logspace(-3, 5, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    param_sets = [Ks, Vs, Sts, epsilons, kappas]
+    nparams = len(param_sets)
+    npts = np.power(npts_per_axis, nparams)
+    index = np.empty(nparams)
+    powers = np.array([np.power(nparams, i) for i in range(nparams)]) # powers of nparams, e.g. 1, 5, 25, ...
+    tol = 1e-3
+
+    # set up true system
+    K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0 # from Antonios' writeup
+    params = np.array((K, V, St, epsilon, kappa))
+    transform_id = 't2'
+    sigma = St/K 
+    # set init concentrations
+    S0 = K*sigma; C0 = 0.0; P0 = 0.0 # init concentrations
+    Cs0 = np.array((S0, C0, P0))
+    # set times at which to collect data
+    tscale = (sigma + 1)*K/V # timescale of slow evolution
+    npts = 20
+    times = tscale*np.linspace(1,npts,npts)/5.0
+    # use these params, concentrations and times to define the MM system
+    MM_system = MM.MM_System(Cs0, times, params, transform_id)
+    
+    kept_params = np.empty((npts, nparams+1)) # storage for all possible params and their respective ob. fn. evaluations
+    kept_npts = 0 # number of parameter sets that fall within tolerated ob. fn. range
+    for i in range(npts):
+        # probably a more efficient method of calculating the current index instead of performing 'nparams' calculations every time
+        index = i/powers%nparams
+        params = np.array([param_sets[j][index[j]] for j in range(nparams)])
+        # record param set and ob. fn. value if below tolerance
+        ob_fn_eval = MM_system.of(params)
+        if ob_fn_eval < tol:
+            kept_params[kept_npts,:-1] = np.copy(params)
+            kept_params[kept_npts,-1] = ob_fn_eval
+            kept_npts += 1
+
+    print kept_npts
+
+    kept_params = kept_params[:kept_npts]
+    nepsilons = 5
+    epsilons = np.logspace(-3, 1, nepsilons)
+    kernels = [dmaps_kernel.custom_kernel(epsilons) for epsilon in epsilons]
+    dmaps.kernel_plot(kernels, epsilons, kept_params)
+        
+        
+
 def check_sloppiness():
     """Checks for sloppiness in the model by printing the Hessian's eigenvalues when evaluated at the minimum of least-squares objective fn."""
     # set parameters as per suggestions in paper
-    K = 1.0; V = 1.0; sigma = 1.0; epsilon = 1e-2; kappa = 10.0
-    S0 = K*sigma; C0 = 0.0; P0 = 0.0
-    tscale = (sigma + 1)*K/V
+    # K = 1.0; V = 1.0; sigma = 1.0; epsilon = 1e-2; kappa = 10.0 # used in first param. transform/ation, now use St instead of sigma
+    # params = np.array((K, V, sigma, epsilon, kappa)) # again, from old transformation
+    # transform_id = 't1'
+
+    K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0 # from Antonios' writeup
+    params = np.array((K, V, St, epsilon, kappa))
+    transform_id = 't2'
+    sigma = St/K 
+
+    # set init concentrations
+    S0 = K*sigma; C0 = 0.0; P0 = 0.0 # init concentrations
+    Cs0 = np.array((S0, C0, P0))
+    # set times at which to collect data
+    tscale = (sigma + 1)*K/V # timescale of slow evolution
     npts = 20
     times = tscale*np.linspace(1,npts,npts)/5.0
-    params = np.array((K, V, sigma, epsilon, kappa))
-    Cs0 = np.array((S0, C0, P0))
-    # generate data to be fit
-    data = MM.gen_profile(Cs0, times, params)
-    # # visualize data
-    # plt.hold(True)
-    # for i in range(3):
-    #     plt.plot(times, data[:,i])
-    # plt.show()
-    # set data in objective function
-    enzyme_of = MM.EnzymeOF(data, times)
+    # use these params, concentrations and times to define the MM system
+    MM_system = MM.MM_System(Cs0, times, params, transform_id)
+
     # test stepsize's effect on hessian approx as the calculation seems prone to numerical errors
     nhvals = 20
-    hvals = np.logspace(-5,-3, nhvals) # numerical delta_h values that will be used in the finite-difference approximations
-    m = 5 # the number of parameters of interest, i.e. '3' if only looking at the effects of K, V and sigma, otherwise '5' to look at effects of all parameters on the obj. fn.
+    hvals = np.logspace(-7,-4, nhvals) # numerical delta_h values that will be used in the finite-difference approximations
+    m = 3 # the number of parameters of interest, i.e. '3' if only looking at the effects of K, V and sigma, otherwise '5' to look at effects of all parameters on the obj. fn.
     eigs = np.empty((nhvals, m))
     for i in range(nhvals):
-        hessian_eval = hessian(enzyme_of.of_t, params, h=hvals[i])
+        hessian_eval = hessian(MM_system.of, params, h=hvals[i])
         eigs[i] = np.sort(np.linalg.eigvalsh(hessian_eval[:m,:m]))
 
     # plot output
@@ -49,8 +109,8 @@ def check_sloppiness():
         ax.set_xlabel('Finite difference approximation stepsize', fontsize=16)
         plt.tight_layout()
         # save in special directory if exists
-        if os.path.isdir('../figs/hessian'):
-            plt.savefig('../figs/hessian/all_eigs' + str(i) + '.png')
+        if os.path.isdir('./figs/hessian'):
+            plt.savefig('./figs/hessian/all_eigs' + str(i) + '.png')
         else:
             plt.savefig('./all_eigs' + str(i) + '.png')
 
@@ -79,4 +139,5 @@ def check_sloppiness():
     # plt.show()
 
 if __name__=='__main__':
-    check_sloppiness()
+    dmap_sloppy_params()
+    # check_sloppiness()

@@ -1,3 +1,5 @@
+import argparse
+import os
 import util_fns as uf
 import pca
 import numpy as np
@@ -83,9 +85,58 @@ def plot_eigvals(eigvals, **kwargs):
     ax.legend()
     plt.show()
     
+def plot_dmap_embeddings(eigvects, eigvals, params):
+    """Loops through all possible eigenvector combinations and plots them in a two-dimensional scatter plot. Thus, if the shape of 'eigvects' is (n, k), this routine produces "k choose 2" plots. Saves plots in directory associated with params['metric'] value, should be either 'euclid' or 'of'
 
-if __name__=="__main__":
-    pca_eigvals = uf.get_data('./brynildsen_model/pca_eigvals.csv')
-    plot_eigvals(pca_eigvals)
+    Args:
+        eigvects (array): shape (n, k) array of dmap output eigenvectors, where 'n' is the number of points in the original dataset, and 'k' is the dimension of the dmap embedding
+        eigvals (array): shape (k,) array of the dmap output eigenvalues. While DMAPs give you flexibility to choose some power of the eigenvalues to investigate global vs. local geometry, this method defaults to a t-value of 1
+        params (dict): contains any header information from the input files, such as the epsilon value, the type of metric used between points, the number of data points, etc
+    """
+    n = eigvects.shape[0] # number of data points
+    k = eigvects.shape[1] # dimension of new embedding sapce
+    # first eigvect is ones, start at second one
+    for i in range(1, k):
+        for j in range(i+1, k):
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(eigvects[:,i], eigvects[:,j])
+            plt.tight_layout()
+            plt.savefig(os.path.expanduser('~') + '/workspace/sloppy_models/brynildsen_model/data/output/dmaps/' + params['metric'] + '/figs/embedding' + str(i) + '_' + str(j) + '.png')
+            plt.close(fig)
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_files', nargs='+', help="files from which data will be read")
+    parser.add_argument('--dmap-embeddings', action='store_true', default=False, help="plot 2d DMAP embeddings from eigenvector inputs")
+    args = parser.parse_args()
+    # import data from files
+    # organize each dataset by file header, then by type of data as a dictionary of dictionaries. Each entry of 'dataset' should correspond to dictionary with keys given by 'data_types' and values of actual data. dataset -> data type -> raw data
+    # the overarching 'datasets' dict is not meant to be indexed by its keys which are convoluted tuples created from the header, but rather it is intended to be used as an interable in a "for d in datasets" fashion
+    datasets = {}
+    data_types = ['eigvals', 'eigvects']
+    for filename in args.input_files:
+        data, params = uf.get_data(filename, header_rows=1)
+        dataset_key = tuple([(key, params[key]) for key in params.keys()])
+        if dataset_key not in datasets.keys():
+            # no entry currently exists, assign dictionary with entries of empty lists. also assign 'params' entry for dataset dict
+            datasets[dataset_key] = {}
+            datasets[dataset_key]['params'] = params
+        # add data to appropriate dataset, under appropriate 'data_set' key
+        for data_type in data_types:
+            if data_type in filename:
+                datasets[dataset_key][data_type] = data
+
+    # run desired routines over each dataset
+    for dataset in datasets.values():
+        if args.dmap_embeddings:
+            # note the necessity of transposing the eigvects as they are read as row vectors from the file, while the plotting fn. expects column vectors
+            plot_dmap_embeddings(dataset['eigvects'].T, dataset['eigvals'], dataset['params'])
+
+    # pca_eigvals = uf.get_data('./brynildsen_model/pca_eigvals.csv')
+    # plot_eigvals(pca_eigvals)
     # committee_meeting_sloppiness()
     # shit_plot()
+
+if __name__=="__main__":
+    main()

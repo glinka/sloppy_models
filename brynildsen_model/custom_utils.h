@@ -11,6 +11,10 @@ namespace custom_utils {
    * \return scaled data
    */
   std::vector< std::vector<double> > scale_data(const std::vector< std::vector<double> > data);
+  /*
+   * Checks that each column has been scaled to one by printing the residual between the scale_data output and a ones vector.
+   */
+  double test_scale_data(const std::vector< std::vector<double> > unscaled_data);
 
 }
   
