@@ -3,6 +3,7 @@
 import MM
 import dmaps
 import dmaps_kernel
+from solarized import solarize
 from Hessian import hessian
 import numpy as np
 from sympy import Function, dsolve, Eq, Derivative, symbols
@@ -12,21 +13,6 @@ import os
 
 def dmap_sloppy_params():
     """Perform DMAPs on a set of sloppy parameters, attempt to capture sloppy directions"""
-    # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
-    # each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
-    npts_per_axis = 10
-    Ks = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
-    Vs = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
-    Sts = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
-    epsilons = np.logspace(-7, 1, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
-    kappas = np.logspace(-3, 5, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
-    param_sets = [Ks, Vs, Sts, epsilons, kappas]
-    nparams = len(param_sets)
-    npts = np.power(npts_per_axis, nparams)
-    index = np.empty(nparams)
-    powers = np.array([np.power(nparams, i) for i in range(nparams)]) # powers of nparams, e.g. 1, 5, 25, ...
-    tol = 1e-3
-
     # set up true system
     K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0 # from Antonios' writeup
     params = np.array((K, V, St, epsilon, kappa))
@@ -42,11 +28,25 @@ def dmap_sloppy_params():
     # use these params, concentrations and times to define the MM system
     MM_system = MM.MM_System(Cs0, times, params, transform_id)
     
+    # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
+    # each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
+    npts_per_axis = 10
+    Ks = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    Vs = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    Sts = np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    epsilons = np.logspace(-7, 1, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    kappas = np.logspace(-3, 5, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
+    param_sets = [Ks, Vs, Sts, epsilons, kappas]
+    nparams = len(param_sets)
+    npts = np.power(npts_per_axis, nparams)
+    index = np.empty(nparams)
+    powers = np.array([np.power(npts_per_axis, i) for i in range(npts_per_axis)]) # powers of nparams, e.g. 1, 5, 25, ...
+    tol = 1e-3
     kept_params = np.empty((npts, nparams+1)) # storage for all possible params and their respective ob. fn. evaluations
     kept_npts = 0 # number of parameter sets that fall within tolerated ob. fn. range
     for i in range(npts):
         # probably a more efficient method of calculating the current index instead of performing 'nparams' calculations every time
-        index = i/powers%nparams
+        index = i/powers%npts_per_axis
         params = np.array([param_sets[j][index[j]] for j in range(nparams)])
         # record param set and ob. fn. value if below tolerance
         ob_fn_eval = MM_system.of(params)
@@ -58,6 +58,7 @@ def dmap_sloppy_params():
     print kept_npts
 
     kept_params = kept_params[:kept_npts]
+    np.savetxt('./sloppy_params.csv', kept_params, delimiter=',')
     nepsilons = 5
     epsilons = np.logspace(-3, 1, nepsilons)
     kernels = [dmaps_kernel.custom_kernel(epsilons) for epsilon in epsilons]
@@ -139,5 +140,6 @@ def check_sloppiness():
     # plt.show()
 
 if __name__=='__main__':
+    # test_combinator()
     dmap_sloppy_params()
     # check_sloppiness()
