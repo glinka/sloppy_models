@@ -1,10 +1,11 @@
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <dmaps.h>
 #include <util_fns.h>
 #include "custom_utils.h"
-#include "gaussian_kernel.h"
+#include "kernel_function.h"
 
 // Performs DMAPS on the the Bryn. lab's data set
 // Reads data from params.csv and of_vals.csv, using this as data as input to DMAPS with two different distance measures:
@@ -16,34 +17,65 @@ typedef std::vector< std::vector<double> > matrix;
 typedef std::vector<double> vector;
 
 int main(int argc, char** argv) {
-  matrix params_data = util_fns::read_data("./data/input/params.csv");
+  matrix sloppy_params = util_fns::read_data("./data/input/params.csv");
   std::cout << "finished reading data from ./data/input/params.csv" << std::endl;
   // pull out first and only vector of matrix
   vector of_data = util_fns::read_data("./data/input/of_vals.csv")[0];
   std::cout << "finished reading data from ./data/input/of_vals.csv" << std::endl;
   // scale parameters to have average "1"
-  params_data = custom_utils::scale_data(params_data);
+  sloppy_params = custom_utils::scale_data(sloppy_params);
   // loop over different epsilon values [1,2,3]
-  for(int eps = 1; eps < 4; eps++) {
-    // create kernel
-    // ? efficiency of choosing epsilon ?
-    /* const double eps = 3; // from \sum W_{ij} vs. \epsilon plot */
-    Gaussian_Kernel<double> gk(eps);
-    vector eigvals; matrix eigvects; matrix W;   // storage for dmaps output
-    const int ndims = 20; // number of dimensions to save
-    // get embedding
-    dmaps::map(params_data, gk, eigvals, eigvects, W, ndims);
-
-    // create directory for this specific value of epsilon if none exists
-    std::string id = std::to_string(eps);
-    std::string dir = "./data/output/dmaps/euclid/eps_" + id + "/";
-    util_fns::create_directory(dir);
-
-    std::cout << "completed DMAP, saving results in " + dir << std::endl;
-    // save data using epsilon as file identifier
-    // create header for file in form: "metric=euclid,eps=1.0, npts=4000"
-    std::string file_header = "metric=euclid,eps=" + std::to_string(eps) + ",npts=" + std::to_string(params_data.size());
-    util_fns::save_vector(eigvals, dir + "eigvals.csv", file_header);
-    util_fns::save_matrix(eigvects, dir + "eigvects.csv", file_header);
+  
+    // test test_kernels function over log-spaced epsilons
+  const int nkernels = 20;
+  const int lower_exp = -4, upper_exp = 4;
+  const double de = (upper_exp - lower_exp)/(nkernels - 1.0); // change in epsilon
+  vector epsilons(nkernels);
+  for (int i = 0; i < nkernels; i++) {
+    epsilons[i] = std::pow(10, lower_exp + i*de);
   }
+  std::vector<Kernel_Function> kernels;
+  for (int i = 0; i < nkernels; i++) {
+    kernels.push_back(Kernel_Function(epsilons[i]));
+  }
+  std::vector<double> kernel_sums = dmaps::test_kernels(sloppy_params, kernels);
+
+  // create file directory and header based on current parameter values
+  std::stringstream ss("");
+  ss << "npts" << of_data.size();
+  std::string file_directory = "data/output/" + ss.str();
+  util_fns::create_directory(file_directory);
+  std::cout << "saving all data in: " << file_directory << std::endl;
+  ss.str("");
+  ss << "npts=" << of_data.size();
+  std::string file_header = ss.str();
+
+  // save output
+  util_fns::save_vector(kernel_sums, file_directory + "/kernel_sums.csv", file_header);
+  util_fns::save_vector(epsilons, file_directory + "/epsilons.csv", file_header);
+  std::cout << "saved kernel sums as: kernel_sums.csv" << std::endl;
+  std::cout << "saved epsilons as: epsilons.csv" << std::endl;
+
+  /* // run dmaps with epsilon = 0.5 for unnormalized ob. fn. vals, 1e-1 for normalized */
+  const double epsilon = 1.0;
+  Kernel_Function of_kernel(epsilon);
+  const int k = 20;
+  const double weight_threshold = 1e-8;
+  Vector eigvals;
+  Matrix eigvects, W;
+  dmaps::map(sloppy_params, of_kernel, eigvals, eigvects, W, k, weight_threshold);
+
+  // save DMAPS output: eigvals, eigvects
+  // set Eigen ioformat to not align columns and have a comma delimiter between columns
+  Eigen::IOFormat comma_format(Eigen::StreamPrecision, Eigen::DontAlignCols, ",");
+
+  std::ofstream eigvect_file(file_directory + "/eigvects.csv");
+  eigvect_file << file_header << std::endl << eigvects.format(comma_format);
+  eigvect_file.close();
+  std::cout << "saved DMAPS output eigvects as: eigvects.csv" << std::endl;
+  std::ofstream eigval_file(file_directory + "/eigvals.csv");
+  eigval_file << file_header << std::endl << eigvals.format(comma_format);
+  std::cout << "saved DMAPS output eigvals as: eigvals.csv" << std::endl;
+  eigval_file.close();
+
 }

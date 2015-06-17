@@ -8,6 +8,8 @@ import matplotlib.cm as cm
 import matplotlib.colors as colors
 from mpl_toolkits.mplot3d import Axes3D
 
+import plot_dmaps
+
 def shit_plot():
     optvals = np.genfromtxt('./data/optvals.csv', delimiter=',')
     errs = np.genfromtxt('./data/errs.csv')
@@ -85,36 +87,19 @@ def plot_eigvals(eigvals, **kwargs):
     ax.legend()
     plt.show()
     
-def plot_dmap_embeddings(eigvects, eigvals, params):
-    """Loops through all possible eigenvector combinations and plots them in a two-dimensional scatter plot. Thus, if the shape of 'eigvects' is (n, k), this routine produces "k choose 2" plots. Saves plots in directory associated with params['metric'] value, should be either 'euclid' or 'of'
-
-    Args:
-        eigvects (array): shape (n, k) array of dmap output eigenvectors, where 'n' is the number of points in the original dataset, and 'k' is the dimension of the dmap embedding
-        eigvals (array): shape (k,) array of the dmap output eigenvalues. While DMAPs give you flexibility to choose some power of the eigenvalues to investigate global vs. local geometry, this method defaults to a t-value of 1
-        params (dict): contains any header information from the input files, such as the epsilon value, the type of metric used between points, the number of data points, etc
-    """
-    n = eigvects.shape[0] # number of data points
-    k = eigvects.shape[1] # dimension of new embedding sapce
-    # first eigvect is ones, start at second one
-    for i in range(1, k):
-        for j in range(i+1, k):
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.scatter(eigvects[:,i], eigvects[:,j])
-            plt.tight_layout()
-            plt.savefig(os.path.expanduser('~') + '/workspace/sloppy_models/brynildsen_model/data/output/dmaps/' + params['metric'] + '/figs/embedding' + str(i) + '_' + str(j) + '.png')
-            plt.close(fig)
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_files', nargs='+', help="files from which data will be read")
     parser.add_argument('--dmap-embeddings', action='store_true', default=False, help="plot 2d DMAP embeddings from eigenvector inputs")
+    parser.add_argument('--kernel-sums', action='store_true', default=False, help="plots kernel sums vs. epsilon in kernel for determination of epsilon in DMAP")
+    parser.add_argument('--of-coloring', action='store_true', default=False, help="plots the k1, k2 plane colored by obj. fn. value")
+    parser.add_argument('--kplane-coloring', action='store_true', default=False, help="plots k1, k2 plane colored by successive DMAP eigenvectors")
     args = parser.parse_args()
     # import data from files
     # organize each dataset by file header, then by type of data as a dictionary of dictionaries. Each entry of 'dataset' should correspond to dictionary with keys given by 'data_types' and values of actual data. dataset -> data type -> raw data
     # the overarching 'datasets' dict is not meant to be indexed by its keys which are convoluted tuples created from the header, but rather it is intended to be used as an interable in a "for d in datasets" fashion
     datasets = {}
-    data_types = ['eigvals', 'eigvects']
+    data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums']
     for filename in args.input_files:
         data, params = uf.get_data(filename, header_rows=1)
         dataset_key = tuple([(key, params[key]) for key in params.keys()])
@@ -127,16 +112,31 @@ def main():
             if data_type in filename:
                 datasets[dataset_key][data_type] = data
 
+
     # run desired routines over each dataset
     for dataset in datasets.values():
+        # plots the k1, k2 plane colored by obj. fn. value
+        if args.of_coloring:
+            plot_dmaps.plot_xy(dataset['sloppy_params'][:,0], dataset['sloppy_params'][:,1], color=dataset['sloppy_params'][:,2], xlabel=r"$k_1$", ylabel="$k_2$", scatter=True)
+        # plots k1, k2 plane colored by successive DMAP eigenvectors
+        if args.kplane_coloring:
+            # # note the necessity of transposing the eigvects as they are read as row vectors from the file, while the plotting fn. expects column vectors
+            # plot_dmaps.plot_embeddings(dataset['eigvects'].T, dataset['eigvals'], dataset['params'])
+            # now that we're using Eigen's output, no need to transpose eigvects
+            for i in range(1, dataset['eigvects'].shape[1]):
+                plot_dmaps.plot_xy(dataset['sloppy_params'][:,0], dataset['sloppy_params'][:,1], color=-dataset['eigvects'][:,i], xlabel=r"$k_1$", ylabel="$k_2$", scatter=True)
+        # plots kernel sums vs. epsilon in kernel for determination of epsilon in DMAP
+        if args.kernel_sums:
+            plot_dmaps.plot_xy(dataset['epsilons'], dataset['kernel_sums'], xlabel=r"$\epsilon$", ylabel="$\sum W_{ij}$", xscale='log', yscale='log')
         if args.dmap_embeddings:
-            # note the necessity of transposing the eigvects as they are read as row vectors from the file, while the plotting fn. expects column vectors
-            plot_dmap_embeddings(dataset['eigvects'].T, dataset['eigvals'], dataset['params'])
+            # color by ob. fn. value if dealing with the k1, k2 sloppy param dataset
+            if 'sloppy_params' in dataset.keys():
+                # plot_dmaps.plot_embeddings(dataset['eigvects'], np.linspace(1,10,dataset['eigvects'].shape[1]), color=dataset['sloppy_params'][:,2])
+                plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], color=dataset['sloppy_params'][:,2])
+            else:
+                plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'])
 
-    # pca_eigvals = uf.get_data('./brynildsen_model/pca_eigvals.csv')
-    # plot_eigvals(pca_eigvals)
-    # committee_meeting_sloppiness()
-    # shit_plot()
+
 
 if __name__=="__main__":
     main()
