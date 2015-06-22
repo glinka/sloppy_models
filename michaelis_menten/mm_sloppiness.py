@@ -16,73 +16,89 @@ def dmap_sloppy_params():
     """Perform DMAPs on a set of sloppy parameters, attempt to capture sloppy directions"""
     # set up true system
     K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0 # from Antonios' writeup
-    params = np.array((K, V, St, epsilon, kappa))
+    true_params = np.array((K, V, St, epsilon, kappa))
+    nparams = true_params.shape[0]
     transform_id = 't2'
     sigma = St/K 
     # set init concentrations
-    S0 = K*sigma; C0 = 0.0; P0 = 0.0 # init concentrations
+    S0 = St; C0 = 0.0; P0 = 0.0 # init concentrations
     Cs0 = np.array((S0, C0, P0))
     # set times at which to collect data
     tscale = (sigma + 1)*K/V # timescale of slow evolution
     npts = 20
     times = tscale*np.linspace(1,npts,npts)/5.0
     # use these params, concentrations and times to define the MM system
-    MM_system = MM.MM_System(Cs0, times, params, transform_id)
+    MM_system = MM.MM_System(Cs0, times, true_params, transform_id)
+
+    # # visualize concentration profiles
+    # conc_profiles = MM_system.gen_profile(Cs0, times, true_params)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.plot(times, conc_profiles[:,0], label='S')
+    # ax.plot(times, conc_profiles[:,1], label='C')
+    # ax.plot(times, conc_profiles[:,2], label='P')
+    # ax.set_xlabel('times')
+    # ax.set_ylabel('concentration (potentially dimensionless)')
+    # ax.legend(loc=2)
+    # plt.show(fig)
+    
     
     # data generation, if saved data exists, use it. otherwise generate in this script
-    if os.path.isfile('./sloppy_params.csv'):
-        print '******************************\nLoading data from: ./sloppy_params.csv\n******************************'
-        kept_params = np.genfromtxt('./sloppy_params.csv', delimiter=',')
+    if os.path.isfile('./data/input/sloppy_params.csv'):
+        print '************************************************************\nLoading data from: ./data/input/sloppy_params.csv\n************************************************************'
+        kept_params = np.genfromtxt('./data/input/sloppy_params.csv', delimiter=',')
     else:
         # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
-        # each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
-
-        npts_per_axis = 100
-
+        # center each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
+        npts_per_axis = 200
         Ks = 2*np.logspace(-4, 1, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis)) # K*np.ones(npts_per_axis)
         Vs = np.logspace(-4, 1, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis))
         # Sts = St*np.ones(npts_per_axis) # np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
-        # epsilons = np.logspace(-7, 1, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis))
+        epsilons = np.logspace(-7, 1, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis))
         # kappas = np.logspace(-3, 5, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis))
         # param_sets = [Ks, Vs, Sts, epsilons, kappas]
         param_sets = [Ks, Vs]
-        nparams = len(param_sets)
-        npts = np.power(npts_per_axis, nparams)
-        index = np.empty(nparams)
-        powers = np.array([np.power(npts_per_axis, i) for i in range(nparams)]) # powers of nparams, e.g. 1, 5, 25, ...
+        ntest_params = len(param_sets)
+        npts = np.power(npts_per_axis, ntest_params)
+        index = np.empty(ntest_params)
+        powers = np.array([np.power(npts_per_axis, i) for i in range(ntest_params)]) # powers of ntest_params, e.g. 1, 5, 25, ...
+        
         tol = 5
-        kept_params = np.empty((npts, nparams+1)) # storage for all possible params and their respective ob. fn. evaluations
+        kept_params = np.empty((npts, ntest_params+1)) # storage for all possible params and their respective ob. fn. evaluations
         kept_npts = 0 # number of parameter sets that fall within tolerated ob. fn. range
         of_evals = np.empty(npts)
         np.seterr(all='ignore')
+        params = np.empty(nparams)
+
         for i in range(npts):
-            # probably a more efficient method of calculating the current index instead of performing 'nparams' calculations every time
+            # probably a more efficient method of calculating the current index instead of performing 'ntest_params' calculations every time
             index = i/powers%npts_per_axis
-            params = np.array([param_sets[j][index[j]] for j in range(nparams)])
-
-            # params = np.array((params[0], params[1], 2.0, 1e-3, 10.0))
-
+            new_params = np.array([param_sets[j][index[j]] for j in range(ntest_params)])
+            params[:ntest_params] = new_params
+            params[ntest_params:] = true_params[ntest_params:]
             # record param set and ob. fn. value if below tolerance
-            ob_fn_eval = MM_system.of(np.array((params[0], params[1], 2.0, 1e-3, 10.0)))#params)
+            ob_fn_eval = MM_system.of(params)
             of_evals[i] = ob_fn_eval
             if ob_fn_eval < tol:
-                kept_params[kept_npts,:-1] = np.log(params)
+                kept_params[kept_npts,:-1] = np.log(new_params)
                 kept_params[kept_npts,-1] = ob_fn_eval
                 kept_npts += 1
 
         kept_params = kept_params[:kept_npts]
-        np.savetxt('./sloppy_params.csv', kept_params, delimiter=',')
+        np.savetxt('./data/input/sloppy_params.csv', kept_params, delimiter=',')
 
         print '************************************************************'
         print 'generated', kept_npts, 'new points with min obj. fn. value of', np.min(kept_params[-1,:])
+        print 'saved in ./data/input/sloppy_params.csv'
         print '************************************************************'
 
-    # from analysis below, epsilon values around 80 - 100 should work
+    # # from analysis below, epsilon values around 1.0 should work
     # nepsilons = 10
-    # epsilons = np.logspace(0, 4, nepsilons)
+    # epsilons = np.logspace(-2, 2, nepsilons)
     # kernels = [dmaps_kernel.custom_kernel(epsilon) for epsilon in epsilons]
     # plot_dmaps.kernel_plot(kernels, epsilons, kept_params)
-    epsilon = 2.0
+    # now actually perform dmaps
+    epsilon = 1.0
     k = 20
     eigvals, eigvects = dmaps.embed_data_customkernel(kept_params, k, dmaps_kernel.custom_kernel(epsilon))
     plot_dmaps.plot_embeddings(eigvects, eigvals, k, plot_3d=True, color=kept_params[:,-1])
