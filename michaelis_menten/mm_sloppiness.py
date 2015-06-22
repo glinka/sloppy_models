@@ -2,15 +2,18 @@
 
 import MM
 import dmaps
-import dmaps_kernel
+import dmaps_kernels
 import plot_dmaps
-from solarized import solarize
 from Hessian import hessian
+from solarized import solarize
 import numpy as np
 from sympy import Function, dsolve, Eq, Derivative, symbols
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os
+
+# switch to nicer color scheme
+solarize()
 
 def dmap_sloppy_params():
     """Perform DMAPs on a set of sloppy parameters, attempt to capture sloppy directions"""
@@ -57,7 +60,7 @@ def dmap_sloppy_params():
         epsilons = np.logspace(-7, 1, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis))
         # kappas = np.logspace(-3, 5, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis))
         # param_sets = [Ks, Vs, Sts, epsilons, kappas]
-        param_sets = [Ks, Vs]
+        param_sets = [Ks, Vs, epsilons]
         ntest_params = len(param_sets)
         npts = np.power(npts_per_axis, ntest_params)
         index = np.empty(ntest_params)
@@ -92,19 +95,17 @@ def dmap_sloppy_params():
         print 'saved in ./data/input/sloppy_params.csv'
         print '************************************************************'
 
-    # # from analysis below, epsilon values around 1.0 should work
-    # nepsilons = 10
-    # epsilons = np.logspace(-2, 2, nepsilons)
-    # kernels = [dmaps_kernel.custom_kernel(epsilon) for epsilon in epsilons]
-    # plot_dmaps.kernel_plot(kernels, epsilons, kept_params)
+    # from analysis below, epsilon values around 1.0 should work
+    nepsilons = 10
+    epsilons = np.logspace(-2, 2, nepsilons)
+    kernels = [dmaps_kernel.objective_function_kernel(epsilon) for epsilon in epsilons]
+    plot_dmaps.kernel_plot(kernels, epsilons, kept_params, filename='./figs/dmaps/kernel_plot.png')
     # now actually perform dmaps
     epsilon = 1.0
     k = 20
-    eigvals, eigvects = dmaps.embed_data_customkernel(kept_params, k, dmaps_kernel.custom_kernel(epsilon))
-    plot_dmaps.plot_embeddings(eigvects, eigvals, k, plot_3d=True, color=kept_params[:,-1])
-    
-    
-        
+    save_dir = './figs/dmaps/embeddings/'
+    eigvals, eigvects = dmaps.embed_data_customkernel(kept_params, k, dmaps_kernel.objective_function_kernel(epsilon))
+    plot_dmaps.plot_embeddings(eigvects, eigvals, k, plot_3d=True, color=kept_params[:,-1], folder=save_dir)
         
 
 def check_sloppiness():
