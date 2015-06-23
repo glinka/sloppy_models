@@ -20,11 +20,16 @@ class MM_System:
 
     def __init__(self, Cs0, times, params, param_transform):
         """Completely specifies the objective fn. value given some set of test parameters"""
+        # set up stiff integrator, mimicking ode15s from MATLAB
+        self._integrator = spint.ode(self._enzyme_rhs)
+        self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=30000)
+
         self._Cs0 = Cs0
         self._times = times
         self._params = params
         self.param_transform = param_transform
         self._data = self.gen_profile(self._Cs0, self._times, self._params)
+        
 
     def of(self, params):
         """Returns value of *original* least-squares objective fn. used to fit concentration of P, i.e. in terms of :math:`(k_{inv}, k_1, k_2, S_t, E_t)`
@@ -47,8 +52,13 @@ class MM_System:
         Cs0 = np.array((S0, C0, P0))
         # pack up enzyme parameters to pass
         enzyme_profile = self.gen_profile(Cs0, self._times, params)
-        of_eval = np.sum(np.power(enzyme_profile[:,2] - self._data[:,2], 2))
-        return of_eval
+        # check if enzyme_profile was succesfully computed
+        if enzyme_profile[0] is not False:
+            of_eval = np.sum(np.power(enzyme_profile[:,2] - self._data[:,2], 2))
+            return of_eval
+        else:
+            print '******* received a profile that was set to False, of has been set to False *******'
+            return False
 
     def gen_profile(self, Cs0, times, params):
         """Generates the concentration profiles of the MM species based on the initial concentrations 'Cs0' and parameters 'params', all evaluated at the times given in 'times'
@@ -63,10 +73,28 @@ class MM_System:
         Returns:
             profile (array): shape ('number of times', 3) array in which each column contains the concentrations of S, C, and P respectively at the times specified in 'times'
         """
-        # necessary to decrease tolerance
-        tol = 4e-14
-        profile = spint.odeint(self.enzyme_rhs, Cs0, times, args=tuple(self.inverse_transform_params(params)), atol=tol, rtol=tol)
+        # old method, perhaps not suitable for such a stiff problem
+        # # necessary to decrease tolerance
+        # tol = 4e-14
+        # profile = spint.odeint(self.enzyme_rhs, Cs0, times, args=tuple(self.inverse_transform_params(params)), atol=tol, rtol=tol)
+        # new method with customized 'bdf' integrator
+        # set up new initial conditions
+        self._integrator.set_initial_value(Cs0, 0.0)
+        self._integrator.set_f_params(*self.inverse_transform_params(params))
+        profile = np.empty((times.shape[0], 3))
+        for i, t in enumerate(times):
+            profile[i] = self._integrator.integrate(t)
+            if not self._integrator.successful():
+                print '******* ode failed somehow, profile has been set to False *******'
+                # very graceful failure
+                return [False]
         return profile
+
+        
+    def _enzyme_rhs(self, t, Cs, kinv, k1, k2, St, Et):
+        """ Silly private rhs function with different parameter order from 'enzyme_rhs', necessary because spint.ode and spint.odeint require different argument orders in their rhs functions
+        """
+        return self.enzyme_rhs(Cs, t, kinv, k1, k2, St, Et)
 
     def enzyme_rhs(self, Cs, t, kinv, k1, k2, St, Et):
         """Function passed to scipy integrate routine to find concentration profile

@@ -33,27 +33,27 @@ def dmap_sloppy_params():
     # use these params, concentrations and times to define the MM system
     MM_system = MM.MM_System(Cs0, times, true_params, transform_id)
 
-    # # visualize concentration profiles
-    # conc_profiles = MM_system.gen_profile(Cs0, times, true_params)
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # ax.plot(times, conc_profiles[:,0], label='S')
-    # ax.plot(times, conc_profiles[:,1], label='C')
-    # ax.plot(times, conc_profiles[:,2], label='P')
-    # ax.set_xlabel('times')
-    # ax.set_ylabel('concentration (potentially dimensionless)')
-    # ax.legend(loc=2)
-    # plt.show(fig)
+    # visualize concentration profiles
+    conc_profiles = MM_system.gen_profile(Cs0, times, true_params)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(times, conc_profiles[:,0], label='S')
+    ax.plot(times, conc_profiles[:,1], label='C')
+    ax.plot(times, conc_profiles[:,2], label='P')
+    ax.set_xlabel('times')
+    ax.set_ylabel('concentration (potentially dimensionless)')
+    ax.legend(loc=2)
+    plt.show(fig)
     
     
     # data generation, if saved data exists, use it. otherwise generate in this script
     if os.path.isfile('./data/input/sloppy_params.csv'):
-        print '************************************************************\nLoading data from: ./data/input/sloppy_params.csv\n************************************************************'
         kept_params = np.genfromtxt('./data/input/sloppy_params.csv', delimiter=',')
+        print '************************************************************\nLoaded data from: ./data/input/sloppy_params.csv\n************************************************************'
     else:
         # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
         # center each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
-        npts_per_axis = 200
+        npts_per_axis = 10
         Ks = 2*np.logspace(-4, 1, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis)) # K*np.ones(npts_per_axis)
         Vs = np.logspace(-4, 1, npts_per_axis)#*(1 + np.random.normal(size=npts_per_axis))
         # Sts = St*np.ones(npts_per_axis) # np.logspace(-4, 4, npts_per_axis)*(1 + np.random.normal(size=npts_per_axis))
@@ -69,7 +69,6 @@ def dmap_sloppy_params():
         tol = 5
         kept_params = np.empty((npts, ntest_params+1)) # storage for all possible params and their respective ob. fn. evaluations
         kept_npts = 0 # number of parameter sets that fall within tolerated ob. fn. range
-        of_evals = np.empty(npts)
         np.seterr(all='ignore')
         params = np.empty(nparams)
 
@@ -81,8 +80,7 @@ def dmap_sloppy_params():
             params[ntest_params:] = true_params[ntest_params:]
             # record param set and ob. fn. value if below tolerance
             ob_fn_eval = MM_system.of(params)
-            of_evals[i] = ob_fn_eval
-            if ob_fn_eval < tol:
+            if ob_fn_eval < tol and ob_fn_eval is not False:
                 kept_params[kept_npts,:-1] = np.log(new_params)
                 kept_params[kept_npts,-1] = ob_fn_eval
                 kept_npts += 1
