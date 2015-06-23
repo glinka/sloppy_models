@@ -91,20 +91,20 @@ def dmap_sloppy_params():
         np.savetxt('./data/input/sloppy_params.csv', kept_params, delimiter=',')
 
         print '************************************************************'
-        print 'generated', kept_npts, 'new points with min obj. fn. value of', np.min(kept_params[-1,:])
+        print 'generated', kept_npts, 'new points with min obj. fn. value of', np.min(kept_params[:,-1])
         print 'saved in ./data/input/sloppy_params.csv'
         print '************************************************************'
 
     # from analysis below, epsilon values around 1.0 should work
     nepsilons = 10
     epsilons = np.logspace(-2, 2, nepsilons)
-    kernels = [dmaps_kernel.objective_function_kernel(epsilon) for epsilon in epsilons]
+    kernels = [dmaps_kernels.objective_function_kernel(epsilon) for epsilon in epsilons]
     plot_dmaps.kernel_plot(kernels, epsilons, kept_params, filename='./figs/dmaps/kernel_plot.png')
     # now actually perform dmaps
     epsilon = 1.0
     k = 20
     save_dir = './figs/dmaps/embeddings/'
-    eigvals, eigvects = dmaps.embed_data_customkernel(kept_params, k, dmaps_kernel.objective_function_kernel(epsilon))
+    eigvals, eigvects = dmaps.embed_data_customkernel(kept_params, k, dmaps_kernels.objective_function_kernel(epsilon))
     plot_dmaps.plot_embeddings(eigvects, eigvals, k, plot_3d=True, color=kept_params[:,-1], folder=save_dir)
         
 
