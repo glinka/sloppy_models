@@ -22,7 +22,7 @@ class MM_System:
         """Completely specifies the objective fn. value given some set of test parameters"""
         # set up stiff integrator, mimicking ode15s from MATLAB
         self._integrator = spint.ode(self._enzyme_rhs)
-        self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=30000)
+        self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
 
         self._Cs0 = Cs0
         self._times = times
