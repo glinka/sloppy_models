@@ -7,6 +7,7 @@ import plot_dmaps
 from Hessian import hessian
 from solarized import solarize
 import numpy as np
+from mpi4py import MPI
 from sympy import Function, dsolve, Eq, Derivative, symbols
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -18,6 +19,12 @@ solarize()
 
 def dmap_sloppy_params():
     """Perform DMAPs on a set of sloppy parameters, attempt to capture sloppy directions"""
+
+    # init MPI
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    nprocs = comm.Get_size()
+
     # set up true system
     K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0 # from Antonios' writeup
     true_params = np.array((K, V, St, epsilon, kappa))
@@ -46,70 +53,55 @@ def dmap_sloppy_params():
     # ax.legend(loc=2)
     # plt.show(fig)
     
-    # data generation, if saved data exists, use it. otherwise generate in this script
-    if os.path.isfile('./data/input/sloppy_params.csv'):
-        kept_params = np.genfromtxt('./data/input/sloppy_params.csv', delimiter=',')
-        print '************************************************************'
-        print 'Loaded data from: ./data/input/sloppy_params.csv'
-        print '************************************************************'
-    else:
-        # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
-        # center each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
-        npts_per_axis = 5
-        # # use these ranges as a guide for sampling (with true vals of K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0):
-        # # epsilons = np.logspace(-4, -1, 5) # little effect
-        # # kappas = np.logspace(-2, 2, 5) # little effect
-        # # Ks = np.logspace(-1, 3, 5) # very significant effect
-        # # Vs = np.logspace(-1, 3, 5) # very significant effect
-        test_params = {'K':2*np.logspace(-1, 3, npts_per_axis), 'V':np.logspace(-1, 3, npts_per_axis), 'eps':np.logspace(-4, 0, npts_per_axis)}
-        param_sets = test_params.values()
-        const_params = {'St':St, 'kappa':kappa}
-        ntest_params = len(param_sets)
-        npts = np.power(npts_per_axis, ntest_params)
-        index = np.empty(ntest_params)
-        powers = np.array([np.power(npts_per_axis, i) for i in range(ntest_params)]) # powers of ntest_params, e.g. 1, 5, 25, ...
-        tol = 1.0
-        kept_params = np.empty((npts, ntest_params+1)) # storage for all possible params and their respective ob. fn. evaluations
-        kept_npts = 0 # number of parameter sets that fall within tolerated ob. fn. range
-        np.seterr(all='ignore')
-        # unset, ordered param dict
-        params = OrderedDict((('K',False), ('V',False), ('St',False), ('eps',False), ('kappa',False)))
+    # always gen new data, can run dmaps far faster with c++
+    # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
+    # center each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
+    npts_per_axis = 4
+    # # use these ranges as a guide for sampling (with true vals of K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0):
+    # # epsilons = np.logspace(-4, -1, 5) # little effect
+    # # kappas = np.logspace(-2, 2, 5) # little effect
+    # # Ks = np.logspace(-1, 3, 5) # very significant effect
+    # # Vs = np.logspace(-1, 3, 5) # very significant effect
+    test_params = {'K':2*np.logspace(-1, 3, npts_per_axis), 'V':np.logspace(-1, 3, npts_per_axis), 'eps':np.logspace(-4, 0, npts_per_axis)}
+    param_sets = test_params.values()
+    const_params = {'St':St, 'kappa':kappa}
+    ntest_params = len(param_sets)
+    npts = np.power(npts_per_axis, ntest_params)
+    index = np.empty(ntest_params)
+    powers = np.array([np.power(npts_per_axis, i) for i in range(ntest_params)]) # powers of ntest_params, e.g. 1, 5, 25, ...
+    npts_per_proc = npts/nprocs # number of points that will be sent to each process
+    tol = 1.0
+    kept_params = np.empty((npts_per_proc, ntest_params+1)) # storage for all possible params and their respective ob. fn. evaluations
+    kept_npts = 0 # number of parameter sets that fall within tolerated ob. fn. range
+    # unset, ordered param dict
+    params = OrderedDict((('K',False), ('V',False), ('St',False), ('eps',False), ('kappa',False)))
 
-        for i in range(npts):
-            # probably a more efficient method of calculating the current index instead of performing 'ntest_params' calculations every time
-            index = i/powers%npts_per_axis
-            new_params = np.array([param_sets[j][index[j]] for j in range(ntest_params)])
-            for j, key in enumerate(test_params.keys()):
-                params[key] = new_params[j]
-            for key, val in const_params.items():
-                params[key] = val
-            # record param set and ob. fn. value if below tolerance
-            ob_fn_eval = MM_system.of(params.values())
-            if ob_fn_eval < tol and ob_fn_eval is not False:
-                kept_params[kept_npts,:-1] = np.log(new_params)
-                kept_params[kept_npts,-1] = ob_fn_eval
-                kept_npts += 1
+    for i in range(rank*npts_per_proc, (rank+1)*npts_per_proc):
+        # probably a more efficient method of calculating the current index instead of performing 'ntest_params' calculations every time
+        index = i/powers%npts_per_axis
+        new_params = np.array([param_sets[j][index[j]] for j in range(ntest_params)])
+        for j, key in enumerate(test_params.keys()):
+            params[key] = new_params[j]
+        for key, val in const_params.items():
+            params[key] = val
+        # record param set and ob. fn. value if below tolerance
+        ob_fn_eval = MM_system.of(params.values())
+        if ob_fn_eval < tol and ob_fn_eval is not False:
+            kept_params[kept_npts,:-1] = np.log(new_params)
+            kept_params[kept_npts,-1] = ob_fn_eval
+            kept_npts += 1
 
-        kept_params = kept_params[:kept_npts]
-        np.savetxt('./data/input/sloppy_params.csv', kept_params, delimiter=',')
-
+    kept_params = kept_params[:kept_npts]
+    # possible to use Gather
+    kept_params = comm.gather(kept_params, root=0)
+    if rank is 0:
+        kept_params = np.concatenate(kept_params)
+        kept_npts = kept_params.shape[0]
+        np.savetxt('./data/input/sloppy_params' + str(kept_npts) + '.csv', kept_params, delimiter=',')
         print '************************************************************'
         print 'generated', kept_npts, 'new points with min obj. fn. value of', np.min(kept_params[:,-1])
-        print 'saved in ./data/input/sloppy_params.csv'
+        print 'saved in ./data/input/sloppy_params' + str(kept_npts) + '.csv'
         print '************************************************************'
-
-    # # from analysis below, epsilon values around 1.0 should work
-    # nepsilons = 10
-    # epsilons = np.logspace(-2, 2, nepsilons)
-    # kernels = [dmaps_kernels.objective_function_kernel(epsilon) for epsilon in epsilons]
-    # plot_dmaps.kernel_plot(kernels, epsilons, kept_params, filename='./figs/dmaps/kernel_plot.png')
-    # # now actually perform dmaps
-    # epsilon = 1.0
-    # k = 20
-    # save_dir = './figs/dmaps/embeddings/'
-    # eigvals, eigvects = dmaps.embed_data_customkernel(kept_params, k, dmaps_kernels.objective_function_kernel(epsilon))
-    # plot_dmaps.plot_embeddings(eigvects, eigvals, k, plot_3d=True, color=kept_params[:,-1], folder=save_dir)
-        
 
 def check_sloppiness():
     """Checks for sloppiness in the model by printing the Hessian's eigenvalues when evaluated at the minimum of least-squares objective fn."""
