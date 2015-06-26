@@ -1,0 +1,117 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\title{Preliminary DMAP results in $K_M, V_M, S_t$ parameters}
+\author{}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+By restricting our attention to $K_M, V_M$, and $S_t$, DMAPS uncovered in its $3^{rd}$ and $6^{th}$ eigenvectors a two-dimensional embedding of the $K-V$ plane, while the less sloppy $S_t$ was uncovered later, in the $12^{th}$ eigenvector.
+
+\section*{Details}
+Samples were drawn evenly spaced over a log scale, specifically:
+
+\begin{itemize}
+\item $K_M \in [10^{-4}, 10^{-1}]$ 
+\item $V_M \in [10^{-4}, 10^{-1}]$ 
+\item $S_t \in [10^{-7}, 10^{1}]$ 
+\end{itemize}
+
+with one hundred points drawn per parameter for a total of one million unique combinations. Combinations for which $c(K_M, V_M, S_t) < 5.0$ were kept (where $c$ is the cost/objective function), resulting in a dataset of approximately 7,000 points. \\
+
+It is important to note that log-parameters were stored, and not the true parameters. Using the Euclidean distance with this scaling more accurately reflects the distances we're interested in; otherwise, any parameters below a certain threshold would essentially be at distance zero from one another. I don't believe sloppiness arising from hidden effective parameter combinations (a lack of ``structural identifiability'') would require such scaling, but that is not the sort of sloppiness in our current example. \\
+
+This log-parameter dataset was used as the input to DMAPS with a kernel epsilon of $\epsilon = 0.8$. The results are shown in the three figures below. The Figs. (1) and (2) show that the two-dimensional embedding can be nicely colored by $K_M$ and $V_M$ values. Fig. (3) shows that the $12^{th}$ eigenvector captures $S_t$.
+
+\section*{2D Embeddings}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{k_coloring}
+  \caption{Coloring by $K_M$}
+  \label{fig:K}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{v_coloring}
+  \caption{Coloring by $V_M$}
+  \label{fig:V}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{s_coloring}
+  \caption{Coloring by $S_t$}
+  \label{fig:S}
+\end{figure}
+
+\clearpage
+
+\section*{3D Embeddings}
+
+The three-dimensional embeddings are quite interesting, and suggest that the sloppiness in these three parameters is contained not in some hyper-ribbon like manifold but in something like two intersecting planes. After a certain value of $V_M$ is reached, we pass into a region of constant $V_M$ and sloppy $S_t$. This could be an artifact of sampling: perhaps only at the lower limit of our sampling of $V_M$ is $S_t$ sloppy, and thus if we extended the sampled region we might see more of a three-dimensional structure develop. This is my next step.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{k_coloring_3d}
+  \caption{Coloring by $K_M$. $K_M$ varies over both planes, mainly in the $\phi_3$ direction.}
+  \label{fig:K}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{v_coloring_3d}
+  \caption{Coloring by $V_M$. $V_M$ mainly varies over the right-hand plane.}
+  \label{fig:V}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{s_coloring_3d}
+  \caption{Coloring by $S_t$. $S_t$ varies over the left-hand plane.}
+  \label{fig:S}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{bib.bib}
+
+\end{document}

@@ -132,6 +132,13 @@ def main():
             # color by ob. fn. value if dealing with the k1, k2 sloppy param dataset
             if 'sloppy_params' in dataset.keys():
                 # plot_dmaps.plot_embeddings(dataset['eigvects'], np.linspace(1,10,dataset['eigvects'].shape[1]), color=dataset['sloppy_params'][:,2])
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+                ax.scatter(dataset['eigvects'][:,2], dataset['eigvects'][:,5], dataset['eigvects'][:,11])
+                ax.set_xlabel('phi3')
+                ax.set_ylabel('phi6')
+                ax.set_zlabel('phi12')
+                plt.show(fig)
                 plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], color=dataset['sloppy_params'][:,2], k=12)#plot_3d=True)
             else:
                 plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], plot_3d=True)

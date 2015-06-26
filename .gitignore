@@ -37,3 +37,7 @@ dmap_params
 build*
 *.m
 *.mat
+
+*.log
+*.aux
+*_region_.*

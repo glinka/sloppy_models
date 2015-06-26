@@ -70,13 +70,3 @@ int main(int argc, char** argv) {
   std::cout << "saved DMAPS output eigvals as: eigvals.csv" << std::endl;
   eigval_file.close();
 }
-
-
-  
-
-  
-
-  
-  
-
-  
