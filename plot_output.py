@@ -101,8 +101,8 @@ def main():
     datasets = {}
     data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums']
     for filename in args.input_files:
-        # fix importing of emacs recovery files
-        if "~" not in filename:
+        # only import csv files
+        if filename[-4:] == ".csv":
             data, params = uf.get_data(filename, header_rows=1)
             dataset_key = tuple([(key, params[key]) for key in params.keys()])
             if dataset_key not in datasets.keys():
@@ -138,7 +138,7 @@ def main():
                 # # custom 3d plot, should eventually delete
                 fig = plt.figure()
                 ax = fig.add_subplot(111, projection='3d')
-                p = ax.scatter(dataset['eigvects'][:,1], dataset['eigvects'][:,2], dataset['eigvects'][:,13], c=dataset['sloppy_params'][:,0])
+                p = ax.scatter(dataset['eigvects'][:,1], dataset['eigvects'][:,2], dataset['eigvects'][:,13], c=dataset['sloppy_params'][:,2])
                 ax.set_xlabel(r'$\phi_3$')
                 ax.set_ylabel(r'$\phi_6$')
                 ax.set_zlabel(r'$\phi_{12}$')
@@ -151,7 +151,7 @@ def main():
                 plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], plot_3d=True)
         if args.param_surface:
             # assume only three parameters have been used for investigation and plot the values in log-space
-            plot_dmaps.plot_xyz(dataset['sloppy_params'][:,0], dataset['sloppy_params'][:,1], dataset['sloppy_params'][:,2], xlabel=r'$K_M$', ylabel=r'$V_M$', zlabel=r'$\epsilon$', labelsize=24)
+            plot_dmaps.plot_xyz(dataset['sloppy_params'][:,0], dataset['sloppy_params'][:,1], dataset['sloppy_params'][:,2], xlabel=r'$K_M$', ylabel=r'$V_M$', zlabel=r'$\epsilon$', color=dataset['sloppy_params'][:,2], labelsize=24)
 
 
 

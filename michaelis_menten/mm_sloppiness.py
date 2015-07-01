@@ -58,16 +58,13 @@ def dmap_sloppy_params():
     # center each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
     npts_per_axis = 8
     # # use these ranges as a guide for sampling (with true vals of K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0):
-    # # epsilons = np.logspace(-4, -1, 5) # little effect
-    # # kappas = np.logspace(-2, 2, 5) # little effect
-    # # Ks = np.logspace(-1, 3, 5) # very significant effect
-    # # Vs = np.logspace(-1, 3, 5) # very significant effect
-    Ks = 2*np.logspace(-3, 3, npts_per_axis)
-    Ks = Ks + Ks*np.random.normal(size=npts_per_axis)
-    Vs = np.logspace(-3, 3, npts_per_axis)
-    Vs = Vs + Vs*np.random.normal(size=npts_per_axis)
-    Sts = np.logspace(0, 1, npts_per_axis)
-    Sts = Sts + Sts*np.random.normal(size=npts_per_axis)
+    # # epsilons = np.linspace(-4, -1, 5) # little effect
+    # # kappas = np.linspace(-2, 2, 5) # little effect
+    # # Ks = np.linspace(-1, 3, 5) # very significant effect
+    # # Vs = np.linspace(-1, 3, 5) # very significant effect
+    Ks = np.power(10, 2*np.random.uniform(-3, 3, npts_per_axis))
+    Vs = np.power(10, np.random.uniform(-3, 3, npts_per_axis))
+    Sts = np.power(10, np.random.uniform(0, 1, npts_per_axis))
     test_params = OrderedDict((('K',Ks), ('V',Vs), ('St',Sts)))
     param_sets = test_params.values()
     ntest_params = len(param_sets)
