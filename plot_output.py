@@ -93,6 +93,7 @@ def main():
     parser.add_argument('--kernel-sums', action='store_true', default=False, help="plots kernel sums vs. epsilon in kernel for determination of epsilon in DMAP")
     parser.add_argument('--of-coloring', action='store_true', default=False, help="plots the k1, k2 plane colored by obj. fn. value")
     parser.add_argument('--kplane-coloring', action='store_true', default=False, help="plots k1, k2 plane colored by successive DMAP eigenvectors")
+    parser.add_argument('--param-surface', action='store_true', default=False, help="plots parameters from 'sloppy_params.csv' in three-dimensional space")
     args = parser.parse_args()
     # import data from files
     # organize each dataset by file header, then by type of data as a dictionary of dictionaries. Each entry of 'dataset' should correspond to dictionary with keys given by 'data_types' and values of actual data. dataset -> data type -> raw data
@@ -100,16 +101,18 @@ def main():
     datasets = {}
     data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums']
     for filename in args.input_files:
-        data, params = uf.get_data(filename, header_rows=1)
-        dataset_key = tuple([(key, params[key]) for key in params.keys()])
-        if dataset_key not in datasets.keys():
-            # no entry currently exists, assign dictionary with entries of empty lists. also assign 'params' entry for dataset dict
-            datasets[dataset_key] = {}
-            datasets[dataset_key]['params'] = params
-        # add data to appropriate dataset, under appropriate 'data_set' key
-        for data_type in data_types:
-            if data_type in filename:
-                datasets[dataset_key][data_type] = data
+        # fix importing of emacs recovery files
+        if "~" not in filename:
+            data, params = uf.get_data(filename, header_rows=1)
+            dataset_key = tuple([(key, params[key]) for key in params.keys()])
+            if dataset_key not in datasets.keys():
+                # no entry currently exists, assign dictionary with entries of empty lists. also assign 'params' entry for dataset dict
+                datasets[dataset_key] = {}
+                datasets[dataset_key]['params'] = params
+            # add data to appropriate dataset, under appropriate 'data_set' key
+            for data_type in data_types:
+                if data_type in filename:
+                    datasets[dataset_key][data_type] = data
 
 
     # run desired routines over each dataset
@@ -132,10 +135,10 @@ def main():
             if 'sloppy_params' in dataset.keys():
                 # plot_dmaps.plot_embeddings(dataset['eigvects'], np.linspace(1,10,dataset['eigvects'].shape[1]), color=dataset['sloppy_params'][:,2])
 
-                # custom 3d plot, should eventually delete
+                # # custom 3d plot, should eventually delete
                 fig = plt.figure()
                 ax = fig.add_subplot(111, projection='3d')
-                p = ax.scatter(dataset['eigvects'][:,2], dataset['eigvects'][:,5], dataset['eigvects'][:,11], c=np.log10(np.exp(dataset['sloppy_params'][:,2])))
+                p = ax.scatter(dataset['eigvects'][:,1], dataset['eigvects'][:,2], dataset['eigvects'][:,13], c=dataset['sloppy_params'][:,0])
                 ax.set_xlabel(r'$\phi_3$')
                 ax.set_ylabel(r'$\phi_6$')
                 ax.set_zlabel(r'$\phi_{12}$')
@@ -143,10 +146,12 @@ def main():
                 fig.colorbar(p)
                 plt.show(fig)
                 # end custom plot
-                
-                plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], color=dataset['sloppy_params'][:,2], k=12)#plot_3d=True)
+                plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], color=dataset['sloppy_params'][:,2], colorbar=True)#plot_3d=True)
             else:
                 plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], plot_3d=True)
+        if args.param_surface:
+            # assume only three parameters have been used for investigation and plot the values in log-space
+            plot_dmaps.plot_xyz(dataset['sloppy_params'][:,0], dataset['sloppy_params'][:,1], dataset['sloppy_params'][:,2], xlabel=r'$K_M$', ylabel=r'$V_M$', zlabel=r'$\epsilon$', labelsize=24)
 
 
 

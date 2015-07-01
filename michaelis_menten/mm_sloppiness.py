@@ -62,10 +62,16 @@ def dmap_sloppy_params():
     # # kappas = np.logspace(-2, 2, 5) # little effect
     # # Ks = np.logspace(-1, 3, 5) # very significant effect
     # # Vs = np.logspace(-1, 3, 5) # very significant effect
-    test_params = {'K':2*np.logspace(-3, 3, npts_per_axis), 'V':np.logspace(-3, 3, npts_per_axis), 'St':np.logspace(0, 1, npts_per_axis)}
+    Ks = 2*np.logspace(-3, 3, npts_per_axis)
+    Ks = Ks + Ks*np.random.normal(size=npts_per_axis)
+    Vs = np.logspace(-3, 3, npts_per_axis)
+    Vs = Vs + Vs*np.random.normal(size=npts_per_axis)
+    Sts = np.logspace(0, 1, npts_per_axis)
+    Sts = Sts + Sts*np.random.normal(size=npts_per_axis)
+    test_params = OrderedDict((('K',Ks), ('V',Vs), ('St',Sts)))
     param_sets = test_params.values()
-    const_params = {'eps':epsilon, 'kappa':kappa}
     ntest_params = len(param_sets)
+    const_params = {'eps':epsilon, 'kappa':kappa}
     npts = np.power(npts_per_axis, ntest_params)
     index = np.empty(ntest_params)
     powers = np.array([np.power(npts_per_axis, i) for i in range(ntest_params)]) # powers of ntest_params, e.g. 1, 5, 25, ...
