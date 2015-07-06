@@ -4,6 +4,7 @@
    :synopsis: Basic implementation of pseudo-arclength continuation algorithm
 """
 
+from util_fns import progress_bar
 import numpy as np
 import scipy.sparse.linalg as spla
 import Newton
@@ -49,7 +50,7 @@ class PSA:
             Df_arclength (array): shape (n+1, n+1) array containing the evaluation of the extended, square Jacobian
         """
         # again, the number of state variables 'n' is one less than the length of x because we have appended the scalar parameter value
-        # TODO: it would be clearer to define locally "k = x[n]...", but is there a speed difference?        
+        # TODO: it would be clearer to define locally "k = x[n]...", but is there a speed difference?
         n = x.shape[0] - 1
         Df_arclength = np.empty((n+1, n+1))
         Df_arclength[:n,:] = self._Df(x[:n],x[n])
@@ -82,7 +83,7 @@ class PSA:
         return f
 
 
-    def find_branch(self, x0, k0, ds, nsteps):
+    def find_branch(self, x0, k0, ds, nsteps, progress_bar=False):
         """Continues along the branch of values for which :math:`f(x,k)=0` via pseudo-arclength continuation
 
         Args:
@@ -90,6 +91,7 @@ class PSA:
             k0 (float): the initial parameter value
             ds (float): the arclength step size
             nsteps (int): the total number of arclength steps to take
+            progress_bar (bool): whether or not to show a progress bar as iterations proceed
 
         Returns:
             Numpy array of dimension (nsteps, n+1), each row of which contains first the length-n value of x and then the scalar parameter value at which a point on the branch was found
@@ -128,6 +130,8 @@ class PSA:
             x = np.copy(xstart)
             xprime = np.copy(xprime_start)
             for i in range(halfnsteps):
+                if progress_bar:
+                    progress_bar(k*halfnsteps + i + 1, nsteps)
                 # initial guess for next point on branch
                 x0 = x + xprime*ds
                 # save previous value for arclength eqn

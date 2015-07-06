@@ -4,7 +4,9 @@ import MM
 import dmaps
 import dmaps_kernels
 import plot_dmaps
-from Hessian import hessian
+from algorithms.Derivates import hessian
+import algorithms.PseudoArclengthContinuation as PSA
+import MM_Specialization as MMS
 from solarized import solarize
 import numpy as np
 from mpi4py import MPI
@@ -17,15 +19,55 @@ from collections import OrderedDict
 # switch to nicer color scheme
 solarize()
 
-def dmap_sloppy_params():
-    """Perform DMAPs on a set of sloppy parameters, attempt to capture sloppy directions"""
+def mm_contours():
+    """Finds contours of the MM objective function: either one-dimensional curves or two-dimensional surfaces"""
+    # set up base system
+    params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
+    true_params = np.array(params.values())
+    nparams = true_params.shape[0]
+    transform_id = 't2'
+    state_params = ['K']
+    continuation_param = 'V'
+    # set init concentrations
+    S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
+    Cs0 = np.array((S0, C0, P0))
+    # set times at which to collect data
+    tscale = (params['St'] + params['K'])/params['V'] # timescale of slow evolution
+    npts = 20
+    times = tscale*np.linspace(1,npts,npts)/5.0
+    # use these params, concentrations and times to define the MM system
+    contour_val = 1e-7
+    mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
+
+    conc_profiles = mm_specialization.gen_profile(Cs0, times, true_params)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(times, conc_profiles[:,0], label='S')
+    ax.plot(times, conc_profiles[:,1], label='C')
+    ax.plot(times, conc_profiles[:,2], label='P')
+    ax.set_xlabel('times')
+    ax.set_ylabel('concentration (potentially dimensionless)')
+    ax.legend(loc=2)
+    plt.show(fig)
+
+
+    ds = 1e-6
+    ncontinuation_steps = 50
+    psa_solver = PSA.PSA(mm_specialization.f, mm_specialization.f_gradient)
+    branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
+    plt.plot(branch[:,0], branch[:,1])
+    plt.show()
+    
+
+def sample_sloppy_params():
+    """Uses mpi4py to parallelize the collection of sloppy parameter sets. The current, naive method is to sample over a noisy grid of points, discarding those whose objective function evaluation exceeds the set tolerance. The resulting sloppy parameter combinations are saved in './data/input'"""
 
     # init MPI
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     nprocs = comm.Get_size()
 
-    # set up true system
+    # set up true system, basis for future objective function evaluations
     K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0 # from Antonios' writeup
     true_params = np.array((K, V, St, epsilon, kappa))
     nparams = true_params.shape[0]
@@ -65,15 +107,15 @@ def dmap_sloppy_params():
     Ks = np.power(10, 2*np.random.uniform(-3, 3, npts_per_axis))
     Vs = np.power(10, np.random.uniform(-3, 3, npts_per_axis))
     Sts = np.power(10, np.random.uniform(0, 1, npts_per_axis))
-    test_params = OrderedDict((('K',Ks), ('V',Vs), ('St',Sts)))
+    test_params = OrderedDict((('K',Ks), ('V',Vs), ('St',Sts))) # parameters being varied
     param_sets = test_params.values()
     ntest_params = len(param_sets)
-    const_params = {'eps':epsilon, 'kappa':kappa}
+    const_params = {'eps':epsilon, 'kappa':kappa} # parameters that will be held constant throughout
     npts = np.power(npts_per_axis, ntest_params)
-    index = np.empty(ntest_params)
-    powers = np.array([np.power(npts_per_axis, i) for i in range(ntest_params)]) # powers of ntest_params, e.g. 1, 5, 25, ...
+    index = np.empty(ntest_params) # used in future calculation to get index of desired parameter combination
+    powers = np.array([np.power(npts_per_axis, i) for i in range(ntest_params)]) # powers of ntest_params, e.g. 1, 5, 25, ... also used in index calc
     npts_per_proc = npts/nprocs # number of points that will be sent to each process
-    tol = 1.0
+    tol = 1.0 # ob. fn. tolerance, i.e. any points for which the ob. fn. exceeds this value will be discarded
     kept_params = np.empty((npts_per_proc, ntest_params+1)) # storage for all possible params and their respective ob. fn. evaluations
     kept_npts = 0 # number of parameter sets that fall within tolerated ob. fn. range
     # unset, ordered param dict
@@ -185,6 +227,6 @@ def check_sloppiness():
     # plt.show()
 
 if __name__=='__main__':
-    # test_combinator()
-    dmap_sloppy_params()
+    # sample_sloppy_params()
     # check_sloppiness()
+    mm_contours()

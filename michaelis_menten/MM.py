@@ -3,6 +3,7 @@
 import numpy as np
 import scipy.integrate as spint
 from sympy import Function, dsolve, Eq, Derivative, symbols
+from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 
@@ -16,6 +17,7 @@ class MM_System:
             * 'o': (kinv, k1, k2, St, Et)
             * 't1': (K, V, sigma, epsilon, kappa)
             * 't2': (K, V, St, epsilon, kappa)
+        _param_dict (dict): dictionary of different types of parameter sets available for use. These are transformed into the 'original'/bare parameters during compution.
     """
 
     def __init__(self, Cs0, times, params, param_transform):
@@ -23,12 +25,15 @@ class MM_System:
         # set up stiff integrator, mimicking ode15s from MATLAB
         self._integrator = spint.ode(self._enzyme_rhs)
         self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
-
         self._Cs0 = Cs0
         self._times = times
-        self._params = params
         self.param_transform = param_transform
-        self._data = self.gen_profile(self._Cs0, self._times, self._params)
+        all_param_dicts = {'o':['kinv', 'k1', 'k2', 'St', 'Et'],
+                            't1':['K', 'V', 'sigma', 'epsilon', 'kappa'],
+                            't2':['K', 'V', 'St', 'epsilon', 'kappa']}
+        self._param_list = all_param_dicts[param_transform]
+        self._true_param_dict = OrderedDict(zip(self._param_list, params))
+        self._data = self.gen_profile(self._Cs0, self._times, self._true_param_dict.values())
         
 
     def of(self, params):
@@ -178,7 +183,6 @@ class MM_System:
             St = sigma*K
             return np.array((K, V, St, epsilon, kappa))
 
-    
 
 ################################################################################
 ################################################################################

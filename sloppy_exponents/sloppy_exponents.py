@@ -15,10 +15,10 @@ class ab_fn:
     def __init__(self, data, times, contour, epsilon):
         """
         Args:
-        data (array): arrray of shape (ndimensions, npts) to be fit
-        times (array): vector of shape (npts,) in which times[i] is the time at which data[:,i] was taken
-        contour (float): contour value of interest
-        epsilon (float): characteristic neighborhood used in dmaps kernel
+            data (array): arrray of shape (ndimensions, npts) to be fit
+            times (array): vector of shape (npts,) in which times[i] is the time at which data[:,i] was taken
+            contour (float): contour value of interest
+            epsilon (float): characteristic neighborhood used in dmaps kernel
         """
         self._data = data
         self._times = times
