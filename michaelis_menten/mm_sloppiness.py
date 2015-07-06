@@ -39,25 +39,28 @@ def mm_contours():
     contour_val = 1e-7
     mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
 
-    conc_profiles = mm_specialization.gen_profile(Cs0, times, true_params)
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(times, conc_profiles[:,0], label='S')
-    ax.plot(times, conc_profiles[:,1], label='C')
-    ax.plot(times, conc_profiles[:,2], label='P')
-    ax.set_xlabel('times')
-    ax.set_ylabel('concentration (potentially dimensionless)')
-    ax.legend(loc=2)
-    plt.show(fig)
+    # # visualize data
+    # conc_profiles = mm_specialization.gen_profile(Cs0, times, true_params)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.plot(times, conc_profiles[:,0], label='S')
+    # ax.plot(times, conc_profiles[:,1], label='C')
+    # ax.plot(times, conc_profiles[:,2], label='P')
+    # ax.set_xlabel('times')
+    # ax.set_ylabel('concentration (potentially dimensionless)')
+    # ax.legend(loc=2)
+    # plt.show(fig)
 
-
-    ds = 1e-6
-    ncontinuation_steps = 50
+    ds = 5e-6
+    ncontinuation_steps = 20
     psa_solver = PSA.PSA(mm_specialization.f, mm_specialization.f_gradient)
-    branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
+    branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps, progress_bar=True)
     plt.plot(branch[:,0], branch[:,1])
     plt.show()
-    
+    err = 0
+    for pt in branch:
+        err = err + np.abs(mm_specialization.f(np.array((pt[0],)), pt[1]))
+    print 'total error along branch:', err
 
 def sample_sloppy_params():
     """Uses mpi4py to parallelize the collection of sloppy parameter sets. The current, naive method is to sample over a noisy grid of points, discarding those whose objective function evaluation exceeds the set tolerance. The resulting sloppy parameter combinations are saved in './data/input'"""

@@ -11,6 +11,7 @@ class MM_Specialization(MM_System):
     Attributes:
         _state_params (list): strings specifying which parameters will be varied during operation, considered to comprise the state of the system
         _continuation_param (str): specifies the parameter that will be changed during continuation methods
+        _contour_val (float): value of the objective function contour being explored
     """
 
     def __init__(self, Cs0, times, params, param_transform, state_params, continuation_param, contour_val):
@@ -48,7 +49,7 @@ class MM_Specialization(MM_System):
             self._variable_param_dict[param] = params[i]
         for param in self._const_params:
             self._variable_param_dict[param] = self._true_param_dict[param]
-        of_eval = np.array((MM_System.of(self, self._variable_param_dict.values()) - self._contour_val,))
+        of_eval = np.array((self.of(self._variable_param_dict.values()) - self._contour_val,))
         return of_eval
 
     def _f(self, params):
@@ -80,3 +81,6 @@ class MM_Specialization(MM_System):
         return np.array(((of_gradient),))
                                                                                                                 
             
+
+
+

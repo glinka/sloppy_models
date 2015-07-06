@@ -30,13 +30,16 @@ def hessian(f, x, h=1e-8):
             hessian[j,i] = hessian[i,j]
     return hessian
 
-def gradient(f, x, h=1e-8):
+def gradient(f, x, h=1e-4):
     """Evaluates a centered finite-difference approximation of the *gradient* of 'f' at 'x' using stepsize 'h'
 
     Args:
         f (function): function :math:`R^n \\rightarrow R` for which we approximate the gradient
         x (array): shape (n,) vector at which to approximate the gradient
         h (float): stepsize to be used in approximation
+
+    .. note:
+        This method is **terribly sensitive to 'h'** in the case of the Michaelis Menten system
 
     >>> f = lambda x: x[0]**2 + x[1]**2 + x[2]**2 + x[0]*x[1] + x[1]*x[2] # x**2 + y**2 + z**2 + x*y + y*z
     >>> x = np.ones(3)
@@ -49,5 +52,5 @@ def gradient(f, x, h=1e-8):
         # set offset in proper position of a unit vector but first unset previous changes
         ioffset[i-1] = 0
         ioffset[i] = h
-        gradient[i] = (f(x+ioffset) - f(x-ioffset))/(2*h) # centered finite diff approx to df/dxdx
+        gradient[i] = (f(x+ioffset) - f(x-ioffset))/(2*h) # centered finite diff approx to df/dx
     return gradient

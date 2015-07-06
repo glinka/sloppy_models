@@ -25,7 +25,7 @@ class Newton:
         self._fargs = fargs
         self._Dfargs = Dfargs
 
-    def find_zero(self, x0, abstol=1e-7, reltol=1e-7, maxiters=100000):
+    def find_zero(self, x0, abstol=1e-9, reltol=1e-9, maxiters=10000, damping=0):
         """Attempts to find a zero of 'f' through Newton-GMRES, terminating when :math:`\\|F(x_k)\\| \\leq reltol*\\|F(x_0)\\| + abstol`
 
         Args:
@@ -35,10 +35,10 @@ class Newton:
             abstol (float): absolute tolerance for Newton iteration 
             reltol (float): relative tolerance **both for Newton iteration and inner GMRES iteration**
             maxiters (int): maximum number of iterations to attempt
+            damping (float): damping factor for newton update, representing the scaling of the update, i.e. :math:`x^{k+1} = x^k + (1 - \kappa) dx^k`, where :math:`\kappa` is the damping factor. Thus 'damping=0' corresponds to no damping, while 'damping=1' corresponds to no update.                                                                                                        
 
         .. note::
-
-        scipy's implementation of GMRES exits after 20 iterations by default, and when either the absolute **or** relative errors are less than the input kwarg 'tol'
+            scipy's implementation of GMRES exits after 20 iterations by default, and when either the absolute **or** relative errors are less than the input kwarg 'tol'
 
         """
         # copy x0 to avoid bizarre behavior
@@ -51,7 +51,7 @@ class Newton:
 
         while error > totaltol and iters < maxiters:
             # update with output of linear solver
-            x = x + spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)[0]
+            x = x + (1 - damping)*spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)[0]
             error = np.linalg.norm(self._f(x, *self._fargs))
             iters = iters + 1
         if iters < maxiters:

@@ -40,7 +40,7 @@ class MM_System:
         """Returns value of *original* least-squares objective fn. used to fit concentration of P, i.e. in terms of :math:`(k_{inv}, k_1, k_2, S_t, E_t)`
 
         Args:
-            params (array): the parameter set :math:`(k_{inv}, k_1, k_2, S_t, E_t)` at which to evaluate the objective function, 
+            params (array): the parameter set at which to evaluate the objective function, expressed according to the paramter set 'param_transform'
 
         Returns:
             of_eval (float): value of objective function, given by :math:`C(k_{inv}, k_1, k_2, S_t, E_t) = \sum_i^N (P(t_i; k_{inv}, k_1, k_2, S_t, E_t) - \hat{P_i})^2` where :math:`\hat{P_i}` is the :math:`i^{th}` data point to be fit

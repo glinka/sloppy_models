@@ -4,7 +4,7 @@
    :synopsis: Basic implementation of pseudo-arclength continuation algorithm
 """
 
-from util_fns import progress_bar
+import util_fns as uf
 import numpy as np
 import scipy.sparse.linalg as spla
 import Newton
@@ -83,7 +83,7 @@ class PSA:
         return f
 
 
-    def find_branch(self, x0, k0, ds, nsteps, progress_bar=False):
+    def find_branch(self, x0, k0, ds, nsteps, progress_bar=False, **kwargs):
         """Continues along the branch of values for which :math:`f(x,k)=0` via pseudo-arclength continuation
 
         Args:
@@ -106,7 +106,7 @@ class PSA:
         Df_init = lambda x: self._Df(x, k0)[:n,:n]
         # find initial point on branch
         newton_solver = Newton.Newton(f_init, Df_init)
-        xstart = newton_solver.find_zero(x0)
+        xstart = newton_solver.find_zero(x0, **kwargs)
         # append parameter value
         xstart = np.hstack((xstart, k0))
         # find initial slopes
@@ -131,14 +131,14 @@ class PSA:
             xprime = np.copy(xprime_start)
             for i in range(halfnsteps):
                 if progress_bar:
-                    progress_bar(k*halfnsteps + i + 1, nsteps)
+                    uf.progress_bar(k*halfnsteps + i + 1, nsteps)
                 # initial guess for next point on branch
                 x0 = x + xprime*ds
                 # save previous value for arclength eqn
                 xprev = np.copy(x)
                 # update parameter values for f and Df in newton solver
                 newton_solver.change_parameters([xprev, xprime, ds], [xprime])
-                x = newton_solver.find_zero(x0)
+                x = newton_solver.find_zero(x0, **kwargs)
                 # use finite diff approx for xprime
                 xprime = (x - xprev)/ds
                 # normalize
