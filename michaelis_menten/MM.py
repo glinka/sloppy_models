@@ -56,14 +56,14 @@ class MM_System:
         # initial concentrations
         Cs0 = np.array((S0, C0, P0))
         # pack up enzyme parameters to pass
-        enzyme_profile = self.gen_profile(Cs0, self._times, params)
         # check if enzyme_profile was succesfully computed
-        if enzyme_profile[0] is not False:
+        try:
+            enzyme_profile = self.gen_profile(Cs0, self._times, params)
+        except IntegrationError:
+            raise
+        else:
             of_eval = np.sum(np.power(enzyme_profile[:,2] - self._data[:,2], 2))
             return of_eval
-        else:
-            print '******* received a profile that was set to False, of has been set to False *******'
-            return False
 
     def gen_profile(self, Cs0, times, params):
         """Generates the concentration profiles of the MM species based on the initial concentrations 'Cs0' and parameters 'params', all evaluated at the times given in 'times'
@@ -90,9 +90,7 @@ class MM_System:
         for i, t in enumerate(times):
             profile[i] = self._integrator.integrate(t)
             if not self._integrator.successful():
-                print '******* ode failed somehow, profile has been set to False *******'
-                # very graceful failure
-                return [False]
+                raise IntegrationError
         return profile
 
         

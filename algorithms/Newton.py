@@ -45,25 +45,32 @@ class Newton:
         x = np.copy(x0)
         iters = 0
         # need init_error for reltol
-        init_error = np.linalg.norm(self._f(x0, *self._fargs))
+        try:
+            init_error = np.linalg.norm(self._f(x0, *self._fargs))
+        except EvalError:
+            raise
         error = init_error
         totaltol = init_error*reltol + abstol
 
         while error > totaltol and iters < maxiters:
             # update with output of linear solver
-            x = x + (1 - damping)*spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)[0]
-            error = np.linalg.norm(self._f(x, *self._fargs))
+            try:
+                x = x + (1 - damping)*spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)[0]
+                error = np.linalg.norm(self._f(x, *self._fargs))
+            except EvalError:
+                raise
             iters = iters + 1
         if iters < maxiters:
             # converged, return
             return x
         else:
-            # TODO: probably should raise some error
-            print '******************************'
-            print 'failed to converge within total tolerance:', totaltol
-            print 'output error:', error
-            print '******************************'
-            return False
+            raise ConvergenceError
+            # # TODO: probably should raise some error
+            # print '******************************'
+            # print 'failed to converge within total tolerance:', totaltol
+            # print 'output error:', error
+            # print '******************************'
+            # return False
 
     def change_parameters(self, fargs, Dfargs):
         """Updates the optional arguments to both f and Df

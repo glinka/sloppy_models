@@ -20,7 +20,12 @@ from collections import OrderedDict
 solarize()
 
 def mm_contours():
-    """Finds contours of the MM objective function: either one-dimensional curves or two-dimensional surfaces"""
+    """Finds contours of the MM objective function: either one-dimensional curves or two-dimensional surfaces. Distributes computation across processors with mpi4py"""
+    # init MPI
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    nprocs = comm.Get_size()
+
     # set up base system
     params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
     true_params = np.array(params.values())
@@ -36,8 +41,8 @@ def mm_contours():
     npts = 20
     times = tscale*np.linspace(1,npts,npts)/5.0
     # use these params, concentrations and times to define the MM system
-    contour_val = 1e-7
-    mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
+    # contour_val = 1e-7
+    # mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
 
     # # visualize data
     # conc_profiles = mm_specialization.gen_profile(Cs0, times, true_params)
@@ -51,16 +56,43 @@ def mm_contours():
     # ax.legend(loc=2)
     # plt.show(fig)
 
-    ds = 5e-6
+    # define range of V values over which to find level sets
+    npts_per_proc = 4
+    contour_vals = np.logspace(-7,-1,npts_per_proc*nprocs) # countour values of interest
+    ds = 1e-5
     ncontinuation_steps = 20
-    psa_solver = PSA.PSA(mm_specialization.f, mm_specialization.f_gradient)
-    branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps, progress_bar=True)
-    plt.plot(branch[:,0], branch[:,1])
-    plt.show()
-    err = 0
-    for pt in branch:
-        err = err + np.abs(mm_specialization.f(np.array((pt[0],)), pt[1]))
-    print 'total error along branch:', err
+    # branch = np.empty((ncontinuation_steps*npts_per_proc, 2))
+    # current_index = 0
+    for i, contour_val in enumerate(contour_vals[rank*npts_per_proc:(rank+1)*npts_per_proc]):
+        mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
+        psa_solver = PSA.PSA(mm_specialization.f, mm_specialization.f_gradient)
+        branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
+        np.savetxt('./data/output/contour_' + str(contour_val) + '.csv', branch, delimiter=',')
+        # # 'find_branch' may not actually find 'ncontinuation_steps' branch points, so only add those points that were successfully found
+        # partial_branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
+        # nadditional_branch_pts = partial_branch.shape[0]
+        # branch[current_index:current_index+nadditional_branch_pts] = partial_branch
+        # current_index = current_index + nadditional_branch_pts
+    # branch = branch[:current_index]
+    # full_branch = comm.gather(branch, root=0)
+    # if rank is 0:
+    #     full_branch = np.concatenate(full_branch)
+    #     full_npts = full_branch.shape[0]
+    #     # create fileheader specifying which params were investigated, e.g. K=True,V=False,St=True,eps=True,kappa=False
+    #     file_header = state_params[0] + '=True,' + continuation_param + '=True,transform_id=' + transform_id
+    #     # remove trailing comma
+    #     np.savetxt('./data/input/sloppy_contours' + str(full_npts) + '.csv', full_branch, delimiter=',', header=file_header, comments='')
+    #     print '************************************************************'
+    #     print 'generated', full_npts, 'new points with min obj. fn. value of', np.min(full_branch[:,-1])
+    #     print 'saved in ./data/input/sloppy_params' + str(full_npts) + '.csv'
+    #     print '************************************************************'
+    
+    # plt.plot(branch[:,0], branch[:,1])
+    # plt.show()
+    # err = 0
+    # for pt in branch:
+    #     err = err + np.abs(mm_specialization.f(np.array((pt[0],)), pt[1]))
+    # print 'total error along branch:', err
 
 def sample_sloppy_params():
     """Uses mpi4py to parallelize the collection of sloppy parameter sets. The current, naive method is to sample over a noisy grid of points, discarding those whose objective function evaluation exceeds the set tolerance. The resulting sloppy parameter combinations are saved in './data/input'"""
