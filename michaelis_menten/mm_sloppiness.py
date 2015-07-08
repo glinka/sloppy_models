@@ -1,5 +1,6 @@
 """Uses modules :py:mod:`MM` and :py:mod:`Hessian` to investigate the sloppiness Michaelis Menten parameters"""
 
+import algorithms.CustomErrors as CustomErrors
 import MM
 import dmaps
 import dmaps_kernels
@@ -57,7 +58,7 @@ def mm_contours():
     # plt.show(fig)
 
     # define range of V values over which to find level sets
-    npts_per_proc = 4
+    npts_per_proc = 2
     contour_vals = np.logspace(-7,-1,npts_per_proc*nprocs) # countour values of interest
     ds = 1e-5
     ncontinuation_steps = 20
@@ -66,8 +67,12 @@ def mm_contours():
     for i, contour_val in enumerate(contour_vals[rank*npts_per_proc:(rank+1)*npts_per_proc]):
         mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
         psa_solver = PSA.PSA(mm_specialization.f, mm_specialization.f_gradient)
-        branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
-        np.savetxt('./data/output/contour_' + str(contour_val) + '.csv', branch, delimiter=',')
+        try:
+            branch = psa_solver.find_branch(np.array((params['K'],)), params['V']+1e-3, ds, ncontinuation_steps)
+        except CustomErrors.PSAError:
+            continue
+        else:
+            np.savetxt('./data/output/contour_' + str(contour_val) + '.csv', branch, delimiter=',')
         # # 'find_branch' may not actually find 'ncontinuation_steps' branch points, so only add those points that were successfully found
         # partial_branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
         # nadditional_branch_pts = partial_branch.shape[0]

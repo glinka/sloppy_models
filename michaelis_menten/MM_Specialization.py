@@ -1,5 +1,6 @@
 """Provides functions that evaluate the objective function and corresponding Jacobian/gradient while keeping a specific set of parameters constant. Used with PseudoArclengthContinuation module to find contours of the MM system"""
 
+import algorithms.CustomErrors as CustomErrors
 from MM import MM_System
 from algorithms.Derivates import gradient
 from collections import OrderedDict
@@ -49,7 +50,10 @@ class MM_Specialization(MM_System):
             self._variable_param_dict[param] = params[i]
         for param in self._const_params:
             self._variable_param_dict[param] = self._true_param_dict[param]
-        of_eval = np.array((self.of(self._variable_param_dict.values()) - self._contour_val,))
+        try:
+            of_eval = np.array((self.of(self._variable_param_dict.values()) - self._contour_val,))
+        except CustomErrors.EvalError:
+            raise
         return of_eval
 
     def _f(self, params):
@@ -77,7 +81,10 @@ class MM_Specialization(MM_System):
         combined_params = np.empty(params.shape[0] + 1)
         combined_params[:-1] = params
         combined_params[-1] = continuation_param
-        of_gradient = gradient(self._f, combined_params)
+        try:
+            of_gradient = gradient(self._f, combined_params)
+        except CustomErrors.EvalError:
+            raise
         return np.array(((of_gradient),))
                                                                                                                 
             

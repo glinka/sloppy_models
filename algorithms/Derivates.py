@@ -1,5 +1,6 @@
 """Numerical calculation of the Hessian of an objective function through centered finite differences"""
 
+import CustomErrors
 import numpy as np
 
 def hessian(f, x, h=1e-8):
@@ -52,5 +53,8 @@ def gradient(f, x, h=1e-4):
         # set offset in proper position of a unit vector but first unset previous changes
         ioffset[i-1] = 0
         ioffset[i] = h
-        gradient[i] = (f(x+ioffset) - f(x-ioffset))/(2*h) # centered finite diff approx to df/dx
+        try:
+            gradient[i] = (f(x+ioffset) - f(x-ioffset))/(2*h) # centered finite diff approx to df/dx
+        except CustomErrors.EvalError:
+            raise
     return gradient

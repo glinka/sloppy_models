@@ -4,6 +4,7 @@
    :synopsis: Basic implementation of pseudo-arclength continuation algorithm
 """
 
+import CustomErrors
 import util_fns as uf
 import numpy as np
 import scipy.sparse.linalg as spla
@@ -55,7 +56,7 @@ class PSA:
         Df_arclength = np.empty((n+1, n+1))
         try:
             Df_arclength[:n,:] = self._Df(x[:n],x[n])
-        except EvalError:
+        except (EvalError, ConvergenceError):
             raise
         Df_arclength[n,:] = xprime
         return Df_arclength
@@ -82,7 +83,7 @@ class PSA:
         f = np.empty(n+1)
         try:
             f[:n] = self._f(x[:n], x[n])
-        except EvalError:
+        except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
             raise
         f[n] = np.dot(x[:n] - xprev[:n], xprime[:n]) + (x[n] - xprev[n])*xprime[n]  - ds
         return f
@@ -113,8 +114,8 @@ class PSA:
         newton_solver = Newton.Newton(f_init, Df_init)
         try:
             xstart = newton_solver.find_zero(x0, **kwargs)
-        except EvalError:
-            raise
+        except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
+            raise CustomErrors.PSAError
         # append parameter value
         xstart = np.hstack((xstart, k0))
         # find initial slopes
@@ -124,7 +125,7 @@ class PSA:
         # note that tempslopes is also rhs of initial slope calc (see Auto notes)
         try:
             xprime = spla.gmres(self._Df_arclength(xstart, tempslopes), tempslopes)[0]
-        except EvalError:
+        except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
             raise
         # normalize
         xprime_start = xprime/np.linalg.norm(xprime)
@@ -168,18 +169,18 @@ class PSA:
                     # normalize
                     xprime = xprime/np.linalg.norm(xprime)
                     branch_pts[k*ncompleted_pts + i] = np.copy(x)
-            except EvalError:
+            except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
                 # continue from ncompleted_pts
                 if k == 0:
                     ncompleted_pts = i
                     continue
                 # k == 1, copy initial point from end of 'branch' and return whatever was successfully found
                 else:
-                    branch[ncompleted_pts + i] = branch[-1]
-                    return branch[:ncompleted_pts + i + 1]
+                    branch_pts[ncompleted_pts + i] = branch_pts[-1]
+                    return branch_pts[:ncompleted_pts + i + 1]
             else:
                 ncompleted_pts = halfnsteps
         # could have encountered error when k==0, no error when k==1: adjust accordingly
-        branch[ncompleted_pts + halfnsteps] = branch[-1]
-        return branch[:ncompleted_pts + halfnsteps + 1]
+        branch_pts[ncompleted_pts + halfnsteps] = branch_pts[-1]
+        return branch_pts[:ncompleted_pts + halfnsteps + 1]
 

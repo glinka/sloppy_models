@@ -1,3 +1,4 @@
+import CustomErrors
 import numpy as np
 import scipy.sparse.linalg as spla
 
@@ -47,7 +48,7 @@ class Newton:
         # need init_error for reltol
         try:
             init_error = np.linalg.norm(self._f(x0, *self._fargs))
-        except EvalError:
+        except CustomErrors.EvalError:
             raise
         error = init_error
         totaltol = init_error*reltol + abstol
@@ -57,14 +58,14 @@ class Newton:
             try:
                 x = x + (1 - damping)*spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)[0]
                 error = np.linalg.norm(self._f(x, *self._fargs))
-            except EvalError:
+            except CustomErrors.EvalError:
                 raise
             iters = iters + 1
         if iters < maxiters:
             # converged, return
             return x
         else:
-            raise ConvergenceError
+            raise CustomErrors.ConvergenceError
             # # TODO: probably should raise some error
             # print '******************************'
             # print 'failed to converge within total tolerance:', totaltol

@@ -1,5 +1,6 @@
 """A class and functions related to Michaelis Menten kinetics"""
 
+import algorithms.CustomErrors as CustomErrors
 import numpy as np
 import scipy.integrate as spint
 from sympy import Function, dsolve, Eq, Derivative, symbols
@@ -59,7 +60,7 @@ class MM_System:
         # check if enzyme_profile was succesfully computed
         try:
             enzyme_profile = self.gen_profile(Cs0, self._times, params)
-        except IntegrationError:
+        except CustomErrors.IntegrationError:
             raise
         else:
             of_eval = np.sum(np.power(enzyme_profile[:,2] - self._data[:,2], 2))
@@ -90,7 +91,7 @@ class MM_System:
         for i, t in enumerate(times):
             profile[i] = self._integrator.integrate(t)
             if not self._integrator.successful():
-                raise IntegrationError
+                raise CustomErrors.IntegrationError
         return profile
 
         
