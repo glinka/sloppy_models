@@ -2,7 +2,7 @@
 
 import algorithms.CustomErrors as CustomErrors
 from MM import MM_System
-from algorithms.Derivates import gradient
+from algorithms.Derivatives import gradient
 from collections import OrderedDict
 import numpy as np
     
