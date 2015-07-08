@@ -1,7 +1,7 @@
 """Provides functions that evaluate the objective function and corresponding Jacobian/gradient while keeping a specific set of parameters constant. Used with PseudoArclengthContinuation module to find contours of the MM system"""
 
 from MM import MM_System
-from algorithms.Derivates import gradient
+from algorithms.Derivatives import gradient
 from collections import OrderedDict
 import numpy as np
     

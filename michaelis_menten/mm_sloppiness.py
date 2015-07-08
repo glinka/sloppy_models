@@ -4,7 +4,7 @@ import MM
 import dmaps
 import dmaps_kernels
 import plot_dmaps
-from algorithms.Derivates import hessian
+from algorithms.Derivatives import hessian
 import algorithms.PseudoArclengthContinuation as PSA
 import MM_Specialization as MMS
 from solarized import solarize
