@@ -25,7 +25,9 @@ class MM_System:
         """Completely specifies the objective fn. value given some set of test parameters"""
         # set up stiff integrator, mimicking ode15s from MATLAB
         self._integrator = spint.ode(self._enzyme_rhs)
-        self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
+        # uncomment the following line and comment out the 'lsoda' integrator for a stabler method, but one that is about 1000 times slower
+        # self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
+        self._integrator.set_integrator('lsoda')
         self._Cs0 = Cs0
         self._times = times
         self.param_transform = param_transform

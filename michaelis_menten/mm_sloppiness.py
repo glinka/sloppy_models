@@ -1,5 +1,6 @@
 """Uses modules :py:mod:`MM` and :py:mod:`Hessian` to investigate the sloppiness Michaelis Menten parameters"""
 
+import util_fns as uf
 import algorithms.CustomErrors as CustomErrors
 import MM
 import dmaps
@@ -19,6 +20,126 @@ from collections import OrderedDict
 
 # switch to nicer color scheme
 solarize()
+
+def mm_contour_grid_mpi():
+    """Calculates three-dimensional contours in K/V/S_t space in parallel through mpi4py, distributing S_t values over different processes and saving the output in './data/of_evals.csv'"""
+    # init MPI
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    nprocs = comm.Get_size()
+    nks = 1000 # number of K vals to sample
+    nvs = 1000 # number of S vals to sample
+    nsts = 18 # number of S_t vals to sample
+    npts_per_proc = nsts/nprocs # number of St values to distribute to each processor
+    Ks = 2*np.logspace(-1, 3, nks) # k vals
+    Vs = np.logspace(-1, 3, nvs) # v vals
+    Sts = np.logspace(-3, 1, nsts) # st vals
+
+    # set up base system
+    params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
+    true_params = np.array(params.values())
+    nparams = true_params.shape[0]
+    transform_id = 't2'
+    state_params = ['K']
+    continuation_param = 'V'
+    # set init concentrations
+    S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
+    Cs0 = np.array((S0, C0, P0))
+    # set times at which to collect data
+    tscale = (params['St'] + params['K'])/params['V'] # timescale of slow evolution
+    npts = 20
+    times = tscale*np.linspace(1,npts,npts)/5.0
+    # use these params, concentrations and times to define the MM system
+    MM_system = MM.MM_System(Cs0, times, true_params, transform_id)
+
+    #  loop over all parameter combinations
+    test_params = true_params # parameter values that will be passed to 'of'
+    tol = 0.1 # ob. fn. tolerance
+    kept_pts = np.empty((npts_per_proc*nvs*nks,4)) # storage for parameter combinations that pass obj. fn. tol.
+    count = 0 # counter of number of parameter combinations that pass tolerance
+    for St in Sts[rank*npts_per_proc:(rank+1)*npts_per_proc]:
+        for K in Ks:
+            for V in Vs:
+                # change K,V,St values, keep if of below tol
+                test_params[:3] = (K, V, St)
+                try:
+                    of_eval = MM_system.of(test_params)
+                    if of_eval < tol:
+                        kept_pts[count] = (K, V, St, of_eval)
+                        count = count + 1
+                except CustomErrors.EvalError:
+                    continue
+    # gather all the points to root and save
+    kept_pts = kept_pts[:count]
+    all_pts = comm.gather(kept_pts, root=0)
+    if rank is 0:
+        full_pts = np.concatenate(all_pts)
+        np.savetxt('./data/of_evals.csv', full_pts, delimiter=',')
+
+def mm_contour_grid():
+    nks = 1000
+    nvs = 1000
+    Ks = 2*np.logspace(-1, 3, nks)
+    Vs = np.logspace(-1, 3, nvs)
+    if os.path.isfile('./of_evals.csv'):
+        kept_pts = np.genfromtxt('./of_evals.csv', delimiter=',')
+        count = kept_pts.shape[0]
+    else:
+        # set up base system
+        params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
+        true_params = np.array(params.values())
+        nparams = true_params.shape[0]
+        transform_id = 't2'
+        state_params = ['K']
+        continuation_param = 'V'
+        # set init concentrations
+        S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
+        Cs0 = np.array((S0, C0, P0))
+        # set times at which to collect data
+        tscale = (params['St'] + params['K'])/params['V'] # timescale of slow evolution
+        npts = 20
+        times = tscale*np.linspace(1,npts,npts)/5.0
+        # use these params, concentrations and times to define the MM system
+        MM_system = MM.MM_System(Cs0, times, true_params, transform_id)
+        print 'ofeval', MM_system.of(params.values())
+        of_evals = np.empty((nks, nvs))
+        test_params = true_params
+        ndiscarded = 0
+        kept_pts = np.empty((nks*nvs,3))
+        tol = 0.1
+        count = 0
+        for i, K in enumerate(Ks):
+            uf.progress_bar(i+1, nks)
+            for j, V in enumerate(Vs):
+                test_params[0] = K
+                test_params[1] = V
+                try:
+                    # of_evals[i,j] = MM_system.of(test_params)
+                    of_eval = MM_system.of(test_params)
+                    if of_eval < tol:
+                        kept_pts[count,0] = K
+                        kept_pts[count,1] = V
+                        kept_pts[count,2] = of_eval
+                        count = count + 1
+                except CustomErrors.EvalError:
+                    ndiscarded = ndiscarded + 1
+                    continue
+        np.savetxt('./of_evals.csv', kept_pts, delimiter=',')
+        print 'threw away', ndiscarded, 'pts'
+
+    vgrid, kgrid = np.meshgrid(Vs, Ks)
+    solarize('light')
+    # plt.imshow(of_evals)
+    # plt.show()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    plot = ax.scatter(kept_pts[:count,0], kept_pts[:count,1], c=kept_pts[:count,2], s=5, lw=0)
+    ax.set_xlabel('K')
+    ax.set_ylabel('V')
+    plt.colorbar(plot)
+    plt.show(fig)
 
 def mm_contours():
     """Finds contours of the MM objective function: either one-dimensional curves or two-dimensional surfaces. Distributes computation across processors with mpi4py"""
@@ -63,7 +184,7 @@ def mm_contours():
     ds = 1e-5
     ncontinuation_steps = 20
     # branch = np.empty((ncontinuation_steps*npts_per_proc, 2))
-    # current_index = 0
+    # current_index = 0 
     for i, contour_val in enumerate(contour_vals[rank*npts_per_proc:(rank+1)*npts_per_proc]):
         mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
         psa_solver = PSA.PSA(mm_specialization.f, mm_specialization.f_gradient)
@@ -269,4 +390,6 @@ def check_sloppiness():
 if __name__=='__main__':
     # sample_sloppy_params()
     # check_sloppiness()
-    mm_contours()
+    # mm_contours()
+    # mm_contour_grid()
+    mm_contour_grid_mpi()
