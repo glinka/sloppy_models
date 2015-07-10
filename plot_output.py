@@ -1,4 +1,5 @@
 import matplotlib.colors as colors
+import matplotlib.cm as cm
 import matplotlib.colorbar as colorbar
 import matplotlib.gridspec as gs
 import matplotlib.ticker as ticker
@@ -90,6 +91,7 @@ def plot_of_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/'):
     gspec = gs.GridSpec(6,6)
     # set up consistent norm for obj. fn. values
     colornorm = colors.Normalize(vmin=np.log10(np.min(data[:,-1])), vmax=np.log10(np.max(tols)))
+    colormap = cm.ScalarMappable(norm=colornorm, cmap='jet')
     format_fn = lambda val, pos: "%.2f" % val
     # set plot constants
     plt.rcParams['font.size'] = 12
@@ -113,7 +115,7 @@ def plot_of_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/'):
                     ax_cb = fig.add_subplot(gspec[:,5]) # colobar axis
                     ax.set_xscale('log')
                     ax.set_yscale('log')
-                    plot = ax.scatter(data_to_plot[:,0], data_to_plot[:,1], c=np.log10(data_to_plot[:,3]))
+                    plot = ax.scatter(data_to_plot[:,0], data_to_plot[:,1], c=colormap.to_rgba(np.log10(data_to_plot[:,3])))
                     ax.set_xlim((kmin, kmax))
                     ax.set_ylim((vmin, vmax))
                     ax.set_xlabel('K')
