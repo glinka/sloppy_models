@@ -1,3 +1,7 @@
+import matplotlib.colors as colors
+import matplotlib.colorbar as colorbar
+import matplotlib.gridspec as gs
+import matplotlib.ticker as ticker
 import argparse
 import os
 import util_fns as uf
@@ -72,6 +76,53 @@ def committee_meeting_sloppiness():
     plt.tight_layout()
     plt.savefig('./figs/committee/noisey_ks.png')
     
+def plot_of_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/'):
+    """Plots contours of the MM objective function, where each row of 'data' is (K, V, St, of_eval), looping over unique St values and plotting slices in the K/V plane"""
+    tols = np.logspace(2*np.min(data[:-1]), 1, 20)
+    # get data
+    # data = np.genfromtxt('/home/cbe-ygk-10/holiday/of_evals_tol0.1.csv', delimiter=',')
+    # data = np.genfromtxt('./data/of_evals.csv', delimiter=',')
+    npts = data.shape[0]
+    kmin = np.min(data[:,0]); kmax = np.max(data[:,0])
+    vmin = np.min(data[:,1]); vmax = np.max(data[:,1])
+
+    # set up some plotting stuff
+    gspec = gs.GridSpec(6,6)
+    # set up consistent norm for obj. fn. values
+    colornorm = colors.Normalize(vmin=np.log10(np.min(data[:,-1])), vmax=np.log10(np.max(tols)))
+    format_fn = lambda val, pos: "%.2f" % val
+    # set plot constants
+    plt.rcParams['font.size'] = 12
+
+    current_pt = data[0]
+    last_index = 0
+
+    # loop over all points, creating separate plot for each value of St
+    for k, tol in enumerate(tols):
+        for i in range(1,npts):
+            # only plot if new St has been found, or if end of file is reached
+            if data[i,2] != current_pt[2] or i == npts-1:
+                current_pt = data[i]
+                data_to_plot = data[last_index:i-1]
+                data_to_plot = data_to_plot[data_to_plot[:,-1] < tol]
+                last_index = i
+                # if there are points, plot them
+                if data_to_plot.shape[0] > 0:
+                    fig = plt.figure()
+                    ax = fig.add_subplot(gspec[:,:5]) # plotting axis
+                    ax_cb = fig.add_subplot(gspec[:,5]) # colobar axis
+                    ax.set_xscale('log')
+                    ax.set_yscale('log')
+                    plot = ax.scatter(data_to_plot[:,0], data_to_plot[:,1], c=np.log10(data_to_plot[:,3]))
+                    ax.set_xlim((kmin, kmax))
+                    ax.set_ylim((vmin, vmax))
+                    ax.set_xlabel('K')
+                    ax.set_ylabel('V')
+                    ax.set_title(r'$S_t=$' + str(data[i-1,2]))
+                    cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
+                    plt.savefig(dir + 'contours_S' + str(data[i-1,2]) + '_tol' + str(k) + '.png')
+                    plt.close()
+
 def plot_eigvals(eigvals, **kwargs):
     """Plots eigenvalues. Done."""
     fig = plt.figure()
@@ -94,12 +145,13 @@ def main():
     parser.add_argument('--of-coloring', action='store_true', default=False, help="plots the k1, k2 plane colored by obj. fn. value")
     parser.add_argument('--kplane-coloring', action='store_true', default=False, help="plots k1, k2 plane colored by successive DMAP eigenvectors")
     parser.add_argument('--param-surface', action='store_true', default=False, help="plots parameters from 'sloppy_params.csv' in three-dimensional space")
+    parser.add_argument('--of-contours', action='store_true', default=False, help="plots contours of the objective function, where the input data is a (npts, 4) array whose rows are (K, V, St, of_eval)")
     args = parser.parse_args()
     # import data from files
     # organize each dataset by file header, then by type of data as a dictionary of dictionaries. Each entry of 'dataset' should correspond to dictionary with keys given by 'data_types' and values of actual data. dataset -> data type -> raw data
     # the overarching 'datasets' dict is not meant to be indexed by its keys which are convoluted tuples created from the header, but rather it is intended to be used as an interable in a "for d in datasets" fashion
     datasets = {}
-    data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums']
+    data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums', 'contours']
     for filename in args.input_files:
         # only import csv files
         if filename[-4:] == ".csv":
@@ -152,7 +204,9 @@ def main():
         if args.param_surface:
             # assume only three parameters have been used for investigation and plot the values in log-space
             plot_dmaps.plot_xyz(dataset['sloppy_params'][:,0], dataset['sloppy_params'][:,1], dataset['sloppy_params'][:,2], xlabel=r'$K_M$', ylabel=r'$V_M$', zlabel=r'$\epsilon$', color=dataset['sloppy_params'][:,2], labelsize=24)
-
+        if args.of_contours:
+            print 'loaded data, plotting'
+            plot_of_contours(dataset['contours'])
 
 
 if __name__=="__main__":

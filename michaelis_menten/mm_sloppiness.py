@@ -29,11 +29,11 @@ def mm_contour_grid_mpi():
     nprocs = comm.Get_size()
     nks = 1000 # number of K vals to sample
     nvs = 1000 # number of S vals to sample
-    nsts = 18 # number of S_t vals to sample
+    nsts = 6 # number of S_t vals to sample
     npts_per_proc = nsts/nprocs # number of St values to distribute to each processor
     Ks = 2*np.logspace(-1, 3, nks) # k vals
     Vs = np.logspace(-1, 3, nvs) # v vals
-    Sts = np.logspace(-3, 1, nsts) # st vals
+    Sts = 2*np.logspace(-0.5, 0.5, nsts) # st vals
 
     # set up base system
     params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
@@ -64,11 +64,11 @@ def mm_contour_grid_mpi():
                 test_params[:3] = (K, V, St)
                 try:
                     of_eval = MM_system.of(test_params)
-                    if of_eval < tol:
-                        kept_pts[count] = (K, V, St, of_eval)
-                        count = count + 1
                 except CustomErrors.EvalError:
                     continue
+                else:
+                    kept_pts[count] = (K, V, St, of_eval)
+                    count = count + 1
     # gather all the points to root and save
     kept_pts = kept_pts[:count]
     all_pts = comm.gather(kept_pts, root=0)
