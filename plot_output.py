@@ -77,9 +77,9 @@ def committee_meeting_sloppiness():
     plt.tight_layout()
     plt.savefig('./figs/committee/noisey_ks.png')
     
-def plot_of_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/'):
+def plot_of_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/', plot_3d=False):
     """Plots contours of the MM objective function, where each row of 'data' is (K, V, St, of_eval), looping over unique St values and plotting slices in the K/V plane"""
-    tols = np.logspace(2*np.min(data[:-1]), 1, 20)
+    tols = np.logspace(1.1*np.min(data[:-1]), 1, 20)
     # get data
     # data = np.genfromtxt('/home/cbe-ygk-10/holiday/of_evals_tol0.1.csv', delimiter=',')
     # data = np.genfromtxt('./data/of_evals.csv', delimiter=',')
@@ -100,14 +100,15 @@ def plot_of_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/'):
     last_index = 0
 
     # loop over all points, creating separate plot for each value of St
-    for k, tol in enumerate(tols):
-        for i in range(1,npts):
-            # only plot if new St has been found, or if end of file is reached
-            if data[i,2] != current_pt[2] or i == npts-1:
-                current_pt = data[i]
-                data_to_plot = data[last_index:i-1]
-                data_to_plot = data_to_plot[data_to_plot[:,-1] < tol]
-                last_index = i
+    for i in range(1,npts):
+        # only plot if new St has been found, or if end of file is reached
+        if data[i,2] != current_pt[2] or i == npts-1:
+            current_pt = data[i]
+            data_to_plot = data[last_index:i-1]
+            last_index = i
+
+            for k, tol in enumerate(tols[::-1]):
+                data_to_plot = data_to_plot[data_to_plot[:,-1] < tol] # filter out points whose of value is greater than 'tol'
                 # if there are points, plot them
                 if data_to_plot.shape[0] > 0:
                     fig = plt.figure()
@@ -124,6 +125,28 @@ def plot_of_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/'):
                     cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
                     plt.savefig(dir + 'contours_S' + str(data[i-1,2]) + '_tol' + str(k) + '.png')
                     plt.close()
+
+    if plot_3d:
+        min_tol = 0.9; max_tol = 1.0
+        data_to_plot_3d = data[data[:,-1] < max_tol]
+        data_to_plot_3d = data_to_plot_3d[data_to_plot_3d[:,-1] > min_tol]
+        if data_to_plot_3d.shape[0] > 0:
+            # data_to_plot_3d = data_to_plot_3d[:count]
+            fig = plt.figure()
+            ax = fig.add_subplot(gspec[:,:5], projection='3d') # plotting axis
+            ax_cb = fig.add_subplot(gspec[:,5]) # colobar axis
+            # ax.xaxis.set_scale('log')
+            # ax.yaxis.set_scale('log')
+            # ax.zaxis.set_scale('log')
+            ax.scatter(np.log10(data_to_plot_3d[:,0]), np.log10(data_to_plot_3d[:,1]), data_to_plot_3d[:,2], c=colormap.to_rgba(np.log10(data_to_plot_3d[:,-1])))
+            ax.set_xlabel(r'$\log(K)$')
+            ax.set_ylabel(r'$\log(V)$')
+            ax.set_zlabel(r'$S_t$')
+            cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
+            plt.savefig(dir + 'contours_3d.png')
+            plt.close()
+                        
+
 
 def plot_eigvals(eigvals, **kwargs):
     """Plots eigenvalues. Done."""

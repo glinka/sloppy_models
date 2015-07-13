@@ -1,0 +1,105 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\title{Contours in $K, V, S_t$}
+
+\begin{document}
+\maketitle
+
+The following figures illustrate the effects of $K, V$ and $S_t$ on the objective function value. The true system parameters were:
+
+\begin{itemize}
+\item $K = 2.0$
+\item $V = 1.0$
+\item $S_t = 2.0$
+\item $\epsilon = 1*10^{-3}$
+\item $\kappa = 10.0$
+\end{itemize}
+
+The objective function was then evaluated over a grid of points in the $K/V$ plane at varying values of $S_t$. The results are shown in the figures below. These reveal that $S_t$ is more tightly constrained than either $K$ or $V$, as expected. Also, the correlation between $K$ and $V$ at large values is clearly visible. Color denotes $\log(c(K, V, S_t))$, i.e. the log of the objective function value, and are kept consistent from figure to figure, e.g. yellow always corresponds to an objective function value of $\approx 1$ and the darkest red is always $c = 10$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S1.19935394621_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S1.35387618002_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S1.52830673266_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S1.72521054994_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S1.94748303991_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S2.19839264886_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S2.48162892284_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S2.8013567612_tol19}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_S3.16227766017_tol19}}}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}
