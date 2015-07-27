@@ -126,7 +126,7 @@ class PSA:
         try:
             xprime = spla.gmres(self._Df_arclength(xstart, tempslopes), tempslopes)[0]
         except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
-            raise
+            raise CustomErrors.PSAError
         # normalize
         xprime_start = xprime/np.linalg.norm(xprime)
         # update newton to new functions

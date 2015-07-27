@@ -1,6 +1,7 @@
 import CustomErrors
 import numpy as np
 import scipy.sparse.linalg as spla
+import Bisection_Method
 
 class Newton:
     """Solves :math:`f(x) = 0` using Newton's method with an analytical Jacobian and scipy`s GMRES linear solver
@@ -26,7 +27,7 @@ class Newton:
         self._fargs = fargs
         self._Dfargs = Dfargs
 
-    def find_zero(self, x0, abstol=1e-9, reltol=1e-9, maxiters=10000, damping=0):
+    def find_zero(self, x0, abstol=1e-9, reltol=1e-9, maxiters=10000, damping=0, bisection_on_maxiter=False):
         """Attempts to find a zero of 'f' through Newton-GMRES, terminating when :math:`\\|F(x_k)\\| \\leq reltol*\\|F(x_0)\\| + abstol`
 
         Args:
@@ -42,7 +43,7 @@ class Newton:
             scipy's implementation of GMRES exits after 20 iterations by default, and when either the absolute **or** relative errors are less than the input kwarg 'tol'
 
         """
-        # copy x0 to avoid bizarre behavior
+        # copy x0 to avoid bizarre behavior due to lack of understanding of numpy's assignment rules
         x = np.copy(x0)
         iters = 0
         # need init_error for reltol
@@ -56,22 +57,29 @@ class Newton:
         while error > totaltol and iters < maxiters:
             # update with output of linear solver
             try:
-                x = x + (1 - damping)*spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)[0]
-                error = np.linalg.norm(self._f(x, *self._fargs))
+                dx, convergence_info = spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)
             except CustomErrors.EvalError:
                 raise
+            if np.any(np.isinf(dx)):
+                raise CustomErrors.EvalError
+            else:
+                x = x + (1 - damping)*dx
+                error = np.linalg.norm(self._f(x, *self._fargs))
+
             iters = iters + 1
         if iters < maxiters:
             # converged, return
             return x
+        elif bisection_on_maxiter and x.shape[0] is 1:
+            # go into a bisection method for the one-dimensional problem
+            x = Bisection_Method.find_zero(self._f, x, abstol=abstol)
+            if np.linalg.norm(self._f(x, *self._fargs)) < totaltol:
+                return x
+            else:
+                raise CustomErrors.ConvergenceError
         else:
+            # exit with error
             raise CustomErrors.ConvergenceError
-            # # TODO: probably should raise some error
-            # print '******************************'
-            # print 'failed to converge within total tolerance:', totaltol
-            # print 'output error:', error
-            # print '******************************'
-            # return False
 
     def change_parameters(self, fargs, Dfargs):
         """Updates the optional arguments to both f and Df

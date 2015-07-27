@@ -35,7 +35,16 @@ class MM_Specialization(MM_System):
         self._contour_val = contour_val
 
                 
-    def f(self, params, continuation_param):
+    def adjust_const_param(self, const_param_key, const_param_val):
+        """Changes the const param 'const_param_key' to 'const_param_val' in 'self._const_params'
+
+        Args:
+            const_param_key (str): name of parameter to be changed, must be in 'self._const_params.keys()'
+            const_param_val (float): new parameter value
+        """
+        self._true_param_dict[const_param_key] = const_param_val
+
+    def of(self, params, continuation_param):
         """Objective function using 'params' and 'continuation_param' as variables. The remaining parameters, specified in '_const_params', will be set to values in '_params' before evaluation.
 
         Args:
@@ -43,7 +52,7 @@ class MM_Specialization(MM_System):
             continuation_param (float): the continuation parameter value
 
         Returns:
-            of_eval (array): (1,) array containing objective function minus 'contour_val' :math:`\alpha`, given by :math:`C(k_{inv}, k_1, k_2, S_t, E_t) = \sum_i^N (P(t_i; k_{inv}, k_1, k_2, S_t, E_t) - \hat{P_i})^2 - \alpha` where :math:`\hat{P_i}` is the :math:`i^{th}` data point to be fit
+            of_eval (array): (1,) array containing objective function  :math:`\alpha`, given by :math:`C(k_{inv}, k_1, k_2, S_t, E_t) = \sum_i^N (P(t_i; k_{inv}, k_1, k_2, S_t, E_t) - \hat{P_i})^2` where :math:`\hat{P_i}` is the :math:`i^{th}` data point to be fit
         """
         self._variable_param_dict[self._continuation_param] = continuation_param
         for i, param in enumerate(self._state_params):
@@ -51,10 +60,43 @@ class MM_Specialization(MM_System):
         for param in self._const_params:
             self._variable_param_dict[param] = self._true_param_dict[param]
         try:
-            of_eval = np.array((self.of(self._variable_param_dict.values()) - self._contour_val,))
+            of_eval = np.array((MM_System.of(self, self._variable_param_dict.values()),))
         except CustomErrors.EvalError:
             raise
         return of_eval
+
+    def f_of(self, params, continuation_param):
+        """Objective function **minus contour value** using 'params' and 'continuation_param' as variables. The remaining parameters, specified in '_const_params', will be set to values in '_params' before evaluation.
+
+        Args:
+            params (array): (len(_state_params),1) array of parameters specifying "state" of system
+            continuation_param (float): the continuation parameter value
+
+        Returns:
+            f_eval (array): (1,) array containing objective function minus 'contour_val' :math:`\alpha`, given by :math:`C(k_{inv}, k_1, k_2, S_t, E_t) = \sum_i^N (P(t_i; k_{inv}, k_1, k_2, S_t, E_t) - \hat{P_i})^2 - \alpha` where :math:`\hat{P_i}` is the :math:`i^{th}` data point to be fit
+        """
+        try:
+            of_eval = self.of(params, continuation_param)
+        except CustomErrors.EvalError:
+            raise
+        return of_eval - self._contour_val
+
+    def f_avg_error(self, params, continuation_param):
+        """Returns average error at 'params' and 'continuation_param' minus 'contour_val', defined as :math:`f = \frac{\sqrt{\sum_{i=1}^N (\hat{P}_i - P_i)^2}}{N} - c`, i.e. the l2 norm of the difference between predicted and true trajectories of P, scaled by the number of data points.
+
+        Args:
+            params (array): (len(_state_params),1) array of parameters specifying "state" of system
+            continuation_param (float): the continuation parameter value
+
+        Returns:
+            f_eval (array): (1,) array containing average error at 'params' and 'continuation_param' minus 'contour_val', defined as :math:`f = \frac{\sqrt{\sum_{i=1}^N (\hat{P}_i - P_i)^2}}{N} - c`
+        """
+        try:
+            of_eval = self.of(params, continuation_param) # squared l2 norm of error
+        except CustomErrors.EvalError:
+            raise
+        # take sqrt of of_eval to give l2 norm, scale by number of samples and subtract 'contour_val'
+        return np.sqrt(of_eval)/self._times.shape[0] - self._contour_val
 
     def _f(self, params):
         """Performs the same operation as 'of', but takes only one argument that combines the state parameters and continuation parameter into one array. This enables '_f' to be used with the 'hessian' function
@@ -65,8 +107,8 @@ class MM_Specialization(MM_System):
         Returns:
             of_eval (array): (1,) array containing objective function evaluated at 'params' minus 'contour_val'
         """
-        of_eval = self.f(params[:-1], params[-1])
-        return of_eval
+        f_eval = self.f_avg_error(params[:-1], params[-1])
+        return f_eval
 
     def f_gradient(self, params, continuation_param):
         """Calculates the gradient of specialized objective function with respect to '_state_params' and 'continuation_param', returning a vector
@@ -86,8 +128,3 @@ class MM_Specialization(MM_System):
         except CustomErrors.EvalError:
             raise
         return np.array(((of_gradient),))
-                                                                                                                
-            
-
-
-

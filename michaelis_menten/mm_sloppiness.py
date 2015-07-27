@@ -19,29 +19,15 @@ import os
 from collections import OrderedDict
 
 # switch to nicer color scheme
-solarize()
+solarize('light')
 
-def mm_contour_grid_mpi():
-    """Calculates three-dimensional contours in K/V/S_t space in parallel through mpi4py, distributing S_t values over different processes and saving the output in './data/of_evals.csv'"""
-    # init MPI
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    nprocs = comm.Get_size()
-    nks = 1000 # number of K vals to sample
-    nvs = 1000 # number of S vals to sample
-    nsts = 6 # number of S_t vals to sample
-    npts_per_proc = nsts/nprocs # number of St values to distribute to each processor
-    Ks = 2*np.logspace(-1, 3, nks) # k vals
-    Vs = np.logspace(-1, 3, nvs) # v vals
-    Sts = 2*np.logspace(-0.5, 0.5, nsts) # st vals
-
+def mm_sloppy_plot():
+    """Plots trajectories of 'P' at different parameter values: a visual confirmation of parameter sloppiness"""
     # set up base system
     params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
     true_params = np.array(params.values())
     nparams = true_params.shape[0]
     transform_id = 't2'
-    state_params = ['K']
-    continuation_param = 'V'
     # set init concentrations
     S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
     Cs0 = np.array((S0, C0, P0))
@@ -52,29 +38,114 @@ def mm_contour_grid_mpi():
     # use these params, concentrations and times to define the MM system
     MM_system = MM.MM_System(Cs0, times, true_params, transform_id)
 
+    # define variables to test
+    param1_name = 'epsilon'
+    # nparam1s = 2
+    param1s = [0.01, 0.000001]#np.logspace(-1, -0.5, nparam1s)
+    # # nparam2s = 1
+    param2_name = 'kappa'
+    param2s = [10.0]#np.logspace(-2, 2, nparam2s)
+    # param1_name = 'K'
+    # # nparam1s = 3
+    # param1s = np.array((100,))#2*np.logspace(0, 3, nparam1s)
+    # param2_name = 'V'
+    # param2s = 3.0*param1s/10.0 + np.array((10, 0))
+
+    # set up figure, add true trajectory
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.hold(True)
+    ax.plot(times, MM_system.gen_profile(Cs0, times, true_params)[:,2], label='true params')
+
+    markers = ['.', 'o', 'v', '^', 's', 'p', '*', 'x', '+', '_', 'D']
+    count = 0
+    # true_traj_squared_norm = np.power(np.linalg.norm(MM_system.gen_profile(Cs0, times, true_params)[:,2]), 2) # for recording relative as error, scale of_eval by this norm
+    for param1 in param1s:
+        for param2 in param2s:
+            # update values
+            params[param1_name] = param1
+            params[param2_name] = param2
+            # params['V'] = params['K']*3.0/10.0
+            S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
+            Cs0 = np.array((S0, C0, P0))
+            ax.plot(times, MM_system.gen_profile(Cs0, times, np.array(params.values()))[:,2], label=param1_name + '=' + str(param1) + ', ' + param2_name + '=' + str(param2) + ',error=' + str("%1.2e" % (np.power(MM_system.of(params.values()), 0.5)/npts)), marker=markers[count])
+            count = count + 1
+    ax.set_xlabel('time')
+    ax.set_ylabel('P')
+    # ax.set_title(r'$\frac{K}{V} = \frac{10}{3}$')
+    ax.legend(fontsize=24, loc='lower right')
+    plt.show()
+            
+
+def mm_contour_grid_mpi():
+    """Calculates three-dimensional contours in K/V/S_t space in parallel through mpi4py, distributing S_t values over different processes and saving the output in './data/of_evals.csv'"""
+    # init MPI
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    nprocs = comm.Get_size()
+    # nks = 1000 # number of K vals to sample
+    # nvs = 1000 # number of S vals to sample
+    # nsts = 6 # number of S_t vals to sample
+    # npts_per_proc = nsts/nprocs # number of St values to distribute to each processor
+    # Ks = 2*np.logspace(-1, 3, nks) # k vals
+    # Vs = np.logspace(-1, 3, nvs) # v vals
+    # Sts = 2*np.logspace(-0.5, 0.5, nsts) # st vals
+    # npts_per_proc = 1
+    # nepsilons = 400
+    # nkappas = 400
+    # epsilons = np.logspace(-6, 0, nepsilons)
+    # kappas = np.logspace(-5, 4, nkappas)
+    # nks = 500 # number of K vals to sample
+    # nvs = 500 # number of S vals to sample
+    # npts_per_proc = 1 #nsts/nprocs # number of St values to distribute to each processor
+    # Ks = 2*np.logspace(-1, 3, nks) # k vals
+    # Vs = np.logspace(-1, 3, nvs) # v vals
+
+    # set up base system
+    params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
+    true_params = np.array(params.values())
+    nparams = true_params.shape[0]
+    transform_id = 't2'
+    nstate_params = 100
+    ncontinuation_params = 100
+    state_params = {'id':'St', 'data':np.linspace(1.9, 2.1, nstate_params)}#2*np.logspace(-1, 3, nstate_params)}
+    # continuation_params = {'id':'V', 'data':np.linspace(.9, 1.15, ncontinuation_params)}#np.logspace(-1, 3, ncontinuation_params)}
+    continuation_params = {'id':'K', 'data':np.linspace(1.8, 2.2, ncontinuation_params)}#np.logspace(-1, 3, ncontinuation_params)}
+    # set init concentrations
+    S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
+    Cs0 = np.array((S0, C0, P0))
+    # set times at which to collect data
+    tscale = (params['St'] + params['K'])/params['V'] # timescale of slow evolution
+    npts = 20
+    times = tscale*np.linspace(1,npts,npts)/5.0
+    # use these params, concentrations and times to define the MM system
+    contour = 0.001
+    MM_system = MMS.MM_Specialization(Cs0, times, true_params, transform_id, [state_params['id']], continuation_params['id'], contour)
+
+    # investigate different St slice
+    MM_system.adjust_const_param('V', 1.014)
+
+    true_traj_squared_norm = np.power(np.linalg.norm(MM_system.gen_profile(Cs0, times, true_params)[:,2]), 2) # for recording relative as error, scale of_eval by this norm
     #  loop over all parameter combinations
-    test_params = true_params # parameter values that will be passed to 'of'
-    tol = 0.1 # ob. fn. tolerance
-    kept_pts = np.empty((npts_per_proc*nvs*nks,4)) # storage for parameter combinations that pass obj. fn. tol.
+    kept_pts = np.empty((nstate_params*ncontinuation_params,3)) # storage for parameter combinations that pass obj. fn. tol.
     count = 0 # counter of number of parameter combinations that pass tolerance
-    for St in Sts[rank*npts_per_proc:(rank+1)*npts_per_proc]:
-        for K in Ks:
-            for V in Vs:
-                # change K,V,St values, keep if of below tol
-                test_params[:3] = (K, V, St)
-                try:
-                    of_eval = MM_system.of(test_params)
-                except CustomErrors.EvalError:
-                    continue
-                else:
-                    kept_pts[count] = (K, V, St, of_eval)
-                    count = count + 1
+    for state_param in uf.parallelize_iterable(state_params['data'], rank, nprocs):
+        for continuation_param in continuation_params['data']:
+            try:
+                # record relative error
+                f_eval = MM_system.f_avg_error(np.array((state_param,)), continuation_param)
+            except CustomErrors.EvalError:
+                continue
+            else:
+                kept_pts[count] = (state_param, continuation_param, f_eval)
+                count = count + 1
     # gather all the points to root and save
     kept_pts = kept_pts[:count]
     all_pts = comm.gather(kept_pts, root=0)
     if rank is 0:
         full_pts = np.concatenate(all_pts)
-        np.savetxt('./data/of_evals.csv', full_pts, delimiter=',')
+        header = ','.join([key + "=" + str(val) for key, val in params.items()]) + ',Tested=' + state_params['id'] + continuation_params['id']
+        np.savetxt('./data/contours_' + state_params['id'] + '_' + continuation_params['id'] + '.csv', full_pts, delimiter=',', header=header, comments='')
 
 def mm_contour_grid():
     nks = 1000
@@ -153,8 +224,8 @@ def mm_contours():
     true_params = np.array(params.values())
     nparams = true_params.shape[0]
     transform_id = 't2'
-    state_params = ['K']
-    continuation_param = 'V'
+    state_params = ['St']
+    continuation_param = 'K'
     # set init concentrations
     S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
     Cs0 = np.array((S0, C0, P0))
@@ -179,21 +250,119 @@ def mm_contours():
     # plt.show(fig)
 
     # define range of V values over which to find level sets
-    npts_per_proc = 2
-    contour_vals = np.logspace(-7,-1,npts_per_proc*nprocs) # countour values of interest
-    ds = 1e-5
-    ncontinuation_steps = 20
-    # branch = np.empty((ncontinuation_steps*npts_per_proc, 2))
+    nsts = 500
+    # Sts = np.linspace(2.00, 2.02, nsts)
+    third_param_name = 'V'
+    third_param_vals = np.linspace(1.0, 0.9, nsts)
+    dthird_param = third_param_vals[1] - third_param_vals[0] # spacing of third param
+    contour_val = 0.001 # from discussions, use error=1e-3 # np.logspace(-7,-1,npts_per_proc*nprocs) # countour values of interest
+    ds = 1e-4
+    ncontinuation_steps = 100
+
+    branches = []
+    geodesic_pts = np.empty((nsts, 3))
+    init_guesses = np.empty((nsts, 3))
+    maxiters=5000
+
     # current_index = 0 
-    for i, contour_val in enumerate(contour_vals[rank*npts_per_proc:(rank+1)*npts_per_proc]):
+    # for i, St in enumerate(uf.parallelize_iterable(Sts, rank, nprocs)):
+    ncurves = 0
+    for third_param_val in third_param_vals:
         mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
-        psa_solver = PSA.PSA(mm_specialization.f, mm_specialization.f_gradient)
+        mm_specialization.adjust_const_param(third_param_name, third_param_val)
+        psa_solver = PSA.PSA(mm_specialization.f_avg_error, mm_specialization.f_gradient)
         try:
-            branch = psa_solver.find_branch(np.array((params['K'],)), params['V']+1e-3, ds, ncontinuation_steps)
+            # branch = psa_solver.find_branch(np.array((params[state_params[0]]+0.01,)), params[continuation_param]+0.01, ds, ncontinuation_steps, maxiters=maxiters)
+            
+            if ncurves is 0:
+                branch = psa_solver.find_branch(np.array((params[state_params[0]] + 0.01,)), params[continuation_param] + 0.01, ds, ncontinuation_steps, maxiters=maxiters)
+                init_guesses[0] = (params[state_params[0]] + 0.01, params[continuation_param] + 0.01, third_param_val)
+            elif ncurves is 1:
+                branch = psa_solver.find_branch(np.array((branches[0][0,0],)), branches[0][0,1], ds, ncontinuation_steps, maxiters=maxiters)
+                init_guesses[1] = (branches[0][0,0], branches[0][0,1], third_param_val)
+            # use some linear interpolation to get new starting point if we already have two branches
+            elif ncurves is 2:
+                # find nearest point between first entry in previous branch and the branch before (i.e. find point in branches[ncurves-2] closest to branches[ncurves-1][0,:])
+                nearest_pt = branches[0][np.argmin(np.linalg.norm(branches[0] - branches[1][0], axis=1))]
+                geodesic_pts[0,:] = nearest_pt
+                geodesic_pts[1,:] = branches[1][0,:]
+                init_guess = branches[1][0,:] + np.abs(dthird_param)*(branches[1][0,:] - nearest_pt)/np.linalg.norm(branches[1][0,:] - nearest_pt)
+                branch = psa_solver.find_branch(np.array((init_guess[0],)), init_guess[1], ds, ncontinuation_steps, maxiters=maxiters)
+
+                init_guesses[2] = np.copy(init_guess)
+
+                # # visual testing of continuation in third param
+                # fig = plt.figure()
+                # ax = fig.add_subplot(111) # plotting axis
+                # ax.scatter(branches[0][:,0], branches[0][:,1])
+                # ax.scatter(branches[1][:,0], branches[1][:,1])
+                # ax.scatter(init_guess[0], init_guess[1], c='g', s=50)
+                # ax.scatter(nearest_pt[0], nearest_pt[1], c='c', s=50)
+                # ax.scatter(branches[1][0,0], branches[1][0,1], c='r', s=50)
+                # plt.show()
+
+            # use quadratic interpolation if have three or more branches
+            else:
+                # find point on previous branch closest to most recent entry in 'geodesic_pts'
+                nearest_pt = branches[ncurves-1][np.argmin(np.linalg.norm(branches[ncurves-1] - geodesic_pts[ncurves-2], axis=1))]
+                geodesic_pts[ncurves-1] = nearest_pt
+
+                poly_fit_order = 2
+                # use previous three points to fit curves
+                pts_to_fit = geodesic_pts[ncurves-3:ncurves]
+                param1_param3_fit = np.poly1d(np.polyfit(pts_to_fit[:,2], pts_to_fit[:,0], poly_fit_order))
+                param2_param3_fit = np.poly1d(np.polyfit(pts_to_fit[:,2], pts_to_fit[:,1], poly_fit_order))
+                param1_extrap = param1_param3_fit(third_param_val)
+                param2_extrap = param2_param3_fit(third_param_val)
+
+                init_guesses[ncurves] = (param1_extrap, param2_extrap, third_param_val)
+
+                print 'init error:', mm_specialization.f_avg_error(np.array((param1_extrap,)), param2_extrap), 'at branch', ncurves + 1
+
+                branch = psa_solver.find_branch(np.array((param1_extrap,)), param2_extrap, ds, ncontinuation_steps, maxiters=maxiters, abstol=1e-8, bisection_on_maxiter=True)
+
         except CustomErrors.PSAError:
-            continue
+            # exit if previous level set was not found
+            break
         else:
-            np.savetxt('./data/output/contour_' + str(contour_val) + '.csv', branch, delimiter=',')
+            err = 0
+            for pt in branch:
+                err = err + np.abs(mm_specialization.f_avg_error(np.array((pt[0],)), pt[1]))
+            print 'found', branch.shape[0], 'pts at', third_param_name, 'of', third_param_val, 'with total error of', err
+            # add St val to third col of branch array
+            fullbranch = np.empty((branch.shape[0], branch.shape[1] + 1))
+            fullbranch[:,:-1] = branch
+            fullbranch[:,-1] = third_param_val
+            branches.append(fullbranch)
+            ncurves = ncurves + 1
+
+    branches = np.concatenate(branches)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111) # plotting axis
+    ax.scatter(geodesic_pts[:ncurves-1,0], geodesic_pts[:ncurves-1,1], c='g', s=75, marker='^')
+    ax.scatter(init_guesses[:ncurves,0], init_guesses[:ncurves,1], c=range(ncurves), s=100, marker='*')
+    ax.scatter(branches[:,0], branches[:,1], c=range(branches.shape[0]))
+    plt.show()
+
+    file_header = ','.join([key + '=' + str(val) for key, val in params.items()])
+    print 'succesfully found', ncurves, 'level sets'
+    np.savetxt('./data/output/contour_K_V_St.csv', branches, delimiter=',', header=file_header, comments='')
+
+    # fullbranches = comm.gather(fullbranch, root=0)
+    # if rank is 0:
+    #     # get rid of those branches that didn't initiate
+    #     while 'None' in fullbranches:
+    #         fullbranches.remove('None')
+    #     print '******************************'
+    #     print len(fullbranches)
+    #     print '******************************'
+    #     fullbranches = np.concatenate(fullbranches)
+    #     kept_npts = fullbranches.shape[0]
+    #     # create fileheader specifying true param vals
+    #     file_header = ','.join([key + '=' + str(val) for key, val in params.items()])
+    #     np.savetxt('./data/output/contour_K_V_St.csv', fullbranches, delimiter=',')
+
         # # 'find_branch' may not actually find 'ncontinuation_steps' branch points, so only add those points that were successfully found
         # partial_branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
         # nadditional_branch_pts = partial_branch.shape[0]
@@ -390,6 +559,7 @@ def check_sloppiness():
 if __name__=='__main__':
     # sample_sloppy_params()
     # check_sloppiness()
-    # mm_contours()
     # mm_contour_grid()
-    mm_contour_grid_mpi()
+    # mm_contour_grid_mpi()
+    mm_contours()
+    # mm_sloppy_plot()

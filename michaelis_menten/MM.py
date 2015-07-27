@@ -27,7 +27,7 @@ class MM_System:
         self._integrator = spint.ode(self._enzyme_rhs)
         # uncomment the following line and comment out the 'lsoda' integrator for a stabler method, but one that is about 1000 times slower
         # self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
-        self._integrator.set_integrator('lsoda')
+        self._integrator.set_integrator('lsoda', nsteps=1000)
         self._Cs0 = Cs0
         self._times = times
         self.param_transform = param_transform
@@ -65,7 +65,7 @@ class MM_System:
         except CustomErrors.IntegrationError:
             raise
         else:
-            of_eval = np.sum(np.power(enzyme_profile[:,2] - self._data[:,2], 2))
+            of_eval = np.power(np.linalg.norm(enzyme_profile[:,2] - self._data[:,2]), 2) # squared 2-norm, i.e. least-squares
             return of_eval
 
     def gen_profile(self, Cs0, times, params):

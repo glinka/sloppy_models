@@ -1,0 +1,112 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+% \captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\pagestyle{plain}
+
+\title{Discussion notes}
+
+\begin{document}
+\maketitle
+
+The main consideration during our talk was what form the sloppiness in $K$, $V$, and $S$ space took. We determined that there are two regimes corresponding to large and small values of $\frac{K}{S}$. It may help to rewrite Eq. (14) from the May $12^{th}$ notes as
+
+\begin{align*}
+  P' = \frac{1}{\frac{1}{V} + \frac{K}{V*S}}
+\end{align*}
+
+When $S_t$ is large and we sample early in the trajectory where $S \approx S_t$, and when $K \ll 1$, i.e. $\frac{K}{S} \ll 1$, we see that
+
+\begin{align*}
+  P' \approx V
+\end{align*}
+
+and thus the contours appear to straighten out at small $K$ to approximately align with the $K$-axis (see Fig. (1)). In the other case when $\frac{K}{S} \gg 1$ we must examine the value of $V$. For $V \gg 1$ we find
+
+\begin{align*}
+  P' \approx \frac{V*S}{K}
+\end{align*}
+
+and the ratio $\frac{V}{K}$ becomes significant. Again, Fig. (1) exhibits this sloppiness as large values of $V$ lead contours following a linear relationship between $K$ and $V$. On the other hand, if $V \ll 1$
+
+\begin{align*}
+  P' \approx 0
+\end{align*}
+
+We can summarize this as follows:
+
+\begin{enumerate}
+\item $\frac{K}{S} \ll 1 \rightarrow V$ significant
+\item $\frac{K}{S} \gg 1$
+  \begin{enumerate}
+  \item $V \gg 1 \rightarrow \frac{V}{K}$ significant
+  \item $V \ll 1 \rightarrow$ no significant parameters
+  \end{enumerate}
+\end{enumerate}
+
+In any case, we expect the other two parameters $\epsilon$ and $\kappa$, whose main influence is on the fast dynamics, to exhibit sloppiness when $\epsilon \ll 1$. Fig. (2) confirms that this is the case.
+
+\clearpage
+
+Plots of the log-error in prediction of the $P$ timecourse, normalized by the true values of $P$: $\log(\frac{\sum_i (\hat{P(t_i)} - P(t_i))^2}{\sum_i P(t_i)^2})$ where $\hat{P(t_i)}$ is the concentration of $P$ at time $t_i$ based on new parameter values, while $P(t_i)$ is the true value of $P$. First the $K/V$ plane is examined, then the $\epsilon, \kappa$ plane. True parameter values were:
+
+\begin{itemize}
+
+\item $K = 2.0$
+\item $V = 1.0$
+\item $S_t = 2.0$
+\item $\epsilon = 1*10^{-3}$
+\item $\kappa = 10.0$
+\end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_k_v}}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{{{contours_eps_kappa}}}
+\end{figure}
+
+
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}
