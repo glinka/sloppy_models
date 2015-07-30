@@ -6,8 +6,14 @@ class EvalError(ArithmeticError):
 class IntegrationError(EvalError):
     pass
 
+class InitialIntegrationError(IntegrationError):
+    pass
+
 class ConvergenceError(ArithmeticError):
     pass
 
 class PSAError(ArithmeticError):
+    pass
+
+class LSODA_Warning:
     pass

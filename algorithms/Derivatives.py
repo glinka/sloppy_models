@@ -32,7 +32,7 @@ def hessian(f, x, h=1e-8):
             hessian[j,i] = hessian[i,j]
     return hessian
 
-def gradient(f, x, h=1e-5):
+def gradient(f, x, h=1e-4):
     """Evaluates a centered finite-difference approximation of the *gradient* of 'f' at 'x' using stepsize 'h'
 
     Args:

@@ -16,10 +16,75 @@ from sympy import Function, dsolve, Eq, Derivative, symbols
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os
+import sys
+import contextlib
 from collections import OrderedDict
+import tempfile
 
 # switch to nicer color scheme
 solarize('light')
+
+class Warning_Catcher():
+    def __init__(self):
+        self._temp_out = open('tmp.txt', 'w')#tempfile.TemporaryFile(bufsize=1000)
+    def write(self, string):
+        if 'lsoda' in string:
+            raise CustomErrors.LSODA_Warning
+    def fileno(self):
+        return self._temp_out.fileno()
+    def close(self):
+        return self._temp_out.close()
+
+def fileno(file_or_fd):
+    fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
+    if not isinstance(fd, int):
+        raise ValueError("Expected a file (`.fileno()`) or a file descriptor")
+    return fd
+
+@contextlib.contextmanager
+def stdout_redirected():
+    original_stdout_fd, original_stderr_fd = os.dup(sys.stdout.fileno()), os.dup(sys.stderr.fileno())
+    temp_out = Warning_Catcher()
+    temp_err = Warning_Catcher()
+    try:
+        # sys.stdout = Warning_Catcher()
+        # sys.stdout = temp_out
+        # sys.stderr = temp_err
+        os.dup2(temp_out.fileno(), sys.stdout.fileno())
+        # os.dup2(temp_err.fileno(), sys.stderr.fileno())
+        # sys.stdout = Warning_Catcher()
+        # sys.stderr = Warning_Catcher()
+        yield sys.stdout, sys.stderr
+    except CustomErrors.LSODA_Warning:
+        raise
+    finally:
+        os.dup2(original_stdout_fd, sys.stdout.fileno())
+        os.dup2(original_stderr_fd, sys.stdout.fileno())
+        temp_out.close()
+        temp_err.close()
+        # sys.stdout = original_stdout
+        # sys.stderr = original_stderr
+    
+def test():
+    import ctypes
+    libc = ctypes.CDLL("libc.so.6")
+    with stdout_redirected():
+        libc.printf('lsoda C\n')
+        print 'lsoda P'
+        # sys.stdout.write('lsoda')
+            
+        # try:
+        #     os.dup2(fileno(to), stdout_fd)  # $ exec >&to
+        # except ValueError:  # filename
+        #     with open(to, 'wb') as to_file:
+        #         os.dup2(to_file.fileno(), stdout_fd)  # $ exec > to
+        # try:
+        #     yield stdout # allow code to be run with the redirected stdout
+        # finally:
+        #     # restore stdout to its previous value
+        #     #NOTE: dup2 makes stdout_fd inheritable unconditionally
+        #     stdout.flush()
+        #     os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
 
 def mm_sloppy_plot():
     """Plots trajectories of 'P' at different parameter values: a visual confirmation of parameter sloppiness"""
@@ -79,6 +144,10 @@ def mm_sloppy_plot():
 
 def mm_contour_grid_mpi():
     """Calculates three-dimensional contours in K/V/S_t space in parallel through mpi4py, distributing S_t values over different processes and saving the output in './data/of_evals.csv'"""
+
+    # # attempt to turn off error messages
+    # np.seterr(all='ignore')
+
     # init MPI
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
@@ -108,9 +177,11 @@ def mm_contour_grid_mpi():
     transform_id = 't2'
     nstate_params = 100
     ncontinuation_params = 100
-    state_params = {'id':'St', 'data':np.linspace(1.9, 2.1, nstate_params)}#2*np.logspace(-1, 3, nstate_params)}
-    # continuation_params = {'id':'V', 'data':np.linspace(.9, 1.15, ncontinuation_params)}#np.logspace(-1, 3, ncontinuation_params)}
-    continuation_params = {'id':'K', 'data':np.linspace(1.8, 2.2, ncontinuation_params)}#np.logspace(-1, 3, ncontinuation_params)}
+    nthird_params = 1*nprocs
+    # state_params = {'id':'St', 'data':np.linspace(1.9, 2.1, nstate_params)}#2*np.logspace(-1, 3, nstate_params)}
+    state_params = {'id':'V', 'data':np.linspace(0.5, 3.5, nstate_params)}#np.logspace(-1, 3, ncontinuation_params)}
+    continuation_params = {'id':'K', 'data':np.linspace(0.5, 4.5, ncontinuation_params)}#np.logspace(-1, 3, ncontinuation_params)}
+    third_params = {'id':'St', 'data':np.linspace(1, 3, nthird_params)}
     # set init concentrations
     S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
     Cs0 = np.array((S0, C0, P0))
@@ -121,31 +192,48 @@ def mm_contour_grid_mpi():
     # use these params, concentrations and times to define the MM system
     contour = 0.001
     MM_system = MMS.MM_Specialization(Cs0, times, true_params, transform_id, [state_params['id']], continuation_params['id'], contour)
-
-    # investigate different St slice
-    MM_system.adjust_const_param('V', 1.014)
-
-    true_traj_squared_norm = np.power(np.linalg.norm(MM_system.gen_profile(Cs0, times, true_params)[:,2]), 2) # for recording relative as error, scale of_eval by this norm
+    # true_traj_squared_norm = np.power(np.linalg.norm(MM_system.gen_profile(Cs0, times, true_params)[:,2]), 2) # for recording relative as error, scale of_eval by this norm
     #  loop over all parameter combinations
-    kept_pts = np.empty((nstate_params*ncontinuation_params,3)) # storage for parameter combinations that pass obj. fn. tol.
-    count = 0 # counter of number of parameter combinations that pass tolerance
-    for state_param in uf.parallelize_iterable(state_params['data'], rank, nprocs):
-        for continuation_param in continuation_params['data']:
-            try:
-                # record relative error
-                f_eval = MM_system.f_avg_error(np.array((state_param,)), continuation_param)
-            except CustomErrors.EvalError:
-                continue
-            else:
-                kept_pts[count] = (state_param, continuation_param, f_eval)
-                count = count + 1
+    tol  = 0.001 # f_avg_error below tol will be saved
+    st_slices = []
+    # suppress output to stdout in the inner loop, as it's always (hopefully) about lsoda's performance
+    # with stdout_redirected():
+
+    for third_param in uf.parallelize_iterable(third_params['data'], rank, nprocs):
+        MM_system.adjust_const_param(third_params['id'], third_param)
+        count = 0 # counter of number of parameter combinations that pass tolerance
+        kept_pts = np.empty((nstate_params*ncontinuation_params,4)) # storage for parameter combinations that pass obj. fn. tol.
+        for state_param in state_params['data']:
+            for continuation_param in continuation_params['data']:
+                try:
+                    # record relative error
+                    f_eval = MM_system.f_avg_error(np.array((state_param,)), continuation_param)
+                except CustomErrors.EvalError:
+                    continue
+                else:
+                    if f_eval < tol:
+                        kept_pts[count] = (state_param, continuation_param, third_param, f_eval)
+                        count = count + 1
+
+        kept_pts = kept_pts[:count]
+        if count > 0:
+            st_slices.append(kept_pts)
+
+    if len(st_slices) > 0:
+        st_slices = np.concatenate(st_slices)
+        print st_slices.shape
+    else:
+        st_slices = 'None'
     # gather all the points to root and save
-    kept_pts = kept_pts[:count]
-    all_pts = comm.gather(kept_pts, root=0)
+    # kept_pts = kept_pts[:count]
+    all_pts = comm.gather(st_slices, root=0)
     if rank is 0:
+        while 'None' in all_pts:
+            all_pts.remove('None')
         full_pts = np.concatenate(all_pts)
-        header = ','.join([key + "=" + str(val) for key, val in params.items()]) + ',Tested=' + state_params['id'] + continuation_params['id']
-        np.savetxt('./data/contours_' + state_params['id'] + '_' + continuation_params['id'] + '.csv', full_pts, delimiter=',', header=header, comments='')
+        header = ','.join([key + "=" + str(val) for key, val in params.items()]) + ',Tested=' + state_params['id'] + continuation_params['id'] + third_params['id']
+        np.savetxt('./data/contours_' + state_params['id'] + '_' + continuation_params['id'] + '_' + third_params['id'] +  '.csv', full_pts, delimiter=',', header=header, comments='')
+
 
 def mm_contour_grid():
     nks = 1000
@@ -224,7 +312,7 @@ def mm_contours():
     true_params = np.array(params.values())
     nparams = true_params.shape[0]
     transform_id = 't2'
-    state_params = ['St']
+    state_params = ['V']
     continuation_param = 'K'
     # set init concentrations
     S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
@@ -252,8 +340,8 @@ def mm_contours():
     # define range of V values over which to find level sets
     nsts = 500
     # Sts = np.linspace(2.00, 2.02, nsts)
-    third_param_name = 'V'
-    third_param_vals = np.linspace(1.0, 0.9, nsts)
+    third_param_name = 'St'
+    third_param_vals = np.linspace(2.006, 2.008, nsts)
     dthird_param = third_param_vals[1] - third_param_vals[0] # spacing of third param
     contour_val = 0.001 # from discussions, use error=1e-3 # np.logspace(-7,-1,npts_per_proc*nprocs) # countour values of interest
     ds = 1e-4
@@ -560,6 +648,7 @@ if __name__=='__main__':
     # sample_sloppy_params()
     # check_sloppiness()
     # mm_contour_grid()
-    # mm_contour_grid_mpi()
-    mm_contours()
+    # mm_contours()
     # mm_sloppy_plot()
+    mm_contour_grid_mpi()
+    # test()

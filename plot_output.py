@@ -128,7 +128,7 @@ def plot_of_contours(data, xlabel, ylabel, tols=np.logspace(-1,1,20), dir='./fig
 
 def plot_of_k_v_st_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/', plot_3d=True):
     """Plots contours of the MM objective function, where each row of 'data' is (K, V, St, of_eval), looping over unique St values and plotting slices in the K/V plane"""
-    tols = np.logspace(1.1*np.min(data[:-1]), 1, 20)
+    tols = [0.1]# np.logspace(1.1*np.min(data[:-1]), 1, 20)
     # get data
     # data = np.genfromtxt('/home/cbe-ygk-10/holiday/of_evals_tol0.1.csv', delimiter=',')
     # data = np.genfromtxt('./data/of_evals.csv', delimiter=',')
@@ -172,11 +172,12 @@ def plot_of_k_v_st_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contour
                     ax.set_ylabel('V')
                     ax.set_title(r'$S_t=$' + str(data[i-1,2]))
                     cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
-                    plt.savefig(dir + 'contours_S' + str(data[i-1,2]) + '_tol' + str(k) + '.png')
-                    plt.close()
+                    plt.show()
+                    # plt.savefig(dir + 'contours_S' + str(data[i-1,2]) + '_tol' + str(k) + '.png')
+                    # plt.close()
 
     if plot_3d:
-        min_tol = 0.9; max_tol = 1.0
+        min_tol = 0.0; max_tol = 1.0
         data_to_plot_3d = data[data[:,-1] < max_tol]
         data_to_plot_3d = data_to_plot_3d[data_to_plot_3d[:,-1] > min_tol]
         if data_to_plot_3d.shape[0] > 0:
@@ -192,6 +193,7 @@ def plot_of_k_v_st_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contour
             ax.set_ylabel(r'$\log(V)$')
             ax.set_zlabel(r'$S_t$')
             cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
+            plt.show(fig)
             plt.savefig(dir + 'contours_3d.png')
             plt.close()
                         
