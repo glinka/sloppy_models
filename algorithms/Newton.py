@@ -27,7 +27,7 @@ class Newton:
         self._fargs = fargs
         self._Dfargs = Dfargs
 
-    def find_zero(self, x0, abstol=1e-9, reltol=1e-9, maxiters=10000, damping=0, bisection_on_maxiter=False):
+    def find_zero(self, x0, abstol=1e-9, reltol=1e-9, maxiters=10, damping=0, bisection_on_maxiter=False):
         """Attempts to find a zero of 'f' through Newton-GMRES, terminating when :math:`\\|F(x_k)\\| \\leq reltol*\\|F(x_0)\\| + abstol`
 
         Args:

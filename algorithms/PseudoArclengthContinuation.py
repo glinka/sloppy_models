@@ -147,6 +147,8 @@ class PSA:
         # found to that point. Otherwise, return the partial branch from (k==0)
         # and the full branch from (k==1).
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ds_divisions = 0
+        max_ds_divisions = 4
         for k in range(2):
             # flip ds to continue in both directions
             ds = -ds
@@ -154,6 +156,7 @@ class PSA:
             x = np.copy(xstart)
             xprime = np.copy(xprime_start)
             try:
+                count = 0
                 for i in range(halfnsteps):
                     if progress_bar:
                         uf.progress_bar(k*halfnsteps + i + 1, nsteps)
@@ -163,21 +166,31 @@ class PSA:
                     xprev = np.copy(x)
                     # update parameter values for f and Df in newton solver
                     newton_solver.change_parameters([xprev, xprime, ds], [xprime])
-                    x = newton_solver.find_zero(x0, **kwargs)
-                    # use finite diff approx for xprime
-                    xprime = (x - xprev)/ds
-                    # normalize
-                    xprime = xprime/np.linalg.norm(xprime)
-                    branch_pts[k*ncompleted_pts + i] = np.copy(x)
+                    try:
+                        x = newton_solver.find_zero(x0, **kwargs)
+                    except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
+                        if ds_divisions > max_ds_divisions:
+                            raise
+                        else:
+                            x = xprev
+                            ds = ds/10.0
+                            ds_divisions = ds_divisions + 1
+                    else:
+                        # use finite diff approx for xprime
+                        xprime = (x - xprev)/ds
+                        # normalize
+                        xprime = xprime/np.linalg.norm(xprime)
+                        branch_pts[k*ncompleted_pts + count] = np.copy(x)
+                        count = count + 1
             except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
                 # continue from ncompleted_pts
                 if k == 0:
-                    ncompleted_pts = i
+                    ncompleted_pts = count
                     continue
                 # k == 1, copy initial point from end of 'branch' and return whatever was successfully found
                 else:
-                    branch_pts[ncompleted_pts + i] = branch_pts[-1]
-                    return branch_pts[:ncompleted_pts + i + 1]
+                    branch_pts[ncompleted_pts + count] = branch_pts[-1]
+                    return branch_pts[:ncompleted_pts + count + 1]
             else:
                 ncompleted_pts = halfnsteps
         # could have encountered error when k==0, no error when k==1: adjust accordingly

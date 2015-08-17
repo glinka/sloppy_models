@@ -74,7 +74,7 @@ class MM_System:
             of_eval = np.power(np.linalg.norm(enzyme_profile[:,2] - self._data[:,2]), 2) # squared 2-norm, i.e. least-squares
             return of_eval
 
-    def gen_profile(self, Cs0, times, params):
+    def gen_profile(self, Cs0, times, params, integrator='lsoda'):
         """Generates the concentration profiles of the MM species based on the initial concentrations 'Cs0' and parameters 'params', all evaluated at the times given in 'times'
 
         Args:
@@ -100,10 +100,18 @@ class MM_System:
         try:
             for i, t in enumerate(times):
                 profile[i] = self._integrator.integrate(t)
-                if not self._integrator.successful():
+                if not self._integrator.successful() and integrator is not 'vode':
+                    self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
+                    print 'using vode'
+                    print 'param values at lsoda:', params
+                    profile = self.gen_profile(Cs0, times, params, integrator='vode')
+                    break
+                elif not self._integrator.successful():
+                    print 'param values at vode (real bad):', params
                     raise CustomErrors.IntegrationError
         except CustomErrors.LSODA_Warning:
             raise CustomErrors.IntegrationError
+        self._integrator.set_integrator('lsoda')
         return profile
 
         
