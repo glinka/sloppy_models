@@ -60,7 +60,7 @@ class Newton:
                 dx, convergence_info = spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)
             except CustomErrors.EvalError:
                 raise
-            if np.any(np.isinf(dx)):
+            if np.any(np.isinf(dx)) or np.any(np.isnan(dx)):
                 raise CustomErrors.EvalError
             else:
                 x = x + (1 - damping)*dx

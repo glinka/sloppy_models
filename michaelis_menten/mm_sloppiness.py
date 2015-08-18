@@ -361,7 +361,6 @@ def mm_contours():
             # set up PSA
             psa_solver = PSA.PSA(mm_specialization.f_avg_error, mm_specialization.f_gradient)
             try:
-                # branch = psa_solver.find_branch(np.array((params[state_params[0]]+0.01,)), params[continuation_param]+0.01, ds, ncontinuation_steps, maxiters=maxiters)
                 # if no curves have yet been found, use slight perturbations of the true parameter values as initial guesses
                 if ncurves is 0:
                     branch = psa_solver.find_branch(np.array((params[state_params[0]] + 0.01,)), params[continuation_param] + 0.01, ds, ncontinuation_steps, maxiters=maxiters)
@@ -418,18 +417,21 @@ def mm_contours():
                     # this heuristic seems successfull in avoiding the previous breakdowns
                     nattempts = 0 # number of initial points already tried
                     max_nattempts = 10 # max number of initial points to try
-                    initial_perturbation = 1e-3 # perturbation to apply, if necessary
+                    initial_perturbation = 1e-5 # perturbation to apply, if necessary
                     # while we have not tried the maximum number of initial points, try different perturbations
                     while nattempts < max_nattempts:
                         try:
                             branch = psa_solver.find_branch(np.array((param1_extrap*(1+initial_perturbation*nattempts),)), param2_extrap*(1+initial_perturbation*nattempts), ds, ncontinuation_steps, maxiters=maxiters)
                         except CustomErrors.PSAError:
+                            nattempts = nattempts + 1
+
+                            print 'garbage mode engaged again'
+
                             if nattempts < max_nattempts:
-                                nattempts = nattempts + 1
                                 continue
                             else:
                                 print 'attempted max number of attempts, no branch found'
-                                raise
+                                raise CustomErrors.PSAError
                         else:
                             break
 
@@ -438,10 +440,10 @@ def mm_contours():
                 break
             else:
                 # useful info about previous branch
-                # err = 0
-                # for pt in branch:
-                #     err = err + np.abs(mm_specialization.f_avg_error(np.array((pt[0],)), pt[1]))
-                print 'found', branch.shape[0], 'pts at', third_param_name, 'of', third_param_val # , 'with total error of', err
+                err = 0
+                for pt in branch:
+                    err = err + np.abs(mm_specialization.f_avg_error(np.array((pt[0],)), pt[1]))
+                print 'found', branch.shape[0], 'pts at', third_param_name, 'of', third_param_val, 'with total error of', err
 
                 # add third param val to third column
                 fullbranch = np.empty((branch.shape[0], branch.shape[1] + 1))

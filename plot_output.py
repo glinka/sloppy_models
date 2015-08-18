@@ -81,7 +81,13 @@ def plot_contour(data):
     """Plots 2d level sets"""
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d') # plotting axis
-    ax.scatter(data[:,0], data[:,1], data[:,2])
+    npts_to_plot = 50000
+    slice_size = data.shape[0]/npts_to_plot
+    # data = data[data[:,0] > 1.5]# and data[:,1] > 0]
+    # data = data[data[:,0] < 2.1]# and data[:,1] > 0]
+    ax.scatter(data[::slice_size,0], data[::slice_size,1], data[::slice_size,2])
+    ax.set_xlim((np.min(data[:,0]),np.max(data[:,0])))
+    ax.set_ylim((np.min(data[:,1]),np.max(data[:,1])))
     plt.show()
     # fig = plt.figure()
     # ax = fig.add_subplot(111)
