@@ -192,7 +192,7 @@ class PSA:
                     branch_pts[ncompleted_pts + count] = branch_pts[-1]
                     return branch_pts[:ncompleted_pts + count + 1]
             else:
-                ncompleted_pts = halfnsteps
+                ncompleted_pts = count
         # could have encountered error when k==0, no error when k==1: adjust accordingly
         branch_pts[ncompleted_pts + halfnsteps] = branch_pts[-1]
         return branch_pts[:ncompleted_pts + halfnsteps + 1]

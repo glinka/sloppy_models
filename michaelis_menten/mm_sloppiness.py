@@ -305,11 +305,6 @@ def mm_contour_grid():
 
 def mm_contours():
     """Finds contours of the MM objective function: either one-dimensional curves or two-dimensional surfaces. Distributes computation across processors with mpi4py"""
-    # init MPI
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    nprocs = comm.Get_size()
-
     # set up base system
     params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
     true_params = np.array(params.values())
@@ -325,8 +320,8 @@ def mm_contours():
     npts = 20
     times = tscale*np.linspace(1,npts,npts)/5.0
     # use these params, concentrations and times to define the MM system
-    # contour_val = 1e-7
-    # mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
+    contour_val = 0.001 # from discussions, use error=1e-3 # np.logspace(-7,-1,npts_per_proc*nprocs) # countour
+    mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
 
     # # visualize data
     # conc_profiles = mm_specialization.gen_profile(Cs0, times, true_params)
@@ -340,38 +335,42 @@ def mm_contours():
     # ax.legend(loc=2)
     # plt.show(fig)
 
-    # define range of V values over which to find level sets
-    nthird_params = 50
-    # Sts = np.linspace(2.00, 2.02, nthird_params)
+    # define range of values for some third parameter over which to find level sets
     third_param_name = 'K'
-    third_param_set = [np.linspace(2.0, 3.0, nthird_params), np.linspace(2.0, 1, nthird_params)]
-    contour_val = 0.001 # from discussions, use error=1e-3 # np.logspace(-7,-1,npts_per_proc*nprocs) # countour
-    branches = []
-    ds = 1e-4
-    ncontinuation_steps = 1000
-    maxiters=100
+    nthird_params = 500
+    third_param_set = [np.linspace(2.0, 1.0, nthird_params), np.linspace(2.0, 3.0, nthird_params)]
+    all_branches = []
+    ds = 1e-3 # psa stepsize, reduced value will automatically be tried if too large during a particular step
+    ncontinuation_steps = 1000 # total number of PSA steps to take
+    maxiters = 10 # max iterations for newton
+    # loop over third parameter sets, finding contours in state_params/continuation_param plane
+    # this outer loop allows us to search first above and then below the true third_param value
     for third_param_vals in third_param_set:
-        dthird_param = third_param_vals[1] - third_param_vals[0] # spacing of third param # values of interest
-        geodesic_pts = np.empty((nthird_params, 3))
-        init_guesses = np.empty((nthird_params, 3))
 
-        # current_index = 0 
-        # for i, St in enumerate(uf.parallelize_iterable(Sts, rank, nprocs)):
-        ncurves = 0
+        ncurves = 0 # number of curves already found
+        dthird_param = third_param_vals[1] - third_param_vals[0] # spacing of third param # values of interest
+
+        geodesic_pts = np.empty((nthird_params, 3)) # space for storing geodesic curve on three-dimensinal contour
+        init_guesses = np.empty((nthird_params, 3)) # space for storing initial guesses, for testing purposes
+
+        branches = []
+
         for third_param_val in third_param_vals:
-            mm_specialization = MMS.MM_Specialization(Cs0, times, true_params, transform_id, state_params, continuation_param, contour_val)
+            # change the third parameter to be used in subsequent evaluations of the obj. fn.
             mm_specialization.adjust_const_param(third_param_name, third_param_val)
+            # set up PSA
             psa_solver = PSA.PSA(mm_specialization.f_avg_error, mm_specialization.f_gradient)
             try:
                 # branch = psa_solver.find_branch(np.array((params[state_params[0]]+0.01,)), params[continuation_param]+0.01, ds, ncontinuation_steps, maxiters=maxiters)
-
+                # if no curves have yet been found, use slight perturbations of the true parameter values as initial guesses
                 if ncurves is 0:
                     branch = psa_solver.find_branch(np.array((params[state_params[0]] + 0.01,)), params[continuation_param] + 0.01, ds, ncontinuation_steps, maxiters=maxiters)
                     init_guesses[0] = (params[state_params[0]] + 0.01, params[continuation_param] + 0.01, third_param_val)
+                # if one curve has been count, use its first point as an initial guess for a point on the second curve
                 elif ncurves is 1:
-                    branch = psa_solver.find_branch(np.array((branches[0][0,0],)), branches[0][0,1], ds, ncontinuation_steps, maxiters=maxiters)
                     init_guesses[1] = (branches[0][0,0], branches[0][0,1], third_param_val)
-                # use some linear interpolation to get new starting point if we already have two branches
+                    branch = psa_solver.find_branch(np.array((branches[0][0,0],)), branches[0][0,1], ds, ncontinuation_steps, maxiters=maxiters)
+                # if two curves have been found, use some linear interpolation to get new starting point if we already have two branches
                 elif ncurves is 2:
                     # find nearest point between first entry in previous branch and the branch before (i.e. find point in branches[ncurves-2] closest to branches[ncurves-1][0,:])
                     nearest_pt = branches[0][np.argmin(np.linalg.norm(branches[0] - branches[1][0], axis=1))]
@@ -392,33 +391,38 @@ def mm_contours():
                     # ax.scatter(branches[1][0,0], branches[1][0,1], c='r', s=50)
                     # plt.show()
 
-                # use quadratic interpolation if have three or more branches
+                # otherwise, with three or more curves, use quadratic interpolation of geodesics to find new init guess
                 else:
                     # find point on previous branch closest to most recent entry in 'geodesic_pts'
                     nearest_pt = branches[ncurves-1][np.argmin(np.linalg.norm(branches[ncurves-1] - geodesic_pts[ncurves-2], axis=1))]
                     geodesic_pts[ncurves-1] = nearest_pt
 
                     poly_fit_order = 2
-                    # use previous three points to fit curves
-                    npts_fitted = 3
+                    npts_fitted = 3 # number of previous points to use in fitting
+                    # if, for instance, we want to fit 6 points but only have 5 curves, simply use the 5 we have
                     if ncurves >= npts_fitted:
                         pts_to_fit = geodesic_pts[ncurves-npts_fitted:ncurves]
                     else:
                         pts_to_fit = geodesic_pts
-                    param1_param3_fit = np.poly1d(np.polyfit(pts_to_fit[:,2], pts_to_fit[:,0], poly_fit_order))
-                    param2_param3_fit = np.poly1d(np.polyfit(pts_to_fit[:,2], pts_to_fit[:,1], poly_fit_order))
-                    param1_extrap = param1_param3_fit(third_param_val)
-                    param2_extrap = param2_param3_fit(third_param_val)
+                    param1_param3_fit = np.poly1d(np.polyfit(pts_to_fit[:,2], pts_to_fit[:,0], poly_fit_order)) # np function that will evaluate the best-fit polynomial at a given value, here the fit is between the first and third parameters
+                    param2_param3_fit = np.poly1d(np.polyfit(pts_to_fit[:,2], pts_to_fit[:,1], poly_fit_order)) # np function that will evaluate the best-fit polynomial at a given value, here the fit is between the second and third parameters
+                    param1_extrap = param1_param3_fit(third_param_val) # new first param
+                    param2_extrap = param2_param3_fit(third_param_val) # new second param
 
                     init_guesses[ncurves] = (param1_extrap, param2_extrap, third_param_val)
 
-                    print 'init error:', mm_specialization.f_avg_error(np.array((param1_extrap,)), param2_extrap), 'at branch', ncurves + 1
-                    nattempts = 0
-                    max_nattempts = 10
-                    initial_perturbation = 1e-3
+                    # print 'init error:', mm_specialization.f_avg_error(np.array((param1_extrap,)), param2_extrap), 'at branch', ncurves + 1
+                    # the following works around the inherent lack of robustness in the integration routine: occasionally, despite minimal error in the initial guess, Newton will fail to converge and/or the integrator will exit unsucessfully
+                    # the parameter values at which this breakdown occurs seem arbitrary and do not correspond to distinct regions of parameter space but rather random isolated points
+                    # thus, if one of these points is located (signalled by CustomErrors.PSAError), we try using slight perturbation to it
+                    # this heuristic seems successfull in avoiding the previous breakdowns
+                    nattempts = 0 # number of initial points already tried
+                    max_nattempts = 10 # max number of initial points to try
+                    initial_perturbation = 1e-3 # perturbation to apply, if necessary
+                    # while we have not tried the maximum number of initial points, try different perturbations
                     while nattempts < max_nattempts:
                         try:
-                            branch = psa_solver.find_branch(np.array((param1_extrap*(1+initial_perturbation*nattempts),)), param2_extrap*(1+initial_perturbation*nattempts), ds, ncontinuation_steps, maxiters=maxiters, abstol=1e-8)
+                            branch = psa_solver.find_branch(np.array((param1_extrap*(1+initial_perturbation*nattempts),)), param2_extrap*(1+initial_perturbation*nattempts), ds, ncontinuation_steps, maxiters=maxiters)
                         except CustomErrors.PSAError:
                             if nattempts < max_nattempts:
                                 nattempts = nattempts + 1
@@ -429,73 +433,38 @@ def mm_contours():
                         else:
                             break
 
+            # exit if previous level set was not found
             except CustomErrors.PSAError:
-                # exit if previous level set was not found
                 break
             else:
-                err = 0
-                for pt in branch:
-                    err = err + np.abs(mm_specialization.f_avg_error(np.array((pt[0],)), pt[1]))
+                # useful info about previous branch
+                # err = 0
+                # for pt in branch:
+                #     err = err + np.abs(mm_specialization.f_avg_error(np.array((pt[0],)), pt[1]))
                 print 'found', branch.shape[0], 'pts at', third_param_name, 'of', third_param_val # , 'with total error of', err
-                # add St val to third col of branch array
+
+                # add third param val to third column
                 fullbranch = np.empty((branch.shape[0], branch.shape[1] + 1))
                 fullbranch[:,:-1] = branch
                 fullbranch[:,-1] = third_param_val
                 branches.append(fullbranch)
                 ncurves = ncurves + 1
 
-    branches = np.concatenate(branches)
+        all_branches.append(np.concatenate(branches))
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111) # plotting axis
-    ax.scatter(geodesic_pts[:ncurves-1,0], geodesic_pts[:ncurves-1,1], c='g', s=75, marker='^')
-    ax.scatter(init_guesses[:ncurves,0], init_guesses[:ncurves,1], c=range(ncurves), s=100, marker='*')
-    ax.scatter(branches[:,0], branches[:,1], c=range(branches.shape[0]))
-    plt.show()
+    branches = np.concatenate(all_branches)
+
+    # # plot, in two-dimensional projections, the located contours and the geodesic points and the initial guess, for diagnostic purposes
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111) # plotting axis
+    # # ax.scatter(geodesic_pts[:ncurves-1,0], geodesic_pts[:ncurves-1,1], c='g', s=75, marker='^')
+    # # ax.scatter(init_guesses[:ncurves,0], init_guesses[:ncurves,1], c=range(ncurves), s=100, marker='*')
+    # ax.scatter(branches[:,0], branches[:,1], c=range(branches.shape[0]))
+    # plt.show()
 
     file_header = ','.join([key + '=' + str(val) for key, val in params.items()])
     print 'succesfully found', ncurves, 'level sets'
     np.savetxt('./data/output/contour_K_V_St.csv', branches, delimiter=',', header=file_header, comments='')
-
-    # fullbranches = comm.gather(fullbranch, root=0)
-    # if rank is 0:
-    #     # get rid of those branches that didn't initiate
-    #     while 'None' in fullbranches:
-    #         fullbranches.remove('None')
-    #     print '******************************'
-    #     print len(fullbranches)
-    #     print '******************************'
-    #     fullbranches = np.concatenate(fullbranches)
-    #     kept_npts = fullbranches.shape[0]
-    #     # create fileheader specifying true param vals
-    #     file_header = ','.join([key + '=' + str(val) for key, val in params.items()])
-    #     np.savetxt('./data/output/contour_K_V_St.csv', fullbranches, delimiter=',')
-
-        # # 'find_branch' may not actually find 'ncontinuation_steps' branch points, so only add those points that were successfully found
-        # partial_branch = psa_solver.find_branch(np.array((params['K'],)), params['V'], ds, ncontinuation_steps)
-        # nadditional_branch_pts = partial_branch.shape[0]
-        # branch[current_index:current_index+nadditional_branch_pts] = partial_branch
-        # current_index = current_index + nadditional_branch_pts
-    # branch = branch[:current_index]
-    # full_branch = comm.gather(branch, root=0)
-    # if rank is 0:
-    #     full_branch = np.concatenate(full_branch)
-    #     full_npts = full_branch.shape[0]
-    #     # create fileheader specifying which params were investigated, e.g. K=True,V=False,St=True,eps=True,kappa=False
-    #     file_header = state_params[0] + '=True,' + continuation_param + '=True,transform_id=' + transform_id
-    #     # remove trailing comma
-    #     np.savetxt('./data/input/sloppy_contours' + str(full_npts) + '.csv', full_branch, delimiter=',', header=file_header, comments='')
-    #     print '************************************************************'
-    #     print 'generated', full_npts, 'new points with min obj. fn. value of', np.min(full_branch[:,-1])
-    #     print 'saved in ./data/input/sloppy_params' + str(full_npts) + '.csv'
-    #     print '************************************************************'
-    
-    # plt.plot(branch[:,0], branch[:,1])
-    # plt.show()
-    # err = 0
-    # for pt in branch:
-    #     err = err + np.abs(mm_specialization.f(np.array((pt[0],)), pt[1]))
-    # print 'total error along branch:', err
 
 def sample_sloppy_params():
     """Uses mpi4py to parallelize the collection of sloppy parameter sets. The current, naive method is to sample over a noisy grid of points, discarding those whose objective function evaluation exceeds the set tolerance. The resulting sloppy parameter combinations are saved in './data/input'"""
