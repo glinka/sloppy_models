@@ -337,21 +337,22 @@ def mm_contours():
 
     # define range of values for some third parameter over which to find level sets
     third_param_name = 'K'
-    nthird_params = 500
-    third_param_set = [np.linspace(2.0, 1.0, nthird_params), np.linspace(2.0, 3.0, nthird_params)]
+    nthird_params = 100 # 500
+    third_param_set = [np.linspace(2.0, 0.1, nthird_params)] #, np.linspace(2.0, 4.0, nthird_params)]
     all_branches = []
-    ds = 1e-3 # psa stepsize, reduced value will automatically be tried if too large during a particular step
+    ds = 1e-4 # psa stepsize, reduced value will automatically be tried if too large during a particular step
     ncontinuation_steps = 1000 # total number of PSA steps to take
-    maxiters = 10 # max iterations for newton
+    maxiters = 100 # max iterations for newton
     # loop over third parameter sets, finding contours in state_params/continuation_param plane
     # this outer loop allows us to search first above and then below the true third_param value
     for third_param_vals in third_param_set:
 
         ncurves = 0 # number of curves already found
-        dthird_param = third_param_vals[1] - third_param_vals[0] # spacing of third param # values of interest
 
         geodesic_pts = np.empty((nthird_params, 3)) # space for storing geodesic curve on three-dimensinal contour
         init_guesses = np.empty((nthird_params, 3)) # space for storing initial guesses, for testing purposes
+
+        dthird_param = third_param_vals[1] - third_param_vals[0] # spacing of third param # values of interest
 
         branches = []
 
@@ -417,7 +418,7 @@ def mm_contours():
                     # this heuristic seems successfull in avoiding the previous breakdowns
                     nattempts = 0 # number of initial points already tried
                     max_nattempts = 10 # max number of initial points to try
-                    initial_perturbation = 1e-5 # perturbation to apply, if necessary
+                    initial_perturbation = 1e-6 # perturbation to apply, if necessary
                     # while we have not tried the maximum number of initial points, try different perturbations
                     while nattempts < max_nattempts:
                         try:
@@ -425,6 +426,7 @@ def mm_contours():
                         except CustomErrors.PSAError:
                             nattempts = nattempts + 1
 
+                            print 'init error:', mm_specialization.f_avg_error(np.array((param1_extrap,)), param2_extrap), 'at branch', third_param_val
                             print 'garbage mode engaged again'
 
                             if nattempts < max_nattempts:
@@ -466,7 +468,7 @@ def mm_contours():
 
     file_header = ','.join([key + '=' + str(val) for key, val in params.items()])
     print 'succesfully found', ncurves, 'level sets'
-    np.savetxt('./data/output/contour_K_V_St.csv', branches, delimiter=',', header=file_header, comments='')
+    np.savetxt('./data/output/contour_K_V_St_dK' + str(np.abs(dthird_param)) + '.csv', branches, delimiter=',', header=file_header, comments='')
 
 def sample_sloppy_params():
     """Uses mpi4py to parallelize the collection of sloppy parameter sets. The current, naive method is to sample over a noisy grid of points, discarding those whose objective function evaluation exceeds the set tolerance. The resulting sloppy parameter combinations are saved in './data/input'"""
