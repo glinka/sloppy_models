@@ -77,17 +77,22 @@ def committee_meeting_sloppiness():
     plt.tight_layout()
     plt.savefig('./figs/committee/noisey_ks.png')
     
-def plot_contour(data):
+def plot_contour(data, guesses=None):
     """Plots 2d level sets"""
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d') # plotting axis
-    npts_to_plot = 50000
+    npts_to_plot = 10000
+    if data.shape[0] < npts_to_plot:
+        npts_to_plot = data.shape[0]
     slice_size = data.shape[0]/npts_to_plot
     # data = data[data[:,0] > 1.5]# and data[:,1] > 0]
     # data = data[data[:,0] < 2.1]# and data[:,1] > 0]
     ax.scatter(data[::slice_size,0], data[::slice_size,1], data[::slice_size,2])
+    if guesses is not None:
+        ax.scatter(guesses[::slice_size,0], guesses[::slice_size,1], guesses[::slice_size,2], c='r')
     ax.set_xlim((np.min(data[:,0]),np.max(data[:,0])))
     ax.set_ylim((np.min(data[:,1]),np.max(data[:,1])))
+    ax.set_zlim((np.min(data[:,2]),np.max(data[:,2])))
     plt.show()
     # fig = plt.figure()
     # ax = fig.add_subplot(111)
@@ -236,7 +241,7 @@ def main():
     # organize each dataset by file header, then by type of data as a dictionary of dictionaries. Each entry of 'dataset' should correspond to dictionary with keys given by 'data_types' and values of actual data. dataset -> data type -> raw data
     # the overarching 'datasets' dict is not meant to be indexed by its keys which are convoluted tuples created from the header, but rather it is intended to be used as an interable in a "for d in datasets" fashion
     datasets = {}
-    data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums', 'contour']
+    data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums', 'contour', 'guesses']
     for filename in args.input_files:
         # only import csv files
         if filename[-4:] == ".csv":
@@ -298,7 +303,7 @@ def main():
         if args.kv_of_contours:
             plot_of_contours(dataset['contour'], r'$K$', r'$V$')
         if args.of_contour:
-            plot_contour(dataset['contour'])
+            plot_contour(dataset['contour'])#, guesses=dataset['guesses'])
 
 
 if __name__=="__main__":
