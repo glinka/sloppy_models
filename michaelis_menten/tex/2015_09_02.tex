@@ -1,0 +1,75 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\title{Dimensionality reduction of sloppy parameter set}
+
+\begin{document}
+\maketitle
+
+Applying DMAPS and PCA to the ellipsoidal contour mainly produces the expected results in that the longest axis is captured in both methods. However, the DMAPS coordinate does not exactly align with this direction, but rather with the parameter $K$.
+
+\section{DMAPS}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{figs/dmaps_3d}
+  \caption{Dataset colored by first DMAP coordinate}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{figs/dmaps_2d}
+  \caption{Plot of 1st and 2nd DMAP coordinates colored by $\frac{K}{V}$}
+\end{figure}
+
+\clearpage
+
+\section{PCA}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{figs/pca}
+  \caption{2D embedding based on PCA, again colored by $\frac{K}{V}$}
+\end{figure}
+
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

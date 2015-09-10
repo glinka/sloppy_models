@@ -21,6 +21,8 @@ import contextlib
 from collections import OrderedDict
 import tempfile
 
+from pca import pca
+
 # switch to nicer color scheme
 solarize('light')
 
@@ -141,6 +143,90 @@ def mm_sloppy_plot():
     ax.legend(fontsize=24, loc='lower right')
     plt.show()
             
+def pca_contour():
+    data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps.csv', skip_header=1, delimiter=',')
+    npts_to_dmaps = 5000
+    slice_size = data.shape[0]/npts_to_dmaps
+    data = data[::slice_size]
+    npts = data.shape[0]
+    ndims = 2
+    pcs, variances = pca(data, ndims)
+    plot_dmaps.plot_xy(np.dot(pcs[:,0].T, data.T), np.dot(pcs[:,1].T, data.T), color=data[:,1]/data[:,2], scatter=True)
+
+def transform_contour():
+    """Applies a nonlinear transformation to the contour, bringing it into a non-ellipsoidal shape"""
+    data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps_5000.csv', skip_header=1, delimiter=',')
+    stmin, stmax = (np.min(data[:,0]), np.max(data[:,0]))
+    vmin, vmax = (np.min(data[:,1]), np.max(data[:,1]))
+    kmin, kmax = (np.min(data[:,2]), np.max(data[:,2]))
+    # npts_to_keep = 5000
+    # slice_size = data.shape[0]/npts_to_keep
+    # data = data[::slice_size]
+    # np.savetxt('./data/output/contour_KVSt_to_dmaps_5000.csv', data, delimiter=',')
+    # transform:
+    data[:,0] = np.sin((data[:,0] + data[:,1] - stmin - vmin)/(stmax + vmax - stmin - vmin)*(np.pi/2))
+    data[:,1] = np.exp((data[:,1]-vmin)/(vmax - vmin))
+    data[:,2] = np.cos((data[:,2] + data[:,1] - vmin - kmin)*np.pi/(vmax + kmax - vmin - kmin))
+    npts = data.shape[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(data[:,0], data[:,1], data[:,2])
+    plt.show(fig)
+    # np.savetxt('./data/output/contour_KVSt_to_dmaps_transformed.csv', data, delimiter=',')
+
+def dmaps_contour():
+    data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps_transformed.csv', skip_header=0, delimiter=',')
+    # npts_to_dmaps = 5000
+    # slice_size = data.shape[0]/npts_to_dmaps
+    # data = data[::slice_size]
+    npts = data.shape[0]
+    # noise_level = 0.01
+    # data[:,2] = data[:,2] + noise_level*np.random.normal(size=(npts))
+    # plot_dmaps.plot_xyz(data[:,0], data[:,1], data[:,2], xlabel='St', ylabel='V', zlabel='K')
+    # plot_dmaps.epsilon_plot(np.logspace(-4, 2, 10), data)
+    ndims = 5
+    eigvals, eigvects = dmaps.embed_data(data, ndims, epsilon=1e-1)
+    # plot_dmaps.plot_embeddings(eigvects, eigvals)
+    # # for use with eps=5e-2
+    # plot_dmaps.plot_xy(eigvects[:,1], eigvects[:,2], color=data[:,1]/data[:,2], scatter=True)
+    # plot_dmaps.plot_xyz(data[:,0], data[:,1], data[:,2], color=eigvects[:,1], xlabel='St', ylabel='V', zlabel='K')
+    # # for use with eps=1e-1
+    # plot_dmaps.plot_xy(eigvects[:,1], eigvects[:,2], color=data[:,1]/data[:,2], scatter=True)
+    # plot_dmaps.plot_xy(eigvects[:,1], eigvects[:,2], color=data[:,0], scatter=True)
+    # plot_dmaps.plot_xy(eigvects[:,2], eigvects[:,13], color=data[:,1]/data[:,2], scatter=True)
+    # plot_dmaps.plot_xy(eigvects[:,2], eigvects[:,13], color=data[:,0], scatter=True)
+    for i in range(1, ndims):
+        plot_dmaps.plot_xyz(data[:,0], data[:,1], data[:,2], color=eigvects[:,i], xlabel=r'$\hat{St}$', ylabel=r'$\hat{V}$', zlabel=r'$\hat{K}$')
+
+def slim_data():
+    data = np.genfromtxt('./data/output/contour_K_V_St_Kcombined.csv', skip_header=1, delimiter=',')
+    # data = np.genfromtxt('./to_dmaps.csv', delimiter=',')
+    k_sort = np.argsort(data[:,2])
+    data = data[k_sort]
+    print data.shape
+    kmin = np.min(data[:,2])
+    kmax = np.max(data[:,2])
+    nks = 90
+    # dk = 1.0*(kmax - kmin)/nks
+    ks = np.linspace(kmin, kmax, nks)
+    saved_pts = []
+    current_row = 0
+    k_actual = None
+    npts = data.shape[0]
+    for i, k in enumerate(ks):
+        while data[current_row,2] < k:
+            current_row = current_row + 1
+        k_actual = data[current_row,2]
+        while current_row < npts and data[current_row,2] == k_actual:
+            saved_pts.append(data[current_row])
+            current_row = current_row + 1
+    saved_pts = np.array(saved_pts)
+    print saved_pts.shape
+    fig = plt.figure()
+    ax = fig.add_subplot(111)#, projection='3d')
+    ax.scatter(saved_pts[:,1], saved_pts[:,2])
+    plt.show()
+    np.savetxt('./to_dmaps.csv', saved_pts, delimiter=',')
 
 def mm_contour_grid_mpi():
     """Calculates three-dimensional contours in K/V/S_t space in parallel through mpi4py, distributing S_t values over different processes and saving the output in './data/of_evals.csv'"""
@@ -175,13 +261,13 @@ def mm_contour_grid_mpi():
     true_params = np.array(params.values())
     nparams = true_params.shape[0]
     transform_id = 't2'
-    nstate_params = 1000
-    ncontinuation_params = 1000
+    nstate_params = 100
+    ncontinuation_params = 100
     nthird_params = 1*nprocs
     # state_params = {'id':'St', 'data':np.linspace(1.9, 2.1, nstate_params)}#2*np.logspace(-1, 3, nstate_params)}
-    state_params = {'id':'V', 'data':np.linspace(0.5, 3.5, nstate_params)}#np.logspace(-1, 3, ncontinuation_params)}
-    continuation_params = {'id':'K', 'data':np.linspace(0.5, 4.5, ncontinuation_params)}#np.logspace(-1, 3, ncontinuation_params)}
-    third_params = {'id':'St', 'data':np.linspace(2, 3, nthird_params)}
+    state_params = {'id':'V', 'data':np.logspace(-1, 3, ncontinuation_params)} #np.linspace(0.5, 3.5, nstate_params)}
+    third_params = {'id':'K', 'data':np.logspace(-1, 3, ncontinuation_params)} #np.linspace(0.5, 4.5, ncontinuation_params)}
+    continuation_params = {'id':'St', 'data':[2.0]}#np.linspace(2, 3, nthird_params)}
     # set init concentrations
     S0 = params['St']; C0 = 0.0; P0 = 0.0 # init concentrations
     Cs0 = np.array((S0, C0, P0))
@@ -190,15 +276,13 @@ def mm_contour_grid_mpi():
     npts = 20
     times = tscale*np.linspace(1,npts,npts)/5.0
     # use these params, concentrations and times to define the MM system
-    contour = 0.001
+    contour = 0.01 # f_avg_error below tol will be saved
     MM_system = MMS.MM_Specialization(Cs0, times, true_params, transform_id, [state_params['id']], continuation_params['id'], contour)
     # true_traj_squared_norm = np.power(np.linalg.norm(MM_system.gen_profile(Cs0, times, true_params)[:,2]), 2) # for recording relative as error, scale of_eval by this norm
     #  loop over all parameter combinations
-    tol  = 0.001 # f_avg_error below tol will be saved
     st_slices = []
     # suppress output to stdout in the inner loop, as it's always (hopefully) about lsoda's performance
     # with stdout_redirected():
-
     for third_param in uf.parallelize_iterable(third_params['data'], rank, nprocs):
         MM_system.adjust_const_param(third_params['id'], third_param)
         count = 0 # counter of number of parameter combinations that pass tolerance
@@ -236,6 +320,8 @@ def mm_contour_grid_mpi():
         full_pts = np.concatenate(all_pts)
         header = ','.join([key + "=" + str(val) for key, val in params.items()]) + ',Tested=' + state_params['id'] + continuation_params['id'] + third_params['id']
         np.savetxt('./data/contours_' + state_params['id'] + '_' + continuation_params['id'] + '_' + third_params['id'] +  '.csv', full_pts, delimiter=',', header=header, comments='')
+        plt.scatter(full_pts[:,0], full_pts[:,2])
+        plt.show()
 
 
 def mm_contour_grid():
@@ -668,6 +754,10 @@ if __name__=='__main__':
     # check_sloppiness()
     # mm_contour_grid()
     # mm_sloppy_plot()
-    mm_contours()
     # mm_contour_grid_mpi()
     # test()
+    # mm_contours()
+    # slim_data()
+    dmaps_contour()
+    # pca_contour()
+    # transform_contour()

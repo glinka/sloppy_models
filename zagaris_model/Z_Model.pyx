@@ -3,6 +3,8 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
+import algorithms.CustomErrors as CustomErrors
+
 cdef class Z_Model:
     """Implementation of Antonios' custom-built model with four parameters: a, b, lambda and epsilon. 'a' controls the curvature of the slow manifold, 'b' the curvature of the fast manifold, 'lambda' the rate of motion along the slow manifold and 'epsilon' the rate of motion along the fast manifold"""
 
@@ -67,6 +69,16 @@ cdef class Z_Model:
         for i, t in enumerate(times_to_integrate):
             trajectory[i+offset] = self._integrator.integrate(t)
             if not self._integrator.successful():
-                print 'failed to integrate'
-                return False
+                raise CustomErrors.IntegrationError
         return trajectory
+
+    cpdef void change_parameters(self, np.ndarray[np.float64_t] new_params):
+        """Changes the parameters of the ode system to 'new_params'
+
+        Args:
+            new_params (array): new parameter set to use in form (a, b, lambda, epsilon)
+        """
+        self._a = new_params[0]
+        self._b = new_params[1]
+        self._lam = new_params[2]
+        self._eps = new_params[3]

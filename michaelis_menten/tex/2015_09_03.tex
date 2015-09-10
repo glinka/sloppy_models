@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\title{DMAPS on nonlinearly transformed dataset}
+
+\begin{document}
+\maketitle
+
+To create a nonlinear contour, two different invertible transformations were applied to the original ellipsoid. These are detailed in the first and second sections, respectively.
+
+\section{Simpler transformation}
+
+This was the simpler of the two transformations. If the original variables were $(x,y,z)$, the new coordinates $(\hat{x}, \hat{y}, \hat{z})$ are given by:
+
+\begin{align*}
+  \hat{x} &= \cos(\frac{x - x_{min}}{x_{max} - x_{min}}) \\
+  \hat{y} &= \sqrt{y - y_{min}} \\
+  \hat{z} &= e^{z - z_{min}}
+\end{align*}
+
+This produces minor curvature in the system, with the first and third DMAP coordinates parameterizing the major directions as shown in the figures below. The, perhaps insignificant, advantage of this simpler transformation is that the transformed parameters can be inserted into the Michaelis-Menten equations directly.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{dmaps1}
+  \caption{First dataset colored by $\phi_1$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{dmaps2}
+  \caption{First dataset colored by $\phi_2$}
+\end{figure}
+
+\clearpage
+
+\section{More complex transformation}
+
+Here we explore a more severe warping of the ellipsoid, given by
+
+\begin{align*}
+  \hat{x} &= \sin(\frac{x + y - x_{min} - y_{min}}{x_{max} - x_{min} + y_{max} - y_{min}}\frac{\pi}{2}) \\
+  \hat{y} &= e^{\frac{y - y_{min}}{y_{max}- y_{min}}} \\
+  \hat{z} &= \cos(\frac{y + z - y_{min} - z_{min}}{y_{max} - y_{min} + z_{max} - z_{min}}\pi)
+\end{align*}
+
+This crushes the second dimension, and DMAPS permits a one-dimensional embedding as shown.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{dmaps3}
+  \caption{Second dataset colored by $\phi_1$}
+  \label{label}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}
