@@ -11,6 +11,7 @@ import algorithms.PseudoArclengthContinuation as PSA
 import MM_Specialization as MMS
 from solarized import solarize
 import numpy as np
+import scipy.linalg as sl
 from mpi4py import MPI
 from sympy import Function, dsolve, Eq, Derivative, symbols
 import matplotlib.pyplot as plt
@@ -155,24 +156,80 @@ def pca_contour():
 
 def transform_contour():
     """Applies a nonlinear transformation to the contour, bringing it into a non-ellipsoidal shape"""
-    data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps_5000.csv', skip_header=1, delimiter=',')
-    stmin, stmax = (np.min(data[:,0]), np.max(data[:,0]))
-    vmin, vmax = (np.min(data[:,1]), np.max(data[:,1]))
-    kmin, kmax = (np.min(data[:,2]), np.max(data[:,2]))
-    # npts_to_keep = 5000
-    # slice_size = data.shape[0]/npts_to_keep
-    # data = data[::slice_size]
-    # np.savetxt('./data/output/contour_KVSt_to_dmaps_5000.csv', data, delimiter=',')
-    # transform:
-    data[:,0] = np.sin((data[:,0] + data[:,1] - stmin - vmin)/(stmax + vmax - stmin - vmin)*(np.pi/2))
-    data[:,1] = np.exp((data[:,1]-vmin)/(vmax - vmin))
-    data[:,2] = np.cos((data[:,2] + data[:,1] - vmin - kmin)*np.pi/(vmax + kmax - vmin - kmin))
+    data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps.csv', skip_header=1, delimiter=',')
+    data = data[::6]
+    # plt.scatter(data[:,0], data[:,1], data[:,2])
+    # plt.show()
     npts = data.shape[0]
+    nvars = data.shape[1]
+    print 'have', npts, 'pts'
+
+    # add some noise
+    data = data + np.random.normal(size=data.shape)*np.array((0.0005, 0.005, 0.05))
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(data[:,0], data[:,1], data[:,2])
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
     plt.show(fig)
-    # np.savetxt('./data/output/contour_KVSt_to_dmaps_transformed.csv', data, delimiter=',')
+
+    # center data
+    data = data - np.average(data, axis=0)
+
+    # do pca
+    ndims = 2
+    u, s, v = sl.svd(data)
+    # # shrink smaller directions by factor of 1/10, enlarge principal axis by factor of 10
+    # scaled_s = np.zeros((npts, nvars))
+    # for i, sval in enumerate(s):
+    #     scaled_s[i,i] = 0.5*sval
+    # scaled_s[0,0] = 20*scaled_s[0,0]
+    # stretched_data = np.dot(u, np.dot(scaled_s, v))
+
+
+    twodim_proj = np.empty((npts, 2))
+    for i in range(npts):
+        twodim_proj[i] = np.dot(v[:2], data[i])
+    # plt.scatter(twodim_proj[:,0], twodim_proj[:,1])
+    # plt.show()
+
+    # scale to -tmax, tmax
+    tmax = np.pi # maximum parameter value
+    twodim_proj[:,0] = tmax*twodim_proj[:,0]/np.max(twodim_proj[:,0])
+    
+    # nonlinearly transform the data
+    transform = np.empty((npts, nvars))
+    transform[:,0] = twodim_proj[:,0]*np.cos(twodim_proj[:,0])
+    transform[:,1] = -twodim_proj[:,0]*np.sin(twodim_proj[:,0]) + twodim_proj[:,1]
+    transform[:,2] = data[:,2]
+
+    # re-rotate (?)
+    transform[:,:2] = np.dot(transform[:,:2], v[:2])[:,:2]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(transform[:,0], transform[:,1], transform[:,2])
+    plt.show(fig)
+
+
+    # stmin, stmax = (np.min(data[:,0]), np.max(data[:,0]))
+    # vmin, vmax = (np.min(data[:,1]), np.max(data[:,1]))
+    # kmin, kmax = (np.min(data[:,2]), np.max(data[:,2]))
+    # # npts_to_keep = 5000
+    # # slice_size = data.shape[0]/npts_to_keep
+    # # data = data[::slice_size]
+    # # np.savetxt('./data/output/contour_KVSt_to_dmaps_5000.csv', data, delimiter=',')
+    # # transform:
+    # data[:,0] = np.sin((data[:,0] + data[:,1] - stmin - vmin)/(stmax + vmax - stmin - vmin)*(np.pi/2))
+    # data[:,1] = np.exp((data[:,1]-vmin)/(vmax - vmin))
+    # data[:,2] = np.cos((data[:,2] + data[:,1] - vmin - kmin)*np.pi/(vmax + kmax - vmin - kmin))
+    # npts = data.shape[0]
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(data[:,0], data[:,1], data[:,2])
+    # plt.show(fig)
+    # # np.savetxt('./data/output/contour_KVSt_to_dmaps_transformed.csv', data, delimiter=',')
 
 def dmaps_contour():
     data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps_transformed.csv', skip_header=0, delimiter=',')
@@ -758,6 +815,6 @@ if __name__=='__main__':
     # test()
     # mm_contours()
     # slim_data()
-    dmaps_contour()
+    # dmaps_contour()
     # pca_contour()
-    # transform_contour()
+    transform_contour()
