@@ -1,3 +1,8 @@
+import matplotlib.colors as colors
+import matplotlib.cm as cm
+import matplotlib.colorbar as colorbar
+import matplotlib.gridspec as gs
+import matplotlib.ticker as ticker
 import argparse
 import os
 import util_fns as uf
@@ -71,24 +76,138 @@ def committee_meeting_sloppiness():
     ax.set_ylabel(r'$k_2$')
     plt.tight_layout()
     plt.savefig('./figs/committee/noisey_ks.png')
+
+def plot_contour(data, guesses=None):
+    """Plots 2d level sets"""
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d') # plotting axis
+    npts_to_plot = 10000
+    if data.shape[0] < npts_to_plot:
+        npts_to_plot = data.shape[0]
+    slice_size = data.shape[0]/npts_to_plot
+    # data = data[data[:,0] > 1.5]# and data[:,1] > 0]
+    # data = data[data[:,0] < 2.1]# and data[:,1] > 0]
+    ax.scatter(data[::slice_size,0], data[::slice_size,1], data[::slice_size,2])
+    if guesses is not None:
+        ax.scatter(guesses[::slice_size,0], guesses[::slice_size,1], guesses[::slice_size,2], c='r')
+    ax.set_xlim((np.min(data[:,0]),np.max(data[:,0])))
+    ax.set_ylim((np.min(data[:,1]),np.max(data[:,1])))
+    ax.set_zlim((np.min(data[:,2]),np.max(data[:,2])))
+    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.scatter(data[:,0], data[:,1], c=range(data.shape[0]), lw=0)
+    # plt.show()
+
+def plot_of_contours(data, xlabel, ylabel, tols=np.logspace(-1,1,20), dir='./figs/contours/', plot_3d=True):
+    """Plots contours of the MM objective function, where each row of 'data' is (xlabel, ylabel, of_eval)"""
+    tol = 0.001
+    data = data[data[:,-1] < tol] # filter out points whose of value is greater than 'tol'
+    epsmin = np.min(data[:,0]); epsmax = np.max(data[:,0])
+    kappamin = np.min(data[:,1]); kappamax = np.max(data[:,1])
+
+    # set up some plotting stuff
+    gspec = gs.GridSpec(6,6)
+    # set up consistent norm for obj. fn. values
+    # colornorm = colors.Normalize(np.log10(np.min(data[:,-1])), np.log10(tol))
+    colornorm = colors.Normalize(np.min(data[:,-1]), np.max(data[:,-1]))
+    colormap = cm.ScalarMappable(norm=colornorm, cmap='jet')
+    format_fn = lambda val, pos: "%.2f" % val
+    # set plot constants
+    plt.rcParams['font.size'] = 18
+    # if there are points, plot them
+    if data.shape[0] > 0: 
+        fig = plt.figure()
+        ax = fig.add_subplot(gspec[:,:5]) # plotting axis
+        ax_cb = fig.add_subplot(gspec[:,5]) # colobar axis
+        # ax.set_xscale('log')
+        # ax.set_yscale('log')
+        ax.scatter(data[:,0], data[:,1], c=colormap.to_rgba(data[:,-1]))#np.log10(data[:,-1])))
+        # assume eps = 0.001 and kappa = 10 are true param values and plot this point
+        ax.scatter([0.001], [10], s=75, lw=0, c='k')
+        # ax.scatter([2], [1], s=75, lw=0, c='k')
+        ax.set_xlim((epsmin, epsmax))
+        ax.set_ylim((kappamin, kappamax))
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title('Color indicates log(relative error)')
+        cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
+        plt.savefig(dir + 'contours_' + xlabel + '_' + ylabel + '.png')
+        plt.show()
     
-def plot_of_contours():
-    data = np.genfromtxt('./data/of_evals.csv', delimiter=',')
+
+
+def plot_of_k_v_st_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contours/', plot_3d=True):
+    """Plots contours of the MM objective function, where each row of 'data' is (K, V, St, of_eval), looping over unique St values and plotting slices in the K/V plane"""
+    tols = [0.1]# np.logspace(1.1*np.min(data[:-1]), 1, 20)
+    # get data
+    # data = np.genfromtxt('/home/cbe-ygk-10/holiday/of_evals_tol0.1.csv', delimiter=',')
+    # data = np.genfromtxt('./data/of_evals.csv', delimiter=',')
     npts = data.shape[0]
+    kmin = np.min(data[:,0]); kmax = np.max(data[:,0])
+    vmin = np.min(data[:,1]); vmax = np.max(data[:,1])
+
+    # set up some plotting stuff
+    gspec = gs.GridSpec(6,6)
+    # set up consistent norm for obj. fn. values
+    colornorm = colors.Normalize(vmin=np.log10(np.min(data[:,-1])), vmax=np.log10(np.max(tols)))
+    colormap = cm.ScalarMappable(norm=colornorm, cmap='jet')
+    format_fn = lambda val, pos: "%.2f" % val
+    # set plot constants
+    plt.rcParams['font.size'] = 12
+
     current_pt = data[0]
+    last_index = 0
+
+    # loop over all points, creating separate plot for each value of St
     for i in range(1,npts):
-        if data[i,2] != current_pt[2]:
+        # only plot if new St has been found, or if end of file is reached
+        if data[i,2] != current_pt[2] or i == npts-1:
             current_pt = data[i]
+            data_to_plot = data[last_index:i-1]
+            last_index = i
+
+            for k, tol in enumerate(tols[::-1]):
+                data_to_plot = data_to_plot[data_to_plot[:,-1] < tol] # filter out points whose of value is greater than 'tol'
+                # if there are points, plot them
+                if data_to_plot.shape[0] > 0:
+                    fig = plt.figure()
+                    ax = fig.add_subplot(gspec[:,:5]) # plotting axis
+                    ax_cb = fig.add_subplot(gspec[:,5]) # colobar axis
+                    ax.set_xscale('log')
+                    ax.set_yscale('log')
+                    plot = ax.scatter(data_to_plot[:,0], data_to_plot[:,1], c=colormap.to_rgba(np.log10(data_to_plot[:,3])))
+                    ax.set_xlim((kmin, kmax))
+                    ax.set_ylim((vmin, vmax))
+                    ax.set_xlabel('K')
+                    ax.set_ylabel('V')
+                    ax.set_title(r'$S_t=$' + str(data[i-1,2]))
+                    cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
+                    plt.show()
+                    # plt.savefig(dir + 'contours_S' + str(data[i-1,2]) + '_tol' + str(k) + '.png')
+                    # plt.close()
+
+    if plot_3d:
+        min_tol = 0.0; max_tol = 1.0
+        data_to_plot_3d = data[data[:,-1] < max_tol]
+        data_to_plot_3d = data_to_plot_3d[data_to_plot_3d[:,-1] > min_tol]
+        if data_to_plot_3d.shape[0] > 0:
+            # data_to_plot_3d = data_to_plot_3d[:count]
             fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.set_xscale('log')
-            ax.set_yscale('log')
-            ax.scatter(data[:i-1,0], data[:i-1,1], c=data[:i-1,3])
-            ax.set_xlabel('K')
-            ax.set_ylabel('V')
-            ax.set_title('S=' + str(data[i-1,2]))
-            plt.colorbar(plot)
-            plt.savefig('./contours/contour_S' + str(data[i-1,2]) + '.png')
+            ax = fig.add_subplot(gspec[:,:5], projection='3d') # plotting axis
+            ax_cb = fig.add_subplot(gspec[:,5]) # colobar axis
+            # ax.xaxis.set_scale('log')
+            # ax.yaxis.set_scale('log')
+            # ax.zaxis.set_scale('log')
+            ax.scatter(np.log10(data_to_plot_3d[:,0]), np.log10(data_to_plot_3d[:,1]), data_to_plot_3d[:,2], c=colormap.to_rgba(np.log10(data_to_plot_3d[:,-1])))
+            ax.set_xlabel(r'$\log(K)$')
+            ax.set_ylabel(r'$\log(V)$')
+            ax.set_zlabel(r'$S_t$')
+            cb = colorbar.ColorbarBase(ax_cb, cmap='jet', norm=colornorm, orientation='vertical', format=ticker.FuncFormatter(format_fn))
+            plt.show(fig)
+            plt.savefig(dir + 'contours_3d.png')
+            plt.close()
+                        
 
 def plot_eigvals(eigvals, **kwargs):
     """Plots eigenvalues. Done."""
@@ -112,12 +231,16 @@ def main():
     parser.add_argument('--of-coloring', action='store_true', default=False, help="plots the k1, k2 plane colored by obj. fn. value")
     parser.add_argument('--kplane-coloring', action='store_true', default=False, help="plots k1, k2 plane colored by successive DMAP eigenvectors")
     parser.add_argument('--param-surface', action='store_true', default=False, help="plots parameters from 'sloppy_params.csv' in three-dimensional space")
+    parser.add_argument('--kvs-of-contours', action='store_true', default=False, help="plots contours of the objective function, where the input data is a (npts, 4) array whose rows are (K, V, St, of_eval)")
+    parser.add_argument('--ek-of-contours', action='store_true', default=False, help="plots contours of the objective function, where the input data is a (npts, 4) array whose rows are (epsilon, kappa, of_eval)")
+    parser.add_argument('--kv-of-contours', action='store_true', default=False, help="plots contours of the objective function, where the input data is a (npts, 4) array whose rows are (K, V, of_eval)")    
+    parser.add_argument('--of-contour', action='store_true', default=False, help="plots contour of the objective function, where the input data is a (npts, 2) array whose rows are (param1, param2)")
     args = parser.parse_args()
     # import data from files
     # organize each dataset by file header, then by type of data as a dictionary of dictionaries. Each entry of 'dataset' should correspond to dictionary with keys given by 'data_types' and values of actual data. dataset -> data type -> raw data
     # the overarching 'datasets' dict is not meant to be indexed by its keys which are convoluted tuples created from the header, but rather it is intended to be used as an interable in a "for d in datasets" fashion
     datasets = {}
-    data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums']
+    data_types = ['eigvals', 'eigvects', 'sloppy_params', 'epsilons', 'kernel_sums', 'contour', 'guesses']
     for filename in args.input_files:
         # only import csv files
         if filename[-4:] == ".csv":
@@ -153,24 +276,33 @@ def main():
             if 'sloppy_params' in dataset.keys():
                 # plot_dmaps.plot_embeddings(dataset['eigvects'], np.linspace(1,10,dataset['eigvects'].shape[1]), color=dataset['sloppy_params'][:,2])
 
-                # # custom 3d plot, should eventually delete
-                fig = plt.figure()
-                ax = fig.add_subplot(111, projection='3d')
-                p = ax.scatter(dataset['eigvects'][:,1], dataset['eigvects'][:,2], dataset['eigvects'][:,13], c=dataset['sloppy_params'][:,2])
-                ax.set_xlabel(r'$\phi_3$')
-                ax.set_ylabel(r'$\phi_6$')
-                ax.set_zlabel(r'$\phi_{12}$')
-                plt.tick_params(axis='both', which='major', labelsize=0)
-                fig.colorbar(p)
-                plt.show(fig)
-                # end custom plot
-                plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], color=dataset['sloppy_params'][:,2], colorbar=True)#plot_3d=True)
+                # # # custom 3d plot, should eventually delete
+                # fig = plt.figure()
+                # ax = fig.add_subplot(111, projection='3d')
+                # p = ax.scatter(dataset['eigvects'][:,1], dataset['eigvects'][:,2], dataset['eigvects'][:,13], c=dataset['sloppy_params'][:,2])
+                # ax.set_xlabel(r'$\phi_3$')
+                # ax.set_ylabel(r'$\phi_6$')
+                # ax.set_zlabel(r'$\phi_{12}$')
+                # plt.tick_params(axis='both', which='major', labelsize=0)
+                # fig.colorbar(p)
+                # plt.show(fig)
+                # # end custom plot
+
+                plot_dmaps.plot_embeddings(dataset['eigvects'].T, dataset['eigvals'], color=dataset['sloppy_params'][:,1], colorbar=True, k=6)#plot_3d=True)
             else:
-                plot_dmaps.plot_embeddings(dataset['eigvects'], dataset['eigvals'], plot_3d=True)
+                plot_dmaps.plot_embeddings(dataset['eigvects'].T, dataset['eigvals'], plot_3d=False)
         if args.param_surface:
             # assume only three parameters have been used for investigation and plot the values in log-space
             plot_dmaps.plot_xyz(dataset['sloppy_params'][:,0], dataset['sloppy_params'][:,1], dataset['sloppy_params'][:,2], xlabel=r'$K_M$', ylabel=r'$V_M$', zlabel=r'$\epsilon$', color=dataset['sloppy_params'][:,2], labelsize=24)
-
+        if args.kvs_of_contours:
+            print 'loaded data, plotting'
+            plot_of_k_v_st_contours(dataset['contour'])
+        if args.ek_of_contours:
+            plot_of_contours(dataset['contour'], r'$\epsilon$', r'$\kappa$')
+        if args.kv_of_contours:
+            plot_of_contours(dataset['contour'], r'$K$', r'$V$')
+        if args.of_contour:
+            plot_contour(dataset['contour'])#, guesses=dataset['guesses'])
 
 
 if __name__=="__main__":

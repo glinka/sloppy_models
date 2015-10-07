@@ -1,0 +1,99 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\title{Nonlinearly transformed parameters}
+\author{}
+
+\begin{document}
+\maketitle
+
+
+To create nonlinear sets of sloppy parameter combinations, we transform the parameters from the original model $\lambda$ and $\epsilon$ into $c_1 = f_1(\lambda, \epsilon)$ and $c_2=f_2(\lambda, \epsilon)$ through invertible $f_1$ and $f_2$. To transform the rectangular region $\lambda \in [0, L]$ and $\epsilon \in [0, E]$, the following was proposed:
+
+\begin{align*}
+  c_1 &= \sqrt{\frac{\epsilon}{E} + \frac{1}{S}\frac{\lambda}{L}} \cos(2\pi S \frac{\epsilon}{E}) \\
+  c_2 &= \sqrt{\frac{\epsilon}{E} + \frac{1}{S}\frac{\lambda}{L}} \sin(2\pi S \frac{\epsilon}{E})
+\end{align*}
+
+where $S$ is a constant affecting the size of the swirl . This has the inversion
+
+\begin{align*}
+  \lambda &= SL(c_1^2 + c_2^2 - \frac{1}{2 \pi S}\tan^{-1}(\frac{c_2}{c_1}) \\
+  \epsilon &=  \frac{E}{2 \pi S}\tan^{-1}(\frac{c_2}{c_1})
+\end{align*}
+
+We start with a system whose true parameters are
+
+\begin{itemize}
+\item a = 0.1
+\item b = 0.1
+\item $\epsilon$ = 1e-3
+\item $\lambda$ = 10.0
+\end{itemize}
+
+and essentially sample $\epsilon \in (0, 10]$ and $\lambda \in (0, 10]$ (actually we sample $c_1$ and $c_2$ but they're equivalent). This leads to the following contours in the $c_1/c_2$ plane:
+
+\clearpage
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{s-contours-full}
+  \caption{The full plane, colored by objective function value. Darkest red corresponds to a least-squares objective function value of 20, darkest blue to 1e-6
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{s-contours-disjointed}
+  \caption{The same data as above, but only keeping points whose objective function value was less than 1e-2.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{s-contours-disjointed2}
+  \caption{A different system at different parameter values created in an attempt to make more-nearly continuous contours.}
+\end{figure}
+
+
+
+
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

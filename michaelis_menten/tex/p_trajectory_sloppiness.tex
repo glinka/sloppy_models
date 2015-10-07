@@ -1,0 +1,115 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\title{ \vspace{-3cm} Visualizing sloppiness through concentration trajectories}
+
+\begin{document}
+\maketitle
+
+% Fig. (1) exhibits sloppiness in both $\epsilon$ and $\kappa$, respectively singular- and regular-perturbation parameters of the model. Fig. (2) shows sloppiness in two regular perturbation parameters $\frac{K}{V}$ and $\kappa$. Only one trajectory in Fig. (2) matches somewhat poorly, when $\kappa \gg 1$ and $K \approx V \approx 1$.
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=\linewidth]{{{p_timecourse_eps_kappa}}}
+% \end{figure}
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=\linewidth]{{{p_timecourse_kv_kappa}}}
+% \end{figure}
+
+% \clearpage
+
+True parameter values were:
+
+\begin{itemize}
+\item $K = 2.0$
+\item $V = 1.0$
+\item $S_t = 2.0$
+\item $\epsilon = 1*10^{-3}$
+\item $\kappa = 10.0$
+\end{itemize}
+
+
+Fig. (1) shows visual discrepancies as $\epsilon$ increases while Fig. (2) shows discrepancies as $\frac{K}{V}$ increases. Note that in Fig. (2), $\frac{K}{V}$ is held constant at $\frac{K}{V} = \frac{10}{3}$; thus, despite the legend suggesting that only $K$ changes, both $K$ and $V$ are being adjusted to maintain this ratio. The legend indicates the corresponding parameter values and errors, where a sort of average $l_2$ norm was used:
+
+\begin{align}
+  \textrm{error}(\hat{P}) = \frac{\sqrt{\sum_{i=1}^N (\hat{P_i} - P_i)^2}}{N}
+\end{align}
+
+where $\hat{P_i} - P_i$ is the difference between the predicted and true concentration values at $t_i$. \\
+
+\noindent\fbox{%
+  \parbox{\textwidth}{%
+    Note that while the reported errors may seem small, a rough estimation shows that the values are commensurate with our definition. Assuming $\hat{P_i} - P_i \approx 0.5$, we find that $\textrm{error} \approx \frac{\sqrt{(20*0.5)^2}}{20} = 0.16$ which is not far off the error of $0.11$ reported for the yellow trajectory in Fig. (2)
+  }
+}
+
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=1.1\linewidth]{{{p_timecourse_eps_visual}}}
+  \caption{}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=1.1\linewidth]{{{p_timecourse_kv_visual}}}
+  \caption{}
+\end{figure}
+
+\clearpage
+
+It is possible to generate trajectories above and below the true profile, though it becomes difficult to visualize when adjusting $\epsilon$ because of the small errors incurred when decreasing below the true value. Fig. (3) zooms in on a particular point revealing that the red trajectory lies slightly above the true values, and the yellow below. Fig. (4) adjusts $K$ and $V$ to create different profiles.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=1.1\linewidth]{{{p_timecourse_eps_visual_above_below}}}
+  \caption{}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=1.1\linewidth]{{{p_timecourse_kv_visual_above_below}}}
+  \caption{}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

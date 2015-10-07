@@ -126,7 +126,7 @@ class PSA:
         try:
             xprime = spla.gmres(self._Df_arclength(xstart, tempslopes), tempslopes)[0]
         except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
-            raise
+            raise CustomErrors.PSAError
         # normalize
         xprime_start = xprime/np.linalg.norm(xprime)
         # update newton to new functions
@@ -136,7 +136,12 @@ class PSA:
         branch_pts[-1] = np.copy(xstart)
         # take nsteps/2 forward and backward from the initial point
         # in case the inner loop over 'i' exits prematurely, keep track of how many were successfully obtained
-        ncompleted_pts = halfnsteps
+        ncompleted_pts = 0
+
+        # TESTING
+        total_pts = 0
+        # TESTING
+        
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # The error handling in this double loop is as follows:
         # The inner loop might raise an EvalError from the 'find_zero' function
@@ -147,12 +152,16 @@ class PSA:
         # found to that point. Otherwise, return the partial branch from (k==0)
         # and the full branch from (k==1).
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ds_divisions = 0
+        max_ds_divisions = 4
+        count = 0
         for k in range(2):
             # flip ds to continue in both directions
             ds = -ds
             # move x back to "center" of branch
             x = np.copy(xstart)
             xprime = np.copy(xprime_start)
+            count = 0
             try:
                 for i in range(halfnsteps):
                     if progress_bar:
@@ -163,24 +172,36 @@ class PSA:
                     xprev = np.copy(x)
                     # update parameter values for f and Df in newton solver
                     newton_solver.change_parameters([xprev, xprime, ds], [xprime])
-                    x = newton_solver.find_zero(x0, **kwargs)
-                    # use finite diff approx for xprime
-                    xprime = (x - xprev)/ds
-                    # normalize
-                    xprime = xprime/np.linalg.norm(xprime)
-                    branch_pts[k*ncompleted_pts + i] = np.copy(x)
+                    try:
+                        x = newton_solver.find_zero(x0, **kwargs)
+                    except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
+                        raise
+                        # if ds_divisions > max_ds_divisions:
+                        #     raise
+                    #     else:
+                    #         x = xprev
+                    #         ds = ds/10.0
+                    #         ds_divisions = ds_divisions + 1
+                    else:
+                        # use finite diff approx for xprime
+                        xprime = (x - xprev)/ds
+                        # normalize
+                        xprime = xprime/np.linalg.norm(xprime)
+                        branch_pts[k*ncompleted_pts + count] = np.copy(x)
+                        count = count + 1
+                        total_pts = total_pts + 1
             except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
                 # continue from ncompleted_pts
                 if k == 0:
-                    ncompleted_pts = i
+                    ncompleted_pts = count
                     continue
                 # k == 1, copy initial point from end of 'branch' and return whatever was successfully found
                 else:
-                    branch_pts[ncompleted_pts + i] = branch_pts[-1]
-                    return branch_pts[:ncompleted_pts + i + 1]
+                    branch_pts[ncompleted_pts + count] = branch_pts[-1]
+                    return branch_pts[:ncompleted_pts + count + 1]
             else:
-                ncompleted_pts = halfnsteps
+                ncompleted_pts = count
         # could have encountered error when k==0, no error when k==1: adjust accordingly
-        branch_pts[ncompleted_pts + halfnsteps] = branch_pts[-1]
-        return branch_pts[:ncompleted_pts + halfnsteps + 1]
+        branch_pts[total_pts] = branch_pts[-1]
+        return branch_pts[:total_pts + 1]
 

@@ -41,3 +41,8 @@ build*
 *.log
 *.aux
 *_region_.*
+
+# cython from zagaris_model
+zagaris_model/*.c
+zagaris_model/*.so
+zagaris_model/build

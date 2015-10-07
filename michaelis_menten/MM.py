@@ -6,6 +6,8 @@ import scipy.integrate as spint
 from sympy import Function, dsolve, Eq, Derivative, symbols
 from collections import OrderedDict
 
+import time
+
 import matplotlib.pyplot as plt
 
 class MM_System:
@@ -27,7 +29,6 @@ class MM_System:
         self._integrator = spint.ode(self._enzyme_rhs)
         # uncomment the following line and comment out the 'lsoda' integrator for a stabler method, but one that is about 1000 times slower
         # self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
-        self._integrator.set_integrator('lsoda')
         self._Cs0 = Cs0
         self._times = times
         self.param_transform = param_transform
@@ -36,7 +37,12 @@ class MM_System:
                             't2':['K', 'V', 'St', 'epsilon', 'kappa']}
         self._param_list = all_param_dicts[param_transform]
         self._true_param_dict = OrderedDict(zip(self._param_list, params))
-        self._data = self.gen_profile(self._Cs0, self._times, self._true_param_dict.values())
+        self._integrator.set_integrator('lsoda')
+        try:
+            self._data = self.gen_profile(self._Cs0, self._times, self._true_param_dict.values())
+        except CustomErrors.IntegrationError:
+            raise CustomErrors.InitialIntegrationError
+        # self._integrator.set_integrator('vode', method='adams')
         
 
     def of(self, params):
@@ -65,10 +71,10 @@ class MM_System:
         except CustomErrors.IntegrationError:
             raise
         else:
-            of_eval = np.sum(np.power(enzyme_profile[:,2] - self._data[:,2], 2))
+            of_eval = np.power(np.linalg.norm(enzyme_profile[:,2] - self._data[:,2]), 2) # squared 2-norm, i.e. least-squares
             return of_eval
 
-    def gen_profile(self, Cs0, times, params):
+    def gen_profile(self, Cs0, times, params, integrator='lsoda'):
         """Generates the concentration profiles of the MM species based on the initial concentrations 'Cs0' and parameters 'params', all evaluated at the times given in 'times'
 
         Args:
@@ -90,10 +96,22 @@ class MM_System:
         self._integrator.set_initial_value(Cs0, 0.0)
         self._integrator.set_f_params(*self.inverse_transform_params(params))
         profile = np.empty((times.shape[0], 3))
-        for i, t in enumerate(times):
-            profile[i] = self._integrator.integrate(t)
-            if not self._integrator.successful():
-                raise CustomErrors.IntegrationError
+        # it appears that integration with 'lsoda' takes either nearly zero seconds, or around 0.01 seconds
+        try:
+            for i, t in enumerate(times):
+                profile[i] = self._integrator.integrate(t)
+                if not self._integrator.successful() and integrator is not 'vode':
+                    self._integrator.set_integrator('vode', method='bdf', order=15, nsteps=10000)
+                    print 'using vode'
+                    print 'param values at lsoda:', params
+                    profile = self.gen_profile(Cs0, times, params, integrator='vode')
+                    break
+                elif not self._integrator.successful():
+                    print 'param values at vode (real bad):', params
+                    raise CustomErrors.IntegrationError
+        except CustomErrors.LSODA_Warning:
+            raise CustomErrors.IntegrationError
+        self._integrator.set_integrator('lsoda')
         return profile
 
         
