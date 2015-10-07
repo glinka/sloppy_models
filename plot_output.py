@@ -72,6 +72,24 @@ def committee_meeting_sloppiness():
     plt.tight_layout()
     plt.savefig('./figs/committee/noisey_ks.png')
     
+def plot_of_contours():
+    data = np.genfromtxt('./data/of_evals.csv', delimiter=',')
+    npts = data.shape[0]
+    current_pt = data[0]
+    for i in range(1,npts):
+        if data[i,2] != current_pt[2]:
+            current_pt = data[i]
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+            ax.scatter(data[:i-1,0], data[:i-1,1], c=data[:i-1,3])
+            ax.set_xlabel('K')
+            ax.set_ylabel('V')
+            ax.set_title('S=' + str(data[i-1,2]))
+            plt.colorbar(plot)
+            plt.savefig('./contours/contour_S' + str(data[i-1,2]) + '.png')
+
 def plot_eigvals(eigvals, **kwargs):
     """Plots eigenvalues. Done."""
     fig = plt.figure()
@@ -156,4 +174,5 @@ def main():
 
 
 if __name__=="__main__":
-    main()
+    plot_of_contours()
+    # main()
