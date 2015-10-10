@@ -76,7 +76,7 @@ def committee_meeting_sloppiness():
     ax.set_ylabel(r'$k_2$')
     plt.tight_layout()
     plt.savefig('./figs/committee/noisey_ks.png')
-    
+
 def plot_contour(data, guesses=None):
     """Plots 2d level sets"""
     fig = plt.figure()
@@ -209,7 +209,6 @@ def plot_of_k_v_st_contours(data, tols=np.logspace(-1,1,20), dir='./figs/contour
             plt.close()
                         
 
-
 def plot_eigvals(eigvals, **kwargs):
     """Plots eigenvalues. Done."""
     fig = plt.figure()
@@ -307,4 +306,5 @@ def main():
 
 
 if __name__=="__main__":
-    main()
+    plot_of_contours()
+    # main()
