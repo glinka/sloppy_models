@@ -77,29 +77,29 @@ Here we see the effective parameter
 
 will create nonlinear level sets in parameter space instead of simple planes.
 
-% as shown below, along with DMAPS parameterization of the sloppy parameter set.
+as shown below, along with DMAPS parameterization of the sloppy parameter set.
 
-% \begin{figure}[htbp]
-%   \centering
-%   \includegraphics[width=\linewidth]{dataset}
-%   \caption{Dataset of sloppy parameter combinations}
-% \end{figure}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{abc-dataset}
+  \caption{Dataset of sloppy parameter combinations}
+\end{figure}
 
-% As expected, it maps out a two-dimensional surface in parameter space over which $k_{eff}$ is nearly constant ($k_{eff} \in (0.4, 1.0)$ in the dataset above).
+As expected, it maps out a two-dimensional surface in parameter space over which $k_{eff}$ is nearly constant ($k_{eff} \in (0.4, 1.0)$ in the dataset above).
 
-% When DMAPS was applied, the first two eigenvectors parameterized the surface as hoped. This is shown in the two figures below.
+When DMAPS was applied, the first two eigenvectors parameterized the surface as hoped. This is shown in the two figures below.
 
-% \begin{figure}[htbp]
-%   \centering
-%   \includegraphics[width=\linewidth]{dmap1}
-%   \caption{Coloring the dataset by the first DMAP parameter/coordinate value}
-% \end{figure}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{abc-dmap1}
+  \caption{Coloring the dataset by the first DMAP parameter/coordinate value}
+\end{figure}
 
-% \begin{figure}[htbp]
-%   \centering
-%   \includegraphics[width=\linewidth]{dmap2}
-%   \caption{Coloring the dataset by the second DMAP parameter/coordinate value}
-% \end{figure}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{abc-dmap2}
+  \caption{Coloring the dataset by the second DMAP parameter/coordinate value}
+\end{figure}
 
 \section{Regularly perturbed}
 
@@ -107,7 +107,7 @@ Here we have the Michaelis Menten system. Although it, too, is singularly pertur
 
 \subsection{Michaelis Menten}
 
-Yet another reaction system which we apply QSSA to, but in this case we transform the bare parameters into 
+This is another reaction system which we apply the QSSA to, but in this case we transform the bare parameters into 
 
 \begin{align*}
   V_M &= k_2 E_T \\
@@ -116,7 +116,13 @@ Yet another reaction system which we apply QSSA to, but in this case we transfor
   \epsilon &= \frac{E_T}{S_T + K_M} \\
 \end{align*}
 
-in which $\kappa$ and $\epsilon$ drop out of the leading dynamics and are thus sloppy. However, these parameter combinations \textbf{do not} yield nonlinear contours in the original parameter space as desired.
+in which $\kappa$ and $\epsilon$ drop out of the leading dynamics and are thus sloppy. However, these parameter combinations \textbf{do not} yield nonlinear contours in the original parameter space as desired. The figure below shows the ellipsoidal contour produced by this system in the $K_M$, $V_M$ and $S_T$ parameter space, combinations of which are also sloppy in certain regimes.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{k-v-st-contour}
+  \caption{Ellipsoidal contour of Michaelis Menten system in $K_M$, $V_M$ and $S_T$ parameter space.}
+\end{figure}
 
 \section{Singularly and regularly perturbed, sloppy initial conditions}
 
@@ -138,7 +144,27 @@ and then transform it into nonlinear $(x, y)$ via
   y &= Y + \mu(x) \\
 \end{align*}
 
-We are free to choose $\phi(y)$ and $\mu(x)$, which control the shape of the fast and slow manifold, respectively. Thus, if we set $\mu = a x^2$ and $\phi = b y^2$ we find parabolic slow and fast manifolds, and additionally we've introduced a sloppy regular perturbation parameter $b$. Additionally, initial conditions lying along a given fast manifold will be sloppy.
+We are free to choose $\phi(y)$ and $\mu(x)$, which control the shape of the fast and slow manifold, respectively. Thus, if we set $\mu = a x^2$ and $\phi = b y^2$ we find parabolic slow and fast manifolds, and additionally we've introduced a sloppy regular perturbation parameter $b$. Additionally, initial conditions lying along a given fast manifold will be sloppy. Sloppiness in $\epsilon$/$\lambda$, $a$/$b$ and $x_0$/$y_0$ are shown in the three figures below.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{zagaris-ic-contours}
+  \caption{$x_0$/$y_0$ plane colored by objective function value. The contours follow the fast manifold $x=y^2$.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{zagaris-le-contours}
+  \caption{$\epsilon$/$\lambda$ plane colored by objective function value. Contours follow lines of constant $\epsilon$.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{zagaris-ab-contours}
+  \caption{$a$/$b$ plane colored by objective function value. Contours follow lines of constant $a$, the parameter affecting the geometry of the fast manifold.}
+\end{figure}
+
+\subsubsection{Nonlinear parameter transformation}
 
 We can transform these stiff/sloppy pairs of $(\lambda, \epsilon)$ and $(a, b)$ using something like
 
@@ -149,6 +175,13 @@ We can transform these stiff/sloppy pairs of $(\lambda, \epsilon)$ and $(a, b)$ 
 
 for $\lambda \in [0, L]$ and $\epsilon \in [0, E]$. This will swirl the domain and produce nonlinear contours in $(c_1, c_2)$ space.
 
+In the following figure, we have taken a set of sloppy parameters in the $\lambda$/$\epsilon$ plane and transformed them into a swirl in $c_1$/$c_2$. Subsequent application of DMAPS uncovers a parameterization of this nonlinear swirl as expected.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{c1-c2-dmap}
+  \caption{DMAPS uncovers a parameterization of the nonlienarly transformed sloppy parameter set. Here the transformed parameter set is colored by the first DMAP eigenvector.}
+\end{figure}
 
 % \bibliographystyle{plain}
 % \bibliography{literature.bib}
