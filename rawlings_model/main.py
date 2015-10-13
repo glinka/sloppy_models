@@ -11,6 +11,48 @@ import util_fns as uf
 import dmaps
 import plot_dmaps
 
+def qssa_comparison():
+    """Shows efficacy of the qssa applied to this system (for gss 2015, fig 3.1)"""
+    import matplotlib.pyplot as plt
+    A0 = 1.0 # initial concentration of A
+    k1_true = 1.0
+    kinv_true = 10.0
+    k2_true = 10.0
+    decay_rate = k1_true*k2_true/(kinv_true + k2_true) # effective rate constant that governs exponential growth rate
+    # start at t0 = 0, end at tf*decay_rate = 4
+    ntimes = 20 # arbitrary
+    times = np.linspace(0, 4/decay_rate, ntimes)
+    model = Rawlings_Model(times, A0, k1_true, kinv_true, k2_true)
+    Cs_true = model.gen_timecourse(k1_true, kinv_true, k2_true)
+    Cs_qssa = A0*(1-np.exp(-times*decay_rate))
+    plt.plot(times, Cs_true)
+    plt.plot(times, Cs_qssa)
+    plt.show()
+    
+def abc_analytical_contour():
+    """Shows line of constant k_eff in k1/kinv/k2 space (for gss 2015, fig 3.2)"""
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    k1 = lambda kinv, k2: (kinv + k2)/k2
+    kinvs, k2s = np.meshgrid(np.logspace(-4,1, 10), np.logspace(-4,1, 10))
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_wireframe(np.log10(k1(kinvs, k2s)), np.log10(kinvs), np.log10(k2s))
+    ax.set_xlabel('log(' + r'$k_1$' + ')')
+    ax.set_ylabel('log(' + r'$k_{-1}$' + ')')
+    ax.set_zlabel('log(' + r'$k_2$' + ')')
+    plt.tight_layout()
+    for ii in xrange(0,360,1):
+        ax.view_init(elev=10.0, azim=ii)
+        ax.xaxis._axinfo['label']['space_factor'] = 2.8
+        ax.yaxis._axinfo['label']['space_factor'] = 2.8
+        ax.zaxis._axinfo['label']['space_factor'] = 2.8
+        ax.set_xticklabels([r'$10^{%i}$'%i for i in range(7)])
+        ax.set_yticklabels([r'$10^{%i}$'%i for i in range(1, -5, -1)])
+        ax.set_zticklabels([r'$10^{%i}$'%i for i in range(1, -5, -1)])
+        plt.savefig("./figs/ks%i"%ii + ".png")
+
+
 def sample_param_grid_mpi():
     """Samples k1, kinv, k2 over a lattice and records obj. fn. evaluations. A starting point for future analysis"""
     # set up mpi
@@ -157,8 +199,6 @@ def dmaps_param_set_custom_kernel():
     plot_dmaps.plot_xyz(somedata[:,1], somedata[:,2], somedata[:,3], color=eigvects[:,2])
 
     
-    
-
 def test_sympy_of():
     # set up base model
     A0 = 1.0 # initial concentration of A
@@ -194,7 +234,9 @@ def do_the_right_thing():
     # sample_param_grid_mpi()
     # dmaps_param_set()
     # test_sympy_of()
-    dmaps_param_set_custom_kernel()
+    # dmaps_param_set_custom_kernel()
+    # qssa_comparison()
+    abc_analytical_contour()
 
 if __name__=='__main__':
     do_the_right_thing()
