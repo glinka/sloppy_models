@@ -3,6 +3,8 @@
 Contact: holiday@alexanderholiday.com
 """
 
+import dill
+from os.path import isfile
 import numpy as np
 import scipy.integrate as spint
 import sympy
@@ -44,6 +46,14 @@ class Rawlings_Model:
             # Cs = sympy.zeros(times.shape[0], 1)
             ones = sympy.ones(1, times.shape[0]) # for adding the time-independent term at each time
             Cs = self._A0*(ones*k1*k2/(alpha*beta) + (-alpha*sympy_times).applyfunc(sympy.exp)*k1*k2/(alpha*(alpha-beta)) - (-beta*sympy_times).applyfunc(sympy.exp)*k1*k2/(beta*(alpha-beta)))
+            # # if we've already constructed and compiled the functions from sympy, just reload
+            # # jk doesn't work
+            # symbolic_lsq_of = None
+            # if isfile("./data/symbolic-of.dill"):
+            #     symbolic_lsq_of = dill.load(open("./data/symbolic-of.dill", 'r'))
+            # else:
+                # symbolic_lsq_of = ObjectiveFunction(sum((Cs - Cs_true).applyfunc(lambda x:x*x)), [k1, kinv, k2])
+                # dill.dump(symbolic_lsq_of, open("./data/symbolic-of.dill", 'w'))
             symbolic_lsq_of = ObjectiveFunction(sum((Cs - Cs_true).applyfunc(lambda x:x*x)), [k1, kinv, k2])
             self.sympy_lsq_of_f = symbolic_lsq_of.f
             self.sympy_lsq_of_gradient = symbolic_lsq_of.gradient

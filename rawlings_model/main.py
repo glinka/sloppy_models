@@ -126,7 +126,7 @@ def dmaps_param_set_custom_kernel():
     model = Rawlings_Model(times, A0, k1_true, kinv_true, k2_true, using_sympy=True)
 
     # import existing data
-    data = np.genfromtxt('./data/params_and_of_evals.csv', delimiter=',')
+    data = np.genfromtxt('./data/params-ofevals.csv', delimiter=',')
 
     of_tol = 0.4 # from plotting with scratch.py
     somedata = data[data[:,0] < of_tol]
@@ -134,13 +134,13 @@ def dmaps_param_set_custom_kernel():
     npts = 6000
     slice_size = somedata.shape[0]/npts
     somedata = somedata[::slice_size]
-    keff = somedata[:,1]*somedata[:,3]/(somedata[:,2] + somedata[:,3])
+    # keff = somedata[:,1]*somedata[:,3]/(somedata[:,2] + somedata[:,3])
 
     log_params_data = np.log10(somedata[:,1:])
     # add some noise
     noise_level = 0.02
     log_params_data = log_params_data + noise_level*np.random.normal(size=log_params_data.shape)
-    log_params_data = np.log10(data[:,1:])
+    # log_params_data = np.log10(data[:,1:])
 
     # evaluate various epsilons for DMAP kernel
     neps = 5 # number of epsilons to evaluate
