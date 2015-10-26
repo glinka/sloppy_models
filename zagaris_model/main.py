@@ -300,34 +300,43 @@ def check_x0():
     x_true_traj = z_system.get_trajectory(x0_true, times)
 
     # set up sampling grid and storage space for obj. fn. evals
-    nsamples_per_axis = 1
+    nsamples_per_axis = 100
     nsamples = nsamples_per_axis**2
-    x10s, x20s = np.meshgrid(np.linspace(-1, 1, nsamples_per_axis), np.linspace(-1, 1, nsamples_per_axis))
+    x10s, x20s = np.meshgrid(np.linspace(1, 2, nsamples_per_axis), np.linspace(1, 2, nsamples_per_axis))
     x10s.shape = (nsamples,)
     x20s.shape = (nsamples,)
     x0_samples = np.array((x10s, x20s)).T # all samples of initial conditions in two columns
     of_evals = np.empty(nsamples) # space for obj. fn. evals
+    x0s = np.empty((nsamples, 2))
 
     # loop through different initial conditions and record obj. fn. value
+    count = 0
     for i, x0 in enumerate(x0_samples):
         uf.progress_bar(i, nsamples) # optional progress bar
         x_sample_traj = z_system.get_trajectory(x0, times)
-        of_evals[i] = get_of(x_sample_traj, x_true_traj)
-
+        temp_eval = get_of(x_sample_traj, x_true_traj)
+        if not np.isnan(temp_eval):
+            of_evals[count] = temp_eval
+            x0s[count] = x0
+            count = count + 1
         
 
+    print count
+    x0s = x0s[:count]
+    of_evals = of_evals[:count]
     # plot grid of sampled points colored by obj. fn. value
+    print np.any(np.isnan(of_evals)), np.any(np.isinf(of_evals))
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.scatter(x0_samples[:,0], x0_samples[:,1], c=of_evals, zorder=1)
+    ax.scatter(x0s[:,0], x0s[:,1])
     plt.show()
 
 if __name__=='__main__':
     # check_params()
     # check_rhs()
     # check_transformed_params()
-    # check_x0()
-    dmaps_transformed_params()
+    check_x0()
+    # dmaps_transformed_params()
 
 
 # S = 10.0

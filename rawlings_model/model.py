@@ -60,6 +60,24 @@ class Rawlings_Model:
             self.sympy_lsq_of_hessian = symbolic_lsq_of.hessian
             
 
+    def gen_full_timecourse(self, k1, kinv, k2):
+        """Generates timecourse of concentrations of A, B, and C at 'times' based on the initial conditions A0 = 'A0', B0 = 0, C0 = 0 and parameters given in self._constants
+
+        Args:
+            k1 (float): value of parameter k1
+            kinv (float): value of parameter kinv
+            k2 (float): value of parameter k2
+
+        Returns:
+            concs (array): (times.shape[0], 3) shape array of concentrations of A, B and C in the columns
+        """
+        alpha = 0.5*(k1+kinv+k2 + np.sqrt(np.power(k1+kinv+k2, 2) - 4*k1*k2))
+        beta  = 0.5*(k1+kinv+k2 - np.sqrt(np.power(k1+kinv+k2, 2) - 4*k1*k2))
+        As = self._A0*(k1*(alpha-k2)*np.exp(-alpha*self._TIMES)/(alpha*(alpha-beta)) + k1*(k2-beta)*np.exp(-beta*self._TIMES)/(beta*(alpha-beta)))
+        Bs = self._A0*(-k1*np.exp(-alpha*self._TIMES)/(alpha-beta) + k1*np.exp(-beta*self._TIMES)/(alpha-beta))
+        Cs = self._A0*(k1*k2/(alpha*beta) + np.exp(-alpha*self._TIMES)*k1*k2/(alpha*(alpha-beta)) - np.exp(-beta*self._TIMES)*k1*k2/(beta*(alpha-beta)))
+        return np.array((As,Bs,Cs)).T
+
 
     def gen_timecourse(self, k1, kinv, k2):
         """Generates timecourse of concentrations of C at 'times' based on the initial conditions A0 = 'A0', B0 = 0, C0 = 0 and parameters given in self._constants
@@ -90,6 +108,18 @@ class Rawlings_Model:
         """
         lsq_of_eval = np.power(np.linalg.norm(self.gen_timecourse(k1, kinv, k2) - self._Cs), 2)
         return lsq_of_eval
+
+    def lsq_f(self, ks):
+        """Returns vector of differences between predicted and true concentrations of C, i.e. returns :math:`f(k_1, k_{inv}, k_2)` where the objective function is given by $\| f(k_1, k_{inv}, k_2) \|$.
+
+        Args:
+            ks (array): (3,1) array of (k1, kinv, k2)
+
+        Returns:
+            f_eval (array): (ntimes, 1) array of difference between predicted and actual C concentrations with time
+        """
+        return self.gen_timecourse(*ks) - self._Cs
+                                                                                                      
 
 
 
