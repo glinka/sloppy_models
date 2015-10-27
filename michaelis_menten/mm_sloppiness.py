@@ -809,7 +809,7 @@ def check_sloppiness():
 if __name__=='__main__':
     # sample_sloppy_params()
     # check_sloppiness()
-    # mm_contour_grid()
+    mm_contour_grid()
     # mm_sloppy_plot()
     # mm_contour_grid_mpi()
     # test()
@@ -817,4 +817,4 @@ if __name__=='__main__':
     # slim_data()
     # dmaps_contour()
     # pca_contour()
-    transform_contour()
+    # transform_contour()

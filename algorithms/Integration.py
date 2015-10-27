@@ -10,14 +10,14 @@ class Integrator:
         _integrator (scipy integrator): internal integrator: the return value of scipy.ode()
     """
 
-    def __init__(f, algorithm='lsoda'):
+    def __init__(self, f, algorithm='lsoda'):
         """Sets up integrator
         Args:
             f (function): right-hand-side of the ODE, **callable as f(t, x)** where 't' is a scalar, and 'x' is a length-N state variable
             algorithm (str): any of 'vode', 'zvode', 'lsoda' (default), 'dopri5' or 'dopri853', i.e. the options accepted by scipy.ode()
         """
         self._f = f
-        self._integrator = spint.integrator(algorithm)
+        self._integrator = spint.ode(f).set_integrator(algorithm)
 
     def integrate(self, x0, times):
         """Integrates 'f' over 'times', returning its value at each points in 'times'. If integration is unsuccessful, raises an IntegrationError from CustomErrors
@@ -47,7 +47,7 @@ def integrate(f, x0, times, algorithm='lsoda'):
     Returns:
         trajectory (array): (times.shape[0], x0.shape[0]) array in which columns contain the trajectory of a given state variable
     """
-    integrator = spint.integrator(algorithm)
+    integrator = spint.ode(algorithm)
     integrator.set_initial_value(x0)
     trajectory = np.empty((times.shape[0], x0.shape[0]))
     for i, t in enumerate(times):
