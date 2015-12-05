@@ -11,7 +11,7 @@ all: gradient_dmaps
 	$(CXX) $(CXXFLAGS) -c $<
 
 gradient_dmaps: $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o "gradient-dmaps" $^
+	$(CXX) -o "gradient-dmaps" $^ $(CXXFLAGS)
 
 depend: .depend
 

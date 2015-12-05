@@ -1,7 +1,3 @@
-ObjectiveFunction module
-========================
-
+Symbolic representation of objective functions and their corresponding gradients
+==================================
 .. automodule:: ObjectiveFunction
-    :members:
-    :undoc-members:
-    :show-inheritance:

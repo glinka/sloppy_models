@@ -1,0 +1,967 @@
+
+\documentclass{article}
+\title{Parameter sloppiness in multiscale systems}
+
+\usepackage{
+amsmath, amssymb, amsfonts, chemarr,
+xcolor, epsf, graphicx, float, subfig
+}
+
+\setlength{\parindent}{0pt}
+
+\newcommand{\N}{\mathrm{N}}
+\newcommand{\T}{\mathrm{T}}
+\newcommand{\X}{\mathrm{X}}
+\newcommand{\D}{\mathrm{D}}
+\newcommand{\V}{\mathcal{V}}
+\newcommand{\M}{\mathcal{M}}
+\newcommand{\ip}[2]{\langle#1,#2\rangle}
+\newcommand{\abs}[1]{\vert#1\vert}
+\newcommand{\norm}[1]{\vert\vert#1\vert\vert}
+\newcommand{\dv}[2]{d(#1,#2)}
+\newcommand{\eps}{\varepsilon}
+
+\newcommand{\p}{\theta}
+\newcommand{\fmr}{\chi}
+\newcommand{\fmm}{\mathcal{X}}
+\newcommand{\fiber}{\mathcal{F}}
+\newcommand{\omr}{\mu}
+\newcommand{\omm}{\mathcal{M}}
+\newcommand{\R}{\mathrm{R}}
+\newcommand{\ps}{\mathrm{\Theta}}
+\newcommand{\fms}{\mathrm{X}}
+
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\dst}{\displaystyle}
+
+\author{}
+
+\begin{document}
+\maketitle
+
+In a 2006 computational neuroscience paper, after repeatedly fitting a "reasonable`' mechanistic neuron model to experimental firing data, the authors arrived at a multitude of "good enough" parameter values - values that gave acceptable agreement between model prediction and experiments in the comparison norm chosen. They then had the insightful idea to try and `'summarize`' this set of "good enough" parameter values through principal component analysis - in effect, they passed hyperplanes through their sampling of the "good enough" subset of their parameter space (good enough
+for their experimental data and with their goodness criterion).
+%
+In effect, they created -through data mining- a parametrization of what we might call the "zero level set" of their objective/fitness function (again, for the experimental data available and the comparison norm chosen).
+
+Clearly, the fact that the dimensionality of this "good set" (for short) was more than zero implied that there are
+directions in parameter space (in their work, local linear combinations of the model parameters) that keep the
+predictions satisfactory.
+%
+This then implies that the number of directions in model parameter space that actually make a difference in the predictions is less than the full parameter space dimension.
+%
+The model has therefore less "effective parameters" than \em{model parameters}.
+
+There is hardly any novelty in this observation - there have been many efforts (and in recent years notably the program on "model/parameter sloppiness" from J. Sethna's group at Cornell, continued and extended by his former student
+N. Transtrum and coworkers, or the ``active subspaces" program of P. Constantine).
+%
+What was interesting for us in this paper, however, was the attempt to provide a quantitative description of an important aspect of sloppiness (the parametrization of the zero level set) \em{through data mining}.
+
+In this paper, motivated by the above (and not only) we will attempt to start building a
+systematic link between \em{nonlinear} data mining and "sloppiness".
+%
+Our research background is in model reduction of complex (many-degree-of-freedom) dynamical systems;
+our experience is therefore much more on state-variable reduction
+(simplifying modeling by deriving reduced dimensionality models) - rather than in \em{parameter reduction}.
+%
+The context might be best illustrated by thinking of reducing a time-dependent
+flow in a complex geometry - one goes from a ``huge" discretization of the Navier-Stokes equations to a
+low-dimensional Galerkin projection in terms of empirical basis functions;
+yet both the original problem and the "state-reduced" problem have \em{one and the same} important parameter:
+the Reynolds number.
+%
+In contrast,when reducing a large chemical (e.g. combustion) or biochemical (e.g.metabolic) reaction network, it is clear
+that one desires a model that is not only reduced in terms of effective number of variables,
+but also reduced in terms of effective parameters - parameters that would arise in a
+reduced dynamic model that, one expects, are (possibly linear, but in general nonlinear) functions of
+combinations the (full, detailed) model parameters.
+%
+For several years we have been developing a framework for "on-the-fly", data based reduction approach to
+modeling complex systems (what we call the equation-free approach);
+we attempt to solve reduced models that are unavailable in closed form by
+judicious short bursts of computation with an (assumed accurate) detailed model.
+%
+There is a natural link between this approach and data mining: these brief bursts
+of simulation of the high dimensional detailed model produce rich, high dimensional
+data-sets; mining these data (through manifold learning techniques, for our group often through diffusion maps)
+suggests the reduced set of \em{effective state variables} in terms of which the reduced model should be locally cast.
+%
+This we call the \em{variable free} component of our approach: the reduced model variables are
+determined not through experience or through mathematics, but rather dictated through data mining of model simulations.
+%
+Clearly, it would be naive to embark on such a process if one is capable of deriving closed form equations in
+terms of explicit reduced variables determined through mathematics (e.g. a few leading moments of particle distributions,
+a few "important" concentrations, a few empirical --PCA-based-- orthogonal basis function coefficients).
+%
+Yet, -also clearly- if one cannot succeed in such a derivation, this does not mean that one must
+remain condemned to lengthy fine scale simulations and verbal/statistical descriptions of their results.
+%
+Knowing that an effective (reduced) equation in terms of some effective (reduced) observables/variables is
+possible, can still lead to the efficient extraction of information from the fine scale model.
+
+Our ambition is to extend this approach beyond the \em{data-driven} determination of "the right effective
+variables", to the data-driven determination of "the right effective parameters".
+%
+This way, not only dynamical simulations can be accelerated, but also
+parametric explorations and optimization computations ("dynamics" in parameter space!) can be
+enhanced.
+
+
+A few words before starting:
+
+We already stated that we want to develop data-driven ways to accomplish the detection of 
+\em{effective} (important, relevant) parameters or parameter combinations within a large "model parameter" set.
+%
+Sensitivity analysis (in particular, computer-assisted sensitivity analysis) is one of the ways this is
+currently approached in many disciplines; yet it is interesting to consider the way we do this analytically 
+(when possible). 
+%
+The appropriate context is, of course, perturbation theory: typically, one would discard a term in an expansion
+if the term is relatively small; the coefficient of this term is then a sloppy parameter (any value that
+keeps the term relatively small does not alter the predictions of the model). 
+%
+Such a coefficient may well be
+a function of several model parameters (ratios of sums of kinetic constants, for example). 
+%
+In the context of \em{time-dependent models}, we know that there are two ``types" of perturbations:
+regular, and singular. 
+%
+The coefficients of \em{regular} perturbation terms can be ignored (they are then ``sloppy"), and the
+parameter set can thus be reduced, while the number of effective variables remains the same.
+%
+In the case of \em{singular} perturbations,  as illustrated by the ``standard" two-variable singularly
+perturbed ODE system
+......
+
+
+where a sufficiently small coefficient multiplies the highest
+time derivative, the sloppiness of this coefficient (and the concomitant reduction of model parameters) 
+is inextricably linked to the reduction of the dimensionality of the long-term system response.
+%
+How do we then test numerically for ``regular" vs. ``singular" sloppiness (the latter
+also linked to potential long-time model reduction) ? 
+%
+And while the long-term dynamics may reduce, if one has accurate measurements of initial transients, 
+this could ``lift" sloppiness in both state-space and parameter-space reduction; the point here being
+that it is the time scales of interest to the observer (and, therefore, the type of measurements the
+observer chooses or is able to perform) that may very well affect potential model and parameter reduction.
+
+We believe it is worth considering (in the context of the above illustrative caricature) the inclusion of the
+initial condition $y_0 \equiv y(t=0)$ in the ``fast" variable $y$ as a parameter, affecting the system response, that is
+to be inferred from later measurements.
+%
+Clearly, if one only wants to fit long-time measurements (long compared to the fast time scale $eps$) there exists a multitude of ``good enough" initial conditions (a one-parameter family, lying on the relevant iscochrone) that fit the bill.
+%
+This infinity (and therefore also ``sloppiness") of ``equivalent" initial conditions in \em{state space}), which is the
+essential manifestation of state-space model reducibility, naturally then becomes part of \em{parameter reduction};
+there is an apparent duality between sloppiness in the singular perturbation parameter $\eps$ and in our
+ability to derive a long-term accurate reduced dynamic model ignoring the fast foliation of state space in the 
+$y$ direction: singular parameter perturbation and model reduction are inextricably linked.
+%
+
+One can also draw a different \em{conceptual} analogy between ``dynamic state reduction" and ``parameter reduction" in the
+context of optimization. 
+%
+Indeed, an optimization algorithm (from conjugate gradients to simulated annealing)
+endows parameter space with ``search dynamics" - each iteration of the algorithm is ``time 1" in this
+optimization clock. 
+%
+In the same sense that fast equilibrating variables can be ignored in long-term dynamics (remember again
+the illustrative caricature we discussed above), sensitive parameter directions quickly ``fathomed" can
+be also factored out in the ``slow", long-term optimization steps in the less-sensitive (and thus
+``optimization slow") directions.
+%
+%Remarkably, in optimization it is the ``slow parameters", that matter less, that we are interested in 
+%exploring. 
+%
+%In dynamics, it is the parameters who ``matter more" that are the effective parameters we want to discover.
+
+One of the issues we will attempt to demonstrate through an \em{ad hoc} designed caricature, is that a
+simple, generic parameter optimization problem, with a simple quadratic minimum and no parameter sloppiness
+can -through a ``bad enough" transformation- be turned into a sloppy one.
+%
+This is not surprising, but it also suggests the converse: that sloppy problems are possibly only sloppy
+in the given model parameter space, but could be transformed back into a different parameter space where
+they would become ``nice" again.
+%
+One could try to find/approximate such a transformation ``back to nonsloppiness" - but then the new parameters
+in this transformed space might have no obvious physical meaning or interpretation. 
+%
+More interestingly, one might try to uncover such a transformation through jointly data-mining parameter
+space and model prediction space \em{with the right metric}; in our opinion, the effort to construct a meaningful
+metric with which to navigate model-prediction space (and through it, possibly, also model parameter space)
+is an important hallmark of the model reduction effort of Transtrum and coworkers.
+
+When one discusses reduction of variables as well as parameters in physical models, the first technique
+that arguably comes to mind is dimensional analysis - finding (through the Buckingham $\pi$ theorem)
+nondimensional groupings of variables and parameters in terms of which the model can be expressed.
+%
+In this work we will not attempt to incorporate this last approach in our data-driven framework; we are
+interested in detecting effective parameters, and possibly effective variables; we will not explore
+methods that involve joint reduction in terms of mixtures of both. 
+
+
+In presenting the theory, it is initially convenient to consider (a) choosing the number and nature of
+measurements to be made and then (b) process \em{all possible} predictions for \em{all possible} 
+parameter values together, globally identifying \em{all possible} limiting cases in which the
+problem reduces (in possibly different ways). 
+%
+Several literature papers proceed in this form.
+%
+We are interested in computational navigating parameter space, taking into account the ``local"
+sloppy directions: finding ways to usefully parametrized an appropriately transformed parameter
+space so that it can be simply -and hopefully efficiently- searched by local Taylor series
+searches (in the right effective directions). 
+%
+If successful, this would provide a ``parameter free" component of our equation-free/variable-free
+framework: both state variables, parameters and the right hand sides of the relevant evolution equations
+would be determined in a data-driven manner.
+%
+We also mention that we believe there is a strong connection (on the data-mining algorithm side) between
+what we attempt to do here (the jointly-informed reduction of parameter space and state space) and the
+recent developments in the geometry and analysis of dual networks on questionnaires \cite{A14}.
+
+
+
+\section{Introduction}
+
+\paragraph{Sloppiness.}
+Holy grail = modeling $\xrightarrow{data}$ calibration
+$\xrightarrow{wrappers}$ understanding/prediction/aggregate
+statistics/automated tasks (EF).
+Field reality = parameter sloppiness:
+compensatory nature of individually meaningful
+(at detailed/fine level) parameters.
+Parameter sloppiness in the literature:
+Sethna, Transtrum, even Constantine.
+Distinguish sloppiness from overparameterization.\footnote{`{\it The
+origin of sloppiness is not a simple lack of data
+where trivial overparametrization leads to unidentifiable parameters.}'
+\cite{WCGBMBES06}}
+Liken sloppiness to perturbation:
+singularly (also regularly?) perturbed systems
+are indifferent to changes in (fine) initialization
+if macro-quantities are kept invariant.
+
+\paragraph{Problem statement.}
+Need non-sloppy effective parameters
+to reduce complexity/effectuate tractability/explore system features
+in parameter space.
+Draw analogy to evolution laws in terms of effective state variables.
+Carry analogy further:
+detailed models transparent (few simple rules) but large,
+coarse-grained models insightful but non-trivial to derive;
+individual parameters easily interpretable but sloppy,
+effective parameters non-sloppy but non-trivial to derive and interpret.
+Re-iterate problem statement.
+
+\paragraph{Problem solution.}
+Suggested partial solution: data-driven identification of effective parameters.
+[Yannis. Include literature.]
+
+\paragraph{Peripherals.}
+Several considerations arise in the process:
+some new, some recast in a new light.
+(a) Helpful/insightful transformations of parameters.
+(b) Duality (of some sort) between state-/parameter space.
+(c) Contrasting singular/regular perturbations and their phenotypes.
+
+\paragraph{Extensions.}
+[Yannis.]
+
+
+
+\section{Data mining}
+
+\subsection{Setting}
+%
+We frame our discussion in the context of arbitrary dynamical systems
+posed over some domain $I \subset \R^K$, for some dimension $K$.  We
+denote the system state at $t \in I$ by $x(t) \in \R^d$, with $d$ some
+problem-specific dimension.  The vector function $x$ is typically
+known only implicitly, e.g. as the solution to an initial/boundary
+value problem.  In all our examples below, $t\in\R$ is interpreted as
+time and $x$ satisfies an ODE system, but this is by no means a
+necessity.  System evolution is contingent on a number of parameters
+$\p = (\p_1,\ldots,\p_M) \in \ps \subset \R^M$,
+a fact made explicit by writing $x(t;\p)$ when necessary.\\
+
+For each fixed $\p\in\ps$, the \emph{full model response}
+$\{x(t;\p) \}_{t \in I}$ is an element of some \emph{full model space}
+$\fms$, typically chosen as an appropriate function space.  We denote
+by $\fmr : \ps \to \fms$ the map sending specific parameter values to
+full model responses, i.e.
+$\fmr(\p) = \{ x(t;\p) \}_{t \in I} \in \fms$.  As $\p$ assumes all
+possible values in $\ps$, the response $\fmr(\p)$ traces out the
+\emph{full model manifold} $\fmm =
+%\mathrm{graph}(\fmr)
+%=
+\{ \fmr(\p) \}_{\p \in \ps}
+\subset
+\fms$
+which is  generically $M-$dimensional.
+We will assume that manifold to be $C^1$,
+i.e. the full model response to be continuously differentiable
+with respect to parameters.\\
+
+One is only rarely interested in observing the \emph{full} model
+response, i.e. in monitoring the system state for \emph{all}
+$t \in I$.  Instead, one observes one or more \emph{functionals} of
+that response, say $f^*_1 , \ldots , f^*_N : \fms \to \R$.  We term
+each individual $f^*_n(\fmr(\p))$ a \emph{partial observation} of the
+system and the $N-$tuple
+%
+\[
+ \mu(\p)
+=
+ f^*(\fmr(\p))
+=
+ \big[f^*_1(\fmr(\p)) , \ldots , f^*_N(\fmr(\p))\big]^{\rm T}
+\in
+ \R^N
+\]
+%
+an \emph{observation} or \emph{observed model response}.
+Under the action of $f^*$,
+the full model manifold $\fmm$ is projected to
+the \emph{observed model manifold} $\omm \subset \R^N$.
+For each \emph{fixed} partial observation $z_n \in \R$,
+the individual fiber $\fiber_{n,z_n} = {f^*_n}^{-1}(z_n) \subset \fms$
+is of \emph{co-dimension one}
+and hence its intersection with the full model manifold
+is either empty or a submanifold $\fmm_{n,z_n} = \fiber_{n,z_n} \cap \fmm$
+generically of dimension $M-1$.
+%for linear functionals $f^*_n$,
+%it is an affine copy of $\mathrm{Ker}(f^*_n)$.
+This submanifold corresponds, in turn, to a parameter region
+$\ps_{n,z_n} = \fmr^{-1}(\fmm_{n,z_n}) \subset \ps$ of the same dimension.
+All parameter combinations in that region yield a full model response
+\emph{consistent} with the given partial observation,
+i.e. $f^*_n\circ\fmr$ maps the entire $\ps_{n,z_n}$
+to the partial observation $z_n\in\R$.
+This \emph{overparameterization} is vividly reflected
+in that $\D (f^*_n\circ\fmr)$ is generically of rank one.
+By fixing more partial observations,
+one decreases the dimension of the intersection one at a time
+until, for $N=M$, that becomes zero.
+For $N > M$, the observed model manifold
+is of lower dimension than its carrying space,
+and points in the latter generically lie off the former.
+In that setting, $\omr : \ps \to \omm$ is one-to-one
+and $\D_\p \omr$ is a linear map of rank $M$.
+We will assume $\omr$ to be a homeomorphism between the two sets,
+which also makes it an atlas for the observed model manifold.
+
+\subsection{Parameter sensitivity}
+%
+To discuss the sensitivity to parameter variations, one must be able
+to assess shifts in observations relative to such variations.  Here
+also, as in \cite{TMS11}, we measure distances on $\omm$ using a
+Riemannian metric effectively induced by the norm in the carrier space
+$\R^N$.  We take that norm to be the standard Euclidean norm
+$\norm{\cdot}$, sidestepping many important questions on weighing of
+partial observations.  In that setting, an infinitesimal displacement
+$d\p = (d\p_1 , \ldots , d\p_M)^{\rm T}$ in $\ps$ yields the
+infinitesimal displacement
+$dz = (dz_1 , \ldots , dz_N)^{\rm T} = (\D_\p\mu) d\p \in
+\mathrm{T}_\p\omm$
+with length $\norm{dz}^2 = (d\p)^{\rm T} \, g \, d\p$.  The
+$M \times M$ positive definite matrix
+$g = (\D_\p\omr)^{\rm T}(\D_\p\omr)$ is the \emph{metric tensor} for
+$\omm$
+for the specific atlas $\omr$.\\
+
+Having assumed that $\mathrm{ rank}(\D_\p \omr) = M$, both the
+\emph{full} and the \emph{observed} system are responsive to
+\emph{all} parameter variations.  Locally around some point
+$\p \in \ps$, though, the observed model response may vary greatly
+with the direction of $d\p$ and be disproportionately small along
+certain directions.  This phenomenon is termed \emph{sloppiness}, and
+it demonstrates itself in the spectrum of the metric.  Small
+eigenvalues yield small observed responses, with sloppy directions in
+$\ps$ being the pull-backs under $\mu$ of the associated
+eigendirections in $\mathrm{T}_\p\omm$.
+
+\subsection{Origins of sloppiness}
+%
+One of the ways in which sloppiness arises is through observation
+functionals that are \emph{nearly} linearly dependent.  Indeed, linear
+dependencies among functionals reduce the dimensionality of $\omm$, so
+a \emph{continuous deformation} of a linearly dependent such set
+fleshes out a manifold with a hyper-ribbon structure.
+Pictorially, this is a process similar to inflating a mattress.\\
+
+To identify other factors contributing to sloppiness, we investigate
+how the projections $f^*_1,\ldots,f^*_n$ transform the metric
+$h = (\D_\p\fmr)^{\rm T}(\D_\p\fmr)$ on $\fmm$ to the metric
+$g = (\D_\p\omr)^{\rm T}(\D_\p\omr)$ on $\omm$.  For clarity of
+presentation, we restrict our attention to the case where
+$f^*_1,\ldots,f^*_N$ are linear and linearly independent, whereas
+$\fms$ is a Hilbert space with inner product
+$\langle\cdot,\cdot\rangle_\fms$ and induced norm $\norm{\cdot}_\fms$.
+In that setting, $\fms$ is isomorphic to its dual $\fms^*$, so there
+exist $f_1,\ldots,f_N \in \fms$ satisfying
+$f^*_n = \langle f_n,\cdot \rangle_\fms$.  It follows that
+%
+\[
+ \omr(\p)
+=
+\left[\begin{array}{c}
+ \langle f_1,\fmr(\p) \rangle_\fms
+\\
+\vdots
+\\
+ \langle f_N,\fmr(\p) \rangle_\fms
+\end{array}\right] ,
+\ \mbox{with push-forward} \
+ \D_\p\omr\vert_\p
+=
+\left[\begin{array}{c}
+ \langle f_1,\cdot\rangle_\fms
+\\
+\vdots
+\\
+ \langle f_N,\cdot \rangle_\fms
+\end{array}\right]
+ \D_\p\fmr\vert_\p .
+\]
+%
+The metric on $\omm$ becomes
+%
+\[
+ g\vert_{\omr(\p)}
+=
+ (\D_\p\omr\vert_\p)^{\rm T}
+ (\D_\p\omr\vert_\p)
+=
+ (\D_\p\fmr\vert_\p)^{\rm T}
+ f f^*
+ (\D_\p\fmr\vert_\p) ,
+\] 
+%
+with $f f^* : \fms \to \fms^*$ an operator
+that we schematically write as
+%
+\[
+\begin{array}{c}
+ f f^*
+=
+\\
+\vspace*{4mm}
+\end{array}
+\begin{array}{c}
+\Big[
+ \langle f_1,\cdot\rangle_\fms
+,
+ \ldots
+,
+ \langle f_N,\cdot\rangle_\fms
+\Big]
+\\
+\vspace*{4mm}
+\end{array}
+%
+\left[\begin{array}{c}
+ \langle f_1,\cdot\rangle_\fms
+\\
+ \vdots
+\\
+ \langle f_N,\cdot\rangle_\fms
+\end{array}\right] .
+\]
+%
+This relation connects $g$ to $h$
+through the mediation of $f f^*$.\\
+
+To understand the effect of that mediation,
+we interpret $f f^*$ as a symmetric endomorphism on $\fms$
+by means of the isomorphism between $\fms$ and $\fms^*$.
+Its spectrum consists of the zero eigenvalue,
+linked to the co-dimension $N$ kernel
+$\mathrm{Ker}(f f^*) = f_1^\perp \cap \ldots \cap f_N^\perp$,
+and of a nontrivial part linked to the invariant subspace
+$\mathrm{Im}(f f^*) = \mathrm{span}(f_1,\ldots,f_N)$.
+It is trivial to show that
+%
+\[
+ f f^*\vert_{\mathrm{Im}(f f^*)}
+=
+ f^* f
+=
+\left[\begin{array}{ccc}
+ \langle f_1,f_1\rangle_\fms
+&
+ \ldots
+&
+ \langle f_1,f_N\rangle_\fms
+\\
+ \vdots
+&
+ \vdots
+&
+ \vdots
+\\
+ \langle f_N,f_1\rangle_\fms
+&
+ \ldots
+&
+ \langle f_N,f_N\rangle_\fms
+\end{array}\right] ,
+\]
+%
+which proves the nontrivial part of the spectum to only contain
+the eigenvalues of the $N \times N$ Gram matrix $f^* f$.
+The columns
+$\D_{\p_1}\fmr\vert_\p , \ldots , \D_{\p_N}\fmr\vert_\p
+\in \mathrm{T}_{\fmr(\p)}\fmm \simeq \fmm$
+of $\D_\p\fmr\vert_\p$ can be decomposed into components along
+$\mathrm{Ker}(f f^*)$ and $\mathrm{Im}(f f^*)$,
+%
+\[
+ \D_{\p_n}\fmr\vert_\p
+=
+ \mathrm{N}_n(\p)
++
+ \left[ f_1 , \ldots , f_N \right]
+ \mathrm{I}_n(\p) ,
+\quad \mbox{with} \
+ \mathrm{N}_n(\p) \in \mathrm{Ker}(f f^*) .
+\]
+%
+Collecting these decompositions, then, we find
+%
+\[
+ \D_\p\fmr\vert_\p
+=
+ \mathrm{N}(\p)
++
+ \left[ f_1 , \ldots , f_N \right]
+ \mathrm{I}(\p)
+\]
+%
+and thus further obtain
+%
+\be
+ g\vert_{\omr(\p)}
+=
+ \mathrm{I}(\p)^{\rm T}
+\left(
+ f^* f
+\right)^2
+ \mathrm{I}(\p) .
+\label{g-ito-proj}
+\ee
+%
+This equation expresses the metric on $\omm$
+in terms of the Gram matrix of the projections
+and of the projection of $\mathrm{T}_{\fmr(\p)}\fmm$ on their image.\\
+
+It now becomes evident that sloppiness may arise
+because either $f^* f$ or $\mathrm{I}(\p)$ are ill-conditioned.
+The former of these matrices depends on
+the pairwise norms and angles of $f_1,\ldots,f_N$,
+and its spectrum characterizes both their relative weight
+and the degree to which they are linearly independent.
+Sloppiness, in this context, is due to functionals
+that are badly scaled (disparate norms)
+or nearly linearly dependent (disparate angles).
+This was the case in \cite{WCGBMBES06},
+where sloppiness was mediated by a Vandermonde matrix
+specific to Taylor polynomials.
+Replacing those with any orthonormal polynomial basis
+would have presumably sufficed to remove sloppiness.
+If $\mathrm{I}(\p)$ is ill-conditioned, instead,
+then sloppiness is due to directions in $\mathrm{T}_\p\fmm$
+that are nearly parallel to the projection kernel
+$\mathrm{Ker}(f^*)
+=
+\mathrm{Ker}(f^*_1) \cap \ldots \cap \mathrm{Ker}(f^*_N)$.
+Here, although the observation functionals are well-chosen
+and the \emph{full} model response to parameter variations is appreciable,
+the latter is projected to a much smaller \emph{observed} model response.
+A prime such example is offered by multiscale systems.
+As we shall see shortly,
+many parameter directions in such systems
+only affect behavior at unobserved scales,
+effectively identifying directions in $\fmm$
+irrelevant to the monitoring protocol.\\
+
+
+\subsection{Data mining.}
+%
+Sloppiness was introduced above as a \emph{local} property
+pertaining to the specific combination of model and observables,
+a fact reflected on our Jacobian- and tangent space-rich analysis above.
+However, sloppy behavior is an open property
+characterizing entire regions of parameter space.
+This fact has strong implications,
+the foremost of which is that the evolution of sloppy systems
+is described by a \emph{reduced} number of effective parameters.
+In this section, we will develop a data mining framework
+for the \emph{identification} of such parameters.\\
+
+The footprint of sloppiness in parameter space is the existence of
+extended, essentially lower-dimensional surfaces, all points of which
+evoke \emph{nearly identical} observed model responses.  Effective
+system parameters are roughly constant on each such surface, so
+mapping out these surfaces amounts to numerically identifying
+effective parameters.  In the linear picture we painted above, an
+$M-$dimensional ball in $\mathrm{T}_{\omr(\p)}\omm$ is pulled back to
+an ellipsoid centered at $\p$ with widely disparate principal axes.
+In that setting, principal directions correspond to effective
+parameters and can be unraveled by Linear Algebra techniques such as
+Principal Component Analysis (PCA), cf.~\cite{ADS06}.  In reality,
+pronounced deviations of the observed model manifold from linearity
+carry points on $\omm$ within a specific distance from $\omr(\p)$ to a
+curved region in parameter space resembling a lower-dimensional
+surface.  We shall call such regions \emph{neutral sets} and, directly
+below, build a \emph{nonlinear} data mining computational framework
+to identify such sets and the associated effective parameters.\\
+
+We begin our investigation with a prototypical singularly perturbed
+dynamical system to illustrate the concept of model data space, and to
+connect this concept to model fitting and neutral sets.
+%
+\be
+\begin{array}{rcl}
+ \dot{x}^1 &=& -\lambda x ,
+\\
+ \eps \dot{x}^2 &=& -\displaystyle\left(1+\frac{1}{2\sin y}\right) y ,
+\end{array}
+\quad\mbox{supplemented with}\quad
+\begin{array}{rcl}
+ x^1(0) &=& x^1_0 ,
+\\
+ x^2(0) &=& x^2_0 .
+\end{array}
+\ee
+%
+Here, a dot denotes differentiation with respect to time
+$t \in I = [0,\infty) \subset \R$, whereas $\lambda > 0$ and
+$0 < \eps \ll 1$ are system parameters.  The full model response is
+the full system trajectory, whereas we choose our observed model
+response to be the three points $\{(x(t_1), x(t_2), x(t_3))\}$ with
+$x(t) = (x^1(t), x^2(t))$. We consider as parameters $\eps$ and
+$x^2(0)$ and examine how they affect our predictions at these three
+times. In the notation introduced earlier,
+
+\begin{align*}
+t \in \mathbb{R}, \; \fms =  \begin{bmatrix} x^1 \\ x^2 \end{bmatrix} \in C^1(0,\infty) \times C^1(0,\infty), \; \theta = (\epsilon, x^2(0)) \in \mathbb{R}^2, \; \mu(\theta) = \begin{bmatrix} x(t_1) \\ x(t_2) \\ x(t_3) \end{bmatrix} \in \mathbb{R}^3
+\end{align*}
+
+and thus,
+
+%
+\[
+ K=1 ,
+\quad
+ d = 2 ,
+\quad
+ M = 2 ,
+\quad
+ N = 3
+\]
+%
+
+
+Interestingly, the dimensionality of the neutral set in this system
+changes depending on the parameter $\epsilon$. For $\eps \ll 1$ the
+system is strongly perturbed. If $t_1, \; t_2$ and $t_3$ all lie on
+the slow manifold, then further decreasing $\eps$ will not influence
+our model predictions $\mu$, as shown in
+Fig. \ref{fig:sing-pert:eps}. Likewise, the value of $x^2(0)$ will
+have little effect as the small $\eps$ so quickly pulls trajectories
+onto the slow manifold that they spend almost no time traversing the
+fast fiber. This is represented by Fig. \ref{fig:sing-pert:x20}. In
+this regime, the neutral set is two-dimensional: niether $\eps$ nor
+$x^2(0)$ affect predictions at $t_1, \; t_2$ and $t_3$. However, as
+$\eps$ increases, we approach a state in which predictions are nearly
+constant for different $x^2(0)$, but further changes in $\eps$ does in
+fact affect $\mu$ as we begin sampling off the slow manifold. In this
+case, we have a one-dimensional neutral set: $\eps$. Finally, when
+$\eps \approx O(1)$ both parameters significantly change $\mu$ and our
+neutral set is empty. Fig \ref{fig:sing-pert-slopp} captures each of
+these three regimes.
+
+We now turn our attention towards the objective function associated
+with this model
+
+\begin{align*}
+  c(\eps, x^2(0)) = \sum_{i=1}^3 (d_i - x(t_i))^2
+\end{align*}
+
+Here we use a least-squares routine to fit the parameters $\eps$ and
+$x^2(0)$ in \ref{eqn:sing-pert-model} to three data points
+$\{d_i\}_{i=1}^3$. While such data would typically be gathered in a
+laboratory setting, we instead choose different points on the model
+manifold to fit to. By examining the resulting contours of the
+objective function we can further illustrate the different neutral
+sets that can arise. If the true system lies in the region
+$\eps \ll 1$, we see in Fig. \ref{fig:sing-pert:contour-2} that large
+regions of $(\eps, x^2(0))$ space provide similar fits, suggesting a
+two-dimensional neutral set as expected. On the other hand, when our
+data is collected in the region $\eps \approx O(1)$,
+Fig. \ref{fig:sing-pert:contour-0} shows that both $\eps$ and $x^2(0)$
+significantly influence the objective function value. As both
+parameters affect the objective function, the neutral set is empty.
+
+
+\textcolor{gray}{
+\paragraph{motivation.}
+(re-)introduce neutral set in parameter space.  Motivate data mining
+of neutral set for effective parameter identification.  Data mining
+via PCA done \cite{ADS06} but neutral sets extended so nonlinearities
+pronounced $\rightarrow$ nonlinear data mining such as diffusion
+maps.}
+
+\paragraph{Alexander's model.}
+The simple, singularly perturbed system presented above contained up
+to two neutral directions in parameter space: $\eps$ and $x^2(0)$,
+which created the ellipsoidal contours seen in
+Fig. \ref{fig:sing-pert:contour-2}. The fact that the bare parameters
+themselves were sloppy, and not some hidden nonlinear combination
+of them, makes it an especially simple example. Next we consider the
+more general case in which model sloppiness arises in parameter
+combinations. The model is the chemical reaction system
+
+\begin{align*}
+  A \xrightleftharpoons[k_{-1}]{k_1} B, \; B \xrightarrow[]{k_2} C
+\end{align*}
+
+Under the assumption that species $B$ is in quasi equilibrium, valid
+when $k_2 \gg k_{-1}$, the simplified solution for the product
+concentration is given by
+
+\begin{align*}
+  C_C = C_{A_0}(1 - e^{-k_{eff} t} \; k_{eff} = \frac{k_1 k_2}{k_{-1} + k_2}
+\end{align*}
+
+Thus, when operating in this quasi-steady state regime, although our
+base model includes the three bare parameters $k_1$, $k_{-1}$ and
+$k_2$, the resulting dynamics are governed by a single effective
+parameter $k_{eff}$. This implies that there will be an entire
+two-dimensional surface in parameter space, each point on which
+equally well fits experimental data. In addition, this neutral set
+will be highly nonlinear, as it is effectively a level set of the
+nonlinear equation $k_{eff} = \frac{k_1 k_2}{k_{-1} + k_2}$. More
+explicitly, any combination of the bare parameters $k_1$, $k_{-1}$ and
+$k_2$ that yield the same value for $k_{eff}$ will predict the same
+system dynamics. Fig. \ref{fig:qssa:sloppy-manifold} shows a surface
+in parameter space along which $k_{eff} = 1$.
+
+It is important to note that this surface in parameter space captures
+all the sloppiness hidden in our model. Traversing along the manifold we
+find many different parameter combinations with nearly equivalent
+model predictions; moving in a direction transverse to the surface
+brings us to a new $k_{eff}$ and thus significantly different model
+predictions. Unfortunately, real-life systems will typically contain
+tens to hundreds of parameters, preventing us from simply plotting the
+neutral set and visually inspecting its sloppiness. Instead, this
+sloppy surface will be hidden somewhere within the high dimensional
+parameter space. Our objective then becomes: uncover the neutral set
+in a potentially high-dimensional parameter space and develop a
+parameterization of its potentially nonlinear structure.
+
+In fact, we must first confront a separate challenge: given some
+model, how do we generate its underlying sloppy surface? One could
+simply sample parameter space and keep those points for which the
+objective function fell within some tolerance, but this becomes
+expensive and inefficient in high dimensions. Instead, we achieve this
+aim by repeatedly fitting our model starting from different initial
+guesses in parameter space. When dealing with an ideal model, each
+initial guess would converge to the same, global optimum in parameter
+space. However, sloppiness creates a manifold of solutions, each of
+which yield equally good fits. Thus, by starting our optimization
+routine at different points in parameter space, we will naturally
+converge to different values on the sloppy manifold, eventually
+generating a dense cover as shown in Fig. \ref{fig:qssa:opt}.
+
+Given this dataset, how can we uncover its hidden structure? This
+problem is naturally framed as one of dimensionality reduction: how
+can we more efficiently describe our high-dimensional dataset? One
+might initially consider performing a principal component analysis;
+however, as Fig. \ref{fig:qssa:sloppy-manifold} shows, our manifold is
+highly nonlinear. Instead, we turn to Diffusion Maps, a data mining
+technique capable of uncovering such nonlinear structure.
+
+ % description of DMAPS here? %
+
+When we apply DMAPS to the set of parameter combinations found through
+repeated optimization, we indeed uncover a parameterization of the
+nonlinear system sloppiness. In this case, DMAPS provides a
+two-dimensional embedding of the surface, as shown in
+Fig. \ref{fig:qssa:dmaps}.
+
+However, it would also be useful if we could uncover not only a
+parameterization of the sloppy directions in our model, but also the
+important parameter directions.
+
+% alternative dmaps description %
+
+Illustrate with simple model: $3 \rightarrow 1$ parameters. DMAPS
+$\rightarrow$ sloppy set $\rightarrow$ effective parameter. Outcome:
+nonlinear data mining + transversal propagation $\rightarrow$
+effective parameters.  Also discuss non-uniqueness of effective
+parameters (anything transversal); candidate parameter combinations
+are tested through non-degeneracy of Jacobian.
+
+
+
+\section{Intermission: transformations/cost functions}
+
+\paragraph{Caricature $1 \rightarrow 0$.}
+Setting: planar singularly perturbed system + data in sloppy $\eps-$regime.
+Limit $\eps \downarrow 0$ entirely removes parameter
+without sacrificing output accuracy.
+Outcome: parameter-free system.
+
+\paragraph{Caricature `{\it eye of the beholder}'.}
+Same setting.  Map $\eps \mapsto 1/\eps$ maps interval
+$[0,\eps_{\rm max}]$ to ray $\rightarrow$ sloppiness not removable
+through linear rescaling.  [Here again, transformations.]  Carry on:
+flat neutral set $\mapsto$ spiral/Swiss roll.  Outcome: sloppiness can
+be more than a finite stretching even in the absence of singular
+perturbations.
+
+\paragraph{Caricature cost function.}
+Discuss how cost function determines neutral set.
+Include short discussion on a priori knowledge of constants
+possibly lifting sloppiness (cite fwd to MM).
+Discuss free vs constrained (e.g. log-likelihood) choice of cost function.
+Cost function choice should be motivated
+partly by interest (e.g. which components to include and how)
+and partly by statistics/data fitting concerns
+(e.g. log-likelihood $\rightarrow$ quadratic sum).
+
+\paragraph{Caricature model space.}
+Distinguish output from cost function: former fixes model (=data)
+space, latter space norm (i.e., packages data into a scalar).
+\emph{Output} analogous to random variable: constrains detailed system
+output (i.e., detailed state at all times).  In effect, output formed
+by projecting detailed system output (=a point in some space) to ($N$
+in number) $1-$D subspaces $\rightarrow$ observables are projections
+(along co-dim. $N$ kernel intersection) of system output onto an
+$N-$dim subspace [nonlinear kernel fibrations OK].  Model manifold
+constructed as projection of `detailed model manifold.'  Norm in model
+space $\rightarrow$ semi-norm in `detailed model space': balls
+$\rightarrow$ cylinders (ball $\times$ kernel) $\rightarrow$
+``neutral" directions along projection kernel.  Sloppy directions in
+parameter space are mapped to neutral (i.e.kernel) directions on
+`detailed model manifold', i.e. $d\theta$ is (largely) along
+intersection of kernels $\rightarrow$ maps to much thinner
+displacement on (restricted) model space.  Conclusion: lower-dim
+subsets of parameter space may map to directions along kernel, but
+these do not necessarily extend through entire parameter space:
+discuss two cases: (a) sing. pert. caricature with $\eps\in\R$ (only
+$1/\eps$ above threshold maps to kernel directions, whereas $1/\eps$
+below it---incl. negative values---does not: detailed model manifold
+is 'sigmoidal') and (b) Goldbeter--Koshland modules, where steady
+states (observables) show `sloppiness--sharp transition--sloppiness'
+structure.  Eye of the beholder again: metric in parameter space bad
+predictor of (constrained) model response.
+
+\section{Parameters and variables}
+
+\paragraph{Variables as parameters.}
+Initial conditions subject to inference $\rightarrow$ link between
+parameter space and state space.  Entire fast fiber sloppy.  Fast/slow
+are relative notions, fixed by observer's (measurement) timescale,
+i.e. by time grid (discrete case) or by initial relaxation window
+(continuous case).
+
+\paragraph{Parameters as variables.}
+Optimization dynamics in data fitting $\rightarrow$ dynamics in
+parameter space. State space dynamics + choice of cost function shape
+the landscape in parameter space that the optimization algorithm
+navigates.  Relatedly: state space dynamics $\rightarrow$ model
+manifold; cost function $\rightarrow$ model space norm.
+
+\paragraph{Parameters as variables.}
+Joint parameter-/variable-space.
+[What can we contribute here?]
+
+
+\section{Sloppiness in enzyme kinetics}
+
+
+
+
+\section{Metrics}
+
+
+\section{Discussion}
+
+Discuss model space and state space.\\
+
+Discuss extension by following manifolds.\\
+
+Discuss bounded/unbounded spaces.\\
+
+
+\begin{thebibliography}{99}
+%
+
+\bibitem{AS72}
+M.~Abramowitz and I.~A.~Stegun,
+Handbook of Mathematical Functions
+with Formulas, Graphs, and Mathematical Tables (10th ed.),
+National Bureau of Standards, Washington, DC, 1972.
+
+\bibitem{ADS06}
+P.~Achard and E.~De~Schutter,
+Complex parameter landscape for a complex neuron model,
+{\it PLoS Comp. Biol.} \textbf{2(7)} 0794--0804, 2006.
+
+\bibitem{A14}
+J.~I.~Ankenman,
+Geometry and Analysis of Dual Networks on Questionnaires,
+Ph.D. Thesis, Yale University, 2014.
+
+\bibitem{JG11}
+K.~A.~Johnson and R.~S.~Goody,
+The original Michaelis constant:
+translation of the 1913 Michaelis--Menten paper,
+{\it Biochem.} \textbf{50} 8264--8269, 2011.
+
+\bibitem{LB34}
+H.~Lineweaver and D.~Burk,
+The Determination of Enzyme Dissociation Constants,
+{\it J. Am. Chem. Soc.} \textbf{56} 658--666, 1934.
+
+\bibitem{MM13}
+L.~Michaelis and M.~L.~Menten,
+Die Kinetik der Invertinwirkung,
+{\it Biochem. Z.} \textbf{49} 333--369, 1913.
+
+\bibitem{SS89}
+L.~A.~Segel and M.~Slemrod,
+The Quasi-Steady-State Assumption:
+A Case Study in Perturbation,
+{\it SIAM Review} \textbf{31(3)} 446--477, 1989.
+
+\bibitem{TMS10}
+M.~K.~Transtrum, B.~B.~Machta and J.~P.~Sethna,
+Why are nonlinear fits to data so challenging?,
+{\it ?Phys. Rev. Lett.} \textbf{104} 060201, 2010.
+
+\bibitem{TMS11}
+M.~K.~Transtrum, B.~B.~Machta and J.~P.~Sethna,
+Geometry of nonlinear least squares
+with applications to sloppy models and optimization,
+{\it Phys. Rev. E} \textbf{83} 036701, 2011.
+
+\bibitem{TQ14}
+M.~K.~Transtrum and P.~Qiu,
+Model reduction by manifold boundaries,
+{\it ?Phys. Rev. Lett.} \textbf{113} 098701, 2014.
+
+\bibitem{WCGBMBES06}
+J.~J.~Waterfall, F.~P.~Casey, R.~N.~Gutenkunst, K.~S.~Brown, C.~R.~Myers,
+P.~W.~Brouwer, V.~Elser and J.~P.~Sethna,
+Sloppy-model universality class and the Vandermonde matrix,
+{\it ?Phys. Rev. Lett.} \textbf{97} 150601, 2006.
+
+\end{thebibliography}
+
+\end{document}

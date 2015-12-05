@@ -1,7 +1,5 @@
-Newton module
-=============
+Newton's method with GMRES
+==================================
 
 .. automodule:: Newton
-    :members:
-    :undoc-members:
-    :show-inheritance:
+		

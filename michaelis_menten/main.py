@@ -1,4 +1,4 @@
-"""Uses modules :py:mod:`MM` and :py:mod:`Hessian` to investigate the sloppiness Michaelis Menten parameters"""
+"""Uses modules :py:mod:`MM` and :py:mod:`Derivatives` to investigate the sloppiness Michaelis Menten parameters"""
 
 import util_fns as uf
 import algorithms.CustomErrors as CustomErrors
@@ -145,6 +145,7 @@ def mm_sloppy_plot():
     plt.show()
             
 def pca_contour():
+    """Plots the pca of the ellipsoid, which projects into a two-dimensional ellipse as expected"""
     data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps.csv', skip_header=1, delimiter=',')
     npts_to_dmaps = 5000
     slice_size = data.shape[0]/npts_to_dmaps
@@ -155,7 +156,7 @@ def pca_contour():
     plot_dmaps.plot_xy(np.dot(pcs[:,0].T, data.T), np.dot(pcs[:,1].T, data.T), color=data[:,1]/data[:,2], scatter=True)
 
 def transform_contour():
-    """Applies a nonlinear transformation to the contour, bringing it into a non-ellipsoidal shape"""
+    """Applies a nonlinear transformation to the contour, bringing it into a non-ellipsoidal shape. Kind of a poorly designed method"""
     data = np.genfromtxt('./data/output/contour_KVSt_to_dmaps.csv', skip_header=1, delimiter=',')
     data = data[::6]
     # plt.scatter(data[:,0], data[:,1], data[:,2])
@@ -448,9 +449,9 @@ def mm_contour_grid():
 
 def attempt_find_branch(psa_solver, x0, y0, max_nattempts, perturbation, ds, ncontinuation_steps, f_error, **kwargs):
 
-                # the following works around the inherent lack of robustness in the integration routine: occasionally, despite minimal error in the initial guess, Newton will fail to converge and/or the integrator will exit unsucessfully
-                # the parameter values at which this breakdown occurs seem arbitrary and do not correspond to distinct regions of parameter space but rather random isolated points
-                # thus, if one of these points is located (signalled by CustomErrors.PSAError), we try using slight perturbation to it
+    # the following works around the inherent lack of robustness in the integration routine: occasionally, despite minimal error in the initial guess, Newton will fail to converge and/or the integrator will exit unsucessfully
+    # the parameter values at which this breakdown occurs seem arbitrary and do not correspond to distinct regions of parameter space but rather random isolated points
+    # thus, if one of these points is located (signalled by CustomErrors.PSAError), we try using slight perturbation to it
 
     nattempts = 0 # number of initial points already tried
 
@@ -473,7 +474,7 @@ def attempt_find_branch(psa_solver, x0, y0, max_nattempts, perturbation, ds, nco
     return branch
 
 def mm_contours():
-    """Finds contours of the MM objective function: either one-dimensional curves or two-dimensional surfaces. Distributes computation across processors with mpi4py"""
+    """Finds contours of the MM objective function: either one-dimensional curves or two-dimensional surfaces"""
     # set up base system
     params = OrderedDict((('K',2.0), ('V',1.0), ('St',2.0), ('epsilon',1e-3), ('kappa',10.0))) # from Antonios' writeup
     true_params = np.array(params.values())
@@ -807,14 +808,14 @@ def check_sloppiness():
     # plt.show()
 
 if __name__=='__main__':
-    # sample_sloppy_params()
-    # check_sloppiness()
-    mm_contour_grid()
     # mm_sloppy_plot()
-    # mm_contour_grid_mpi()
-    # test()
-    # mm_contours()
-    # slim_data()
-    # dmaps_contour()
     # pca_contour()
     # transform_contour()
+    # slim_data()
+    # sample_sloppy_params()
+    # check_sloppiness()
+    # mm_contour_grid()
+    # mm_contour_grid_mpi()
+    # test()
+    mm_contours()
+    # dmaps_contour()

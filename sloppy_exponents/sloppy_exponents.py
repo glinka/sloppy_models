@@ -7,8 +7,8 @@ import matplotlib.colorbar as colorbar
 import matplotlib.gridspec as gs
 import sympy
 import dmaps
-import PseudoArclengthContinuation as PSA
-import ObjectiveFunction as of
+import algorithms.PseudoArclengthContinuation as PSA
+import algorithms.ObjectiveFunction as of
 
 class ab_fn:
     """A test sloppy function, suitable for use with PSA module to find contours. Models an objective function used to estimate parameters from data drawn from a three-dimensional system as defined in 'get_sloppy_traj'"""
@@ -108,12 +108,15 @@ def run_dmaps():
     # k1_true = 0.1
     # kinv_true = 0.1
     # k2_true = 1000.0
+
     # k1_true = 10.0
     # kinv_true = 10.0
     # k2_true = 100.0
+
     k1_true = 1.0
     kinv_true = 1.0
     k2_true = 100.0
+
     beta_true = k2_true/(kinv_true*kinv_true + k2_true)
     alpha_true = k1_true*k1_true/(kinv_true*kinv_true + k2_true)
     # define objective function using sympy
@@ -145,7 +148,7 @@ def run_dmaps():
     # times = np.array(times)
 
     # contour = 6e-2 w/ ks = [10,10,100]
-    contour = 1e-2
+    contour = 1e-3
     beta_true = np.array((beta_true,))
     alpha_true = np.array((alpha_true,))
     times = np.linspace(1, 5, 10)

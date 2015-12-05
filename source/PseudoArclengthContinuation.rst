@@ -1,7 +1,5 @@
-PseudoArclengthContinuation module
+Basic implementation of pseudo-arclength continuation
 ==================================
 
 .. automodule:: PseudoArclengthContinuation
-    :members:
-    :undoc-members:
-    :show-inheritance:
+		

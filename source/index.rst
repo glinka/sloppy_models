@@ -3,20 +3,48 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Documentation for Michaelis Menten Sloppiness Project
-=========================================
+Documentation for Parameter Sloppiness Project
+===============================================
 
 
-
-Model:
+Basic singularly perturbed model:
 -----------------------------------------
 .. toctree::
-   Michaelis Menten helper class and functions <MM>
-   Michaelis Menten sloppiness testing <mm_sloppiness>
+   sp-main
+
+
+Antonios' model:
+-----------------------------------------
+.. toctree::
+  Z_Model 
+  Antonios-main 
+
+
+Rawlings' model:
+-----------------------------------------
+.. toctree::
+  model 
+  Rawlings-main 
+
+
+Michaelis Menten:
+-----------------------------------------
+.. toctree::
+  MM 
+  MM_Specialization 
+  MM-main 
 
 
 Algorithms:
 -----------------------------------------
 .. toctree::
-   Numerical evaluation of the Hessian <Hessian>
+  Derivatives 
+  PseudoArclengthContinuation 
+  BisectionMethod 
+  Newton 
+  Integration 
+  ObjectiveFunction 
+   
+   
+   
 

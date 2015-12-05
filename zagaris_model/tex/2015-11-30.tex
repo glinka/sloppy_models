@@ -1,0 +1,64 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {./figs/} }
+
+\title{Attempting to find important parameters in sloppy models}
+
+\begin{document}
+\maketitle
+
+We use Antonios' model in which $a$ and $\lambda$ are important parameters while $b$ and $\epsilon$ are sloppy. Holding $b$ fixed, we are left with a three-parameter model with two important parameters and one sloppy. We subsequently attempt to recover a parameterization of $a$ and $\lambda$ using the modified DMAPS kernel. This does not seem to have been met with more success than could be expected of the traditional DMAPS kernel.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{dmaps-data-kernel-1}
+  \caption{Coloring three-parameter dataset by first eigenvector}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{dmaps-data-kernel-27}
+  \caption{Coloring three-parameter dataset by $27^{th}$ eigenvector}
+\end{figure}
+
+The final direction corresponding to $\lambda$, also the most highly constrained axis, was not found in the first 30 eigenvectors.
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

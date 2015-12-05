@@ -1,5 +1,4 @@
 """
-.. module:: PseudoArclengthContinuation
    :platform: Unix, Windows, Mac
    :synopsis: Basic implementation of pseudo-arclength continuation algorithm
 """
@@ -18,8 +17,7 @@ class PSA:
         _Df (array): the Jacobian of '_f', a function :math:`Df(x, k)` from :math:`R^{n+1} \\rightarrow R^{n(n+1)}`
 
     .. note::
-
-    _Df is not a square matrix due to the continuation parameter
+        _Df is not a square matrix due to the continuation parameter
 
     >>> insert example code here
     """
@@ -103,8 +101,7 @@ class PSA:
             Numpy array of dimension (nsteps, n+1), each row of which contains first the length-n value of x and then the scalar parameter value at which a point on the branch was found
 
         .. note::
-
-        If :math:`f(x_0,k_0) \\neq 0`, this method automatically searches for an appropriate starting point via a Newton iteration at :math:`k=k_0`
+            If :math:`f(x_0,k_0) \\neq 0`, this method automatically searches for an appropriate starting point via a Newton iteration at :math:`k=k_0`
         """
         # TODO: faster method than defining lambda fn?
         n = x0.shape[0]

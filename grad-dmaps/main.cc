@@ -45,8 +45,8 @@ int main(int argc, char** argv) {
   std::cout << "saved dataset in: ./data/dataset.csv"  << std::endl;
   
   // test test_kernels function over log-spaced epsilons
-  const int nkernels = 20;
-  const int lower_exp = -8, upper_exp = 1;
+  int nkernels = 20;
+  int lower_exp = -8, upper_exp = 1;
   Vector epsilons = Vector::LinSpaced(nkernels, lower_exp, upper_exp);
   for (int i = 0; i < nkernels; i++) {
     epsilons[i] = pow(10, epsilons[i]);
@@ -63,23 +63,30 @@ int main(int argc, char** argv) {
   std::cout << "saved kernel sums in: ./data/kernel_sums.csv" << std::endl;
   std::cout << "saved epsilons in: ./data/epsilons.csv" << std::endl;
 
-
-  /* run dmaps with epsilon = 1e-3 for unnormalized ob. fn. vals, 1e-1 for normalized */
-  const double epsilon = 1e-4;
-  Kernel_Function grad_kernel(epsilon);
+  /* const double epsilon = 1e-1; */
   const int k = 20;
   const double weight_threshold = 1e-8;
-  Vector eigvals;
-  Matrix eigvects, W;
-  dmaps::map(pts, grad_kernel, eigvals, eigvects, W, k, weight_threshold);
+  // loop over multiple epsilon values to see how it changes diffusion on levesets
+  // create vector of kernels
+  nkernels = 5;
+  lower_exp = -3, upper_exp = 0;
+  epsilons = Vector::LinSpaced(nkernels, lower_exp, upper_exp);
+  for(int i = 0; i < nkernels; i++) {
+    Kernel_Function grad_kernel(pow(10, epsilons[i]));
+    std::cout << "started mapping with epsilon = " << pow(10, epsilons[i]) << "..." << std::flush;
+    Vector eigvals;
+    Matrix eigvects, W;
+    dmaps::map(pts, grad_kernel, eigvals, eigvects, W, k, weight_threshold);
+    std::cout << "completed" << std::endl;
 
-  // save DMAPS output: eigvals, eigvects
-  std::ofstream eigvect_file("./data/eigvects.csv");
-  eigvect_file << file_header << std::endl << eigvects.format(comma_format);
-  eigvect_file.close();
+    // save DMAPS output: eigvals, eigvects
+    std::ofstream eigvect_file("./data/eigvects" + std::to_string(i) +  ".csv");
+    eigvect_file << file_header << std::endl << eigvects.format(comma_format);
+    eigvect_file.close();
+    std::ofstream eigval_file("./data/eigvals" + std::to_string(i) + ".csv");
+    eigval_file << file_header << std::endl << eigvals.format(comma_format);
+    eigval_file.close();
+  }
   std::cout << "saved DMAPS output eigvects as: eigvects.csv" << std::endl;
-  std::ofstream eigval_file("./data/eigvals.csv");
-  eigval_file << file_header << std::endl << eigvals.format(comma_format);
   std::cout << "saved DMAPS output eigvals as: eigvals.csv" << std::endl;
-  eigval_file.close();
 }
