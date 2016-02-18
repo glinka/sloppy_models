@@ -1,0 +1,232 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{A comparison of DMAPS and the Neumann heat kernel}
+
+\begin{document}
+\maketitle
+
+Theoretically the DMAPS eigenvalues and eigenvectors converge to the
+eigenvalues and eigenfunctions of certain differential operators,
+namely those of the Laplace-Beltrami operator on the manifold, with
+Neumann boundary conditions. Below we compare the eigenvalues and
+eigenvectors computed with DMAPS to the corresponding analytical
+eigenvalues and eigenfunctions.
+
+\section*{Eigenvalues}
+
+Theory shows that
+
+\begin{align*}
+  \lambda_i^{\frac{t}{\epsilon}} \rightarrow e^{-t \hat{\nu_i}^2}
+\end{align*}
+
+where $\lambda$ corresponds to DMAPS eigenvalues and $\hat{\nu}$ to
+eigenvalues of the Laplace operator. To be precise, $\hat{\nu}$ is actually
+an eigenvalue of a scaled version of the operator $\Delta_0 = \alpha
+\Delta$ where $\Delta$ is the true Laplace-Beltrami operator. Lafon
+gives a vague expression for $\alpha$ that I couldn't work out
+computationally, so I simply estimated it as $\alpha = 2$. This
+value holds for many different domains and densities of points which
+suggests it's close to the true value. Thus if $\nu$ represents the
+eigenvalues of the unscaled L-B operator, we expect
+
+\begin{align*}
+  \lambda_i^{\frac{t}{\epsilon}} \rightarrow e^{-\alpha^2 t \nu_i^2}
+\end{align*}
+
+Sampling points on a rectangular domain $x \in [0, a]$, $y \in [0,b]$
+and comparing DMAPS computed eigenvalues with the theoretical values
+yields good agreement as shown below. We set $t = \epsilon$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./analytical-dmaps-comparison/eigvals-comparison}
+  \caption{Comparison of DMAPS eigenvalues (red line) with the
+    analytical value of $e^{-\alpha \epsilon \nu_i^2}$ (blue dots)}
+\end{figure}
+
+\clearpage
+
+\section{Eigenvectors}
+
+Theory also suggets that the DMAP eigenvectors converge to the L-B
+eigenfunctions. To compare these quantities, we sampled the
+theoretical eigenfunctions over the domain and calculated the
+difference between these values and the correpsonding DMAPS
+eigenvector arising from the data. Specifically, if
+$\Phi_i \in \mathbb{R}^n$ is the $i^{th}$ DMAPS eigenvector with a
+norm equal to one, and
+$F_i \in \mathbb{R}^n$ contains the values of the $i^{th}$
+eigenfunction evaluated at each of the $n$ points in the DMAPS
+dataset, we look at the relative error defined by
+
+\begin{align*}
+  e_i = \frac{\|\|F_i\|\Phi_i - F_i\|}{\|F_i\|}
+\end{align*}
+
+We scale $\Phi_i$ by the norm of $F_i$ to account for the arbitrary
+scaling of the eigenvector. Examining the resulting errors shows good
+agreement between computation and theory.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./analytical-dmaps-comparison/eigvects-error}
+  \caption{Relative error in the DMAPS estimate of the theoretical eigenfunction}
+\end{figure}
+
+The following simply show the dataset colored by these eigenvectors
+and eigenfunctions allowing for quick qualitative comparison.
+
+\clearpage
+
+1st eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect1}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn1}
+\end{figure}
+
+\clearpage
+
+2nd eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect2}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn2}
+\end{figure}
+
+\clearpage
+
+3rd eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect3}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn3}
+\end{figure}
+
+\clearpage
+
+4th eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect4}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn4}
+\end{figure}
+
+\clearpage
+
+5th eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect5}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn5}
+\end{figure}
+
+\clearpage
+
+6th eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect6}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn6}
+\end{figure}
+
+\clearpage
+
+7th eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect7}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn7}
+\end{figure}
+
+\clearpage
+
+8th eigenvector/eigenfunction
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigvect8}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.65\linewidth]{./analytical-dmaps-comparison/eigfn8}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

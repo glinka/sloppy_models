@@ -32,7 +32,6 @@
 dmap_params
 
 # other
-*figs
 *data
 build*
 *.m

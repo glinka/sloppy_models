@@ -45,6 +45,9 @@ cdef class Z_Model:
     def get_trajectory(self, np.ndarray[np.float64_t] x0, np.ndarray[np.float64_t] times):
         """Returns complete trajectory of 'x' at 'times' starting from x(0) = x0. **This function is hardcoded with :math:`\mu = ax` and :math:`\phi = b y^2`**, which allows us to solve for the trajectory algebraically instead of using an integrator
 
+        .. note::
+            x(0) = x0 is given in *transformed* parameters, and not the original X(0)
+
         Args:
             x0 (array): initial system state, **assumed to be given at t=0**
             times (array): the times at which to collect points
@@ -52,8 +55,9 @@ cdef class Z_Model:
         Returns:
             trajectory (array): values of system state 'x' at 'times'
         """
-        # assume x0 = x(0)
-        X0, Y0 = x0
+        x0, y0 = x0
+        X0 = x0 - self._b*y0*y0
+        Y0 = y0 - self._a*x0
         cdef np.ndarray[np.float64_t, ndim=2] alg_trajectory = np.empty((times.shape[0], x0.shape[0]))
         # calculate Y trajectory using quadratic formula
         qa = 1.0
@@ -66,6 +70,9 @@ cdef class Z_Model:
 
     def get_trajectory_quadratic(self, np.ndarray[np.float64_t] x0, np.ndarray[np.float64_t] times):
         """Returns complete trajectory of 'x' at 'times' starting from x(0) = x0. **This function is hardcoded with :math:`\mu = a x^2` and :math:`\phi = b y^2`**
+
+        .. note::
+            x(0) = x0 is given in *transformed* parameters, and not the original X(0)
 
         Args:
             x0 (array): initial system state, **assumed to be given at t=0**

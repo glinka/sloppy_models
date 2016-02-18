@@ -1,0 +1,202 @@
+
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq,
+  setspace, lscape, xcolor, physics}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% ceiling and floor symbols (use with asterisk: \ceil*{} or \floor*{}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/dmaps/} }
+
+\title{Analysis of anisotropic diffusion}
+
+\begin{document}
+\maketitle
+
+\section{Analytical results}
+
+To better understand how anisotropic diffusion affects the resulting
+operator's eigenfunctions, we examine the PDE
+
+\begin{align}
+  &\frac{1}{D} \pdv{f}{t} = \pdv[2]{f}{x} + \epsilon \pdv[2]{f}{y} \\
+\end{align}
+
+with homogenous Neumann boundary conditions on $x,y \in
+[0,a]\cross[0,b]$ and some arbitrary initial condition $f_0$
+
+\begin{align}
+  &f(0,x,y)=f_0 \\
+  &\pdv{f}{x} (t,0,y)=\pdv{f}{x} (t,a,y)=\pdv{f}{y} (t,x,0)=\pdv{f}{x}
+    (t,x,b)=0
+\end{align}
+
+Searching for a solution of the form $f=X(x)Y(y)T(t)$ via separation
+of variables, we find three eigenvalue equations
+
+\begin{alignat}{2}
+  X'' &= \alpha X  & X'(0) = X'(a) = 0 \\
+  Y'' &= \frac{\beta}{\epsilon} Y & Y'(0) = Y'(b) = 0 \\
+  T' &= D (k+\lambda) T &
+\end{alignat}
+
+leading us to the general solution
+
+\begin{align}
+  f(x,y,t) = \sum_{i=0}^{\infty}\sum_{j=0}^{\infty} a_{ij} \cos(\frac{i \pi x}{a})
+  \cos(\frac{j \pi y}{b}) e^{\lambda_{ij} t}
+\end{align}
+
+with 
+
+\begin{align}
+  \lambda_{ij} = -D \bigg( (\frac{i \pi}{a})^2 + \epsilon (\frac{j
+  \pi}{b})^2 \bigg)
+\end{align}
+
+Thus, if $a = b = 1$, we expect the first $\sqrt{\frac{1}{\epsilon}}$
+eigenfunctions to parameterize the direction of slower diffusion (in
+this case $y$), followed by the fast direction, $x$. Subsequent
+eigenfunctions should include a combination of both.
+
+\section{Numerical results}
+
+To confirm these results numerically, we sample the plane
+$[0,1] \cross [0,1]$ to get a set of points $N$ $d_i = (x_i, y_i)$ and
+then perform DMAPS on this planar dataset with the kernel
+
+\begin{align}
+  k(d_i,d_j) = e^{- \frac{(x_i - x_j)^2}{\epsilon} -
+  \frac{(y_i - y_j)^2}{\epsilon^2}}
+\end{align}
+
+This should indeed correspond to a separation of diffusion timescales
+between the $x$ and $y$ directions of order $\epsilon$. \\
+
+Setting $\epsilon = 10^{-1}$, theory suggests the first
+$\floor*{\sqrt{\frac{1}{\epsilon}}}=3$ eigenvectors should
+parameterize the $y$ axis, eigenvector $4$ should parameterize $x$,
+and the remaining will include some mixture of the two. This is indeed
+what we find:
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-plane-1}
+  \caption{Dataset colored by DMAPS eigenvector $\Phi_1$,
+    parameterizing $y$ axis}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-plane-2}
+  \caption{Dataset colored by DMAPS eigenvector $\Phi_2$,
+    parameterizing $y$ axis}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-plane-3}
+  \caption{Dataset colored by DMAPS eigenvector $\Phi_3$,
+    parameterizing $y$ axis}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-plane-4}
+  \caption{Dataset colored by DMAPS eigenvector $\Phi_4$,
+    parameterizing $x$ axis}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-plane-5}
+  \caption{Dataset colored by DMAPS eigenvector $\Phi_5$,
+    a combination of both directions}
+\end{figure}
+
+\clearpage
+
+\section{Numerical results in higher dimensions}
+
+It is unclear to me how to analytically approach a problem closer to
+what we encounter when dealing with actual models, that is when
+
+\begin{align}
+  k(x_i,x_j) = \exp\bigg(- \frac{(x_i - x_j)^2}{\epsilon} - \alpha
+  \frac{(f(x_i) - f(x_j))^2}{\epsilon^2}\bigg)
+\end{align}
+
+and the second term is dependent on the first. To start in this
+direction, we look at a dataset generated by
+$d_i = (x_i, y_i, f(x_i, y_i))$ where $f(x_i, y_i) = x_i + y_i$. Thus
+the dataset is a two dimensional plane embedded in three
+dimensions. We set $\epsilon = 10^{-1}$ as before, but now include
+$\alpha = 10^{-8}$ as well. We might expect the resulting eigenvectors
+to be slightly perturbed versions of the $\alpha = 0$ case; and, if we
+consider a rotation of the eigenvectors a small perturbation, one
+could argue that this is indeed the outcome. I present below the dataset
+$f(x_i, y_i) = z_i = x_i + y_i$ colored by the first several
+eigenvectors of the DMAP. The first two appear to be rotations of the
+traditional $\sin$ and $\cos$ functions, while later eigenvectors do
+align exactly with the $x$ and $y$ axes.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-1d-dataspace-alpha-1e-08-eps-0.1-1}}}
+  \caption{Dataset colored by DMAP eigenvector $\Phi_1$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-1d-dataspace-alpha-1e-08-eps-0.1-2}}}
+  \caption{Dataset colored by DMAP eigenvector $\Phi_2$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-1d-dataspace-alpha-1e-08-eps-0.1-15}}}
+  \caption{Dataset colored by DMAP eigenvector $\Phi_{15}$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-1d-dataspace-alpha-1e-08-eps-0.1-16}}}
+  \caption{Dataset colored by DMAP eigenvector $\Phi_{16}$}
+\end{figure}
+
+\end{document}

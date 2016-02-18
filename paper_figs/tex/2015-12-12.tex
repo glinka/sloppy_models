@@ -1,0 +1,170 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{Data-space kernel results}
+
+\begin{document}
+\maketitle
+
+\section{Background}
+
+We investigate the DMAPS kernel
+
+\begin{align*}
+  k(\theta_i, \theta_j) = e^{\frac{\|\theta_i - \theta_j\|^2}{\epsilon} - \alpha \frac{\|\mu(\theta_i) - \mu(\theta_j)\|^2}{\epsilon^2}}
+\end{align*}
+
+where $\theta$ is some parameter combination and $\mu(\theta)$ is the
+model prediction at $\theta$. In order to better understand the
+anisotropic diffusion implied by this function, we vary $\alpha$ and
+examine the resulting embeddings. $\epsilon$ was fixed to $10^{-1}$
+throughout; future tests will examine different values.
+
+The system in question consists of both the domain and range of $f:
+\mathbb{R}^2 \rightarrow \mathbb{R}^2$. Specifically, we take $f$ to
+be a linear function given by
+
+\begin{align*}
+  f = V \Lambda V^{-1}
+\end{align*}
+
+with
+
+\begin{align*}
+  \Lambda = \begin{bmatrix} \lambda_1 & 0 \\ 0 & \lambda_2 \end{bmatrix}
+\end{align*}
+  
+and
+
+\begin{align*}
+  V = \begin{bmatrix} \cos(\theta_1) & \cos(\theta_2) \\ \sin(\theta_1)
+    & \sin(\theta_2) \end{bmatrix}
+\end{align*}
+
+We take $\lambda_1 = 1$, $\lambda_2 = 10^{-1}$, $\theta_1 =
+\frac{\pi}{4}$ and $\theta_2 = \frac{3\pi}{4}$. When applied to the
+unit square, shown in blue in the figure below, the resulting image is
+the red parallelogram. This four-dimensional dataset consisting of
+$(x_i, y_i, f_1(x_i, y_i), f_2(x_i, y_i))$ was used throughout the
+experiments below.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{linear-dataset}
+  \caption{The preimage (blue square) and image (red parallelogram),
+    which combined consist of the DMAPS dataset}
+\end{figure}
+
+\clearpage
+
+\section{Results}
+
+\subsection{$\alpha=0$}
+
+First we check $\alpha = 0$ for sanity's sake. We indeed recover the
+parameterization of the preimage, the simple square.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha01.png}
+  \caption{Coloring of dataset by first eigenvector with $\alpha=0$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha02.png}
+  \caption{Coloring of dataset by second eigenvector with $\alpha=0$}
+\end{figure}
+
+\clearpage
+
+\subsection{$\alpha=10^{-8}$}
+
+Increasing to $\alpha = 10^{-8}$ we find, first, a parameterization of
+the image, and later in the spectrum a parameterization of the
+preimage. 
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha81.png}
+  \caption{Coloring of dataset by first eigenvector with $\alpha=0$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha82.png}
+  \caption{Coloring of dataset by second eigenvector with $\alpha=0$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha815.png}
+  \caption{Coloring of dataset by fifteenth eigenvector with $\alpha=0$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha816.png}
+  \caption{Coloring of dataset by sixteenth eigenvector with $\alpha=0$}
+\end{figure}
+
+\clearpage
+
+\subsection{$\alpha=1$}
+
+Increasing $\alpha$ any further yields only a parameterization of the
+image within the first eighty calculated eigenvectors. The results
+below follow from $\alpha=1$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha81.png}
+  \caption{Coloring of dataset by first eigenvector with $\alpha=0$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-dataspace-alpha82.png}
+  \caption{Coloring of dataset by second eigenvector with $\alpha=0$}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

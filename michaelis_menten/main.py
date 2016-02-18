@@ -27,6 +27,40 @@ from pca import pca
 # switch to nicer color scheme
 solarize('light')
 
+def dmaps_test():
+    """Tests DMAP results at different values of epsilon and t"""
+    # pts = np.random.uniform(size=(npts,2))
+    npts = 20
+    x = np.linspace(0,1,npts)
+    y = np.linspace(0,1,npts)
+    xpts, ypts = np.meshgrid(x,y)
+    # xpts = np.flatten(xpts)
+    # ypts = np.flatten(ypts)
+    pts = np.array((xpts.flatten(),ypts.flatten())).T
+    plt.scatter(pts[:,0], pts[:,1])
+    plt.show()
+    k = 6
+    neps = 20
+    epsilons = np.linspace(0.01, 0.1, neps)
+    lam2s = np.empty(neps)
+    for i, eps in enumerate(epsilons):
+        print eps
+        eigvals, eigvects = dmaps.embed_data(pts, k, epsilon=eps)
+        lam2s[i] = eigvals[1]
+    lam2s.dump('./lambdas.pkl')
+    epsilons.dump('./eps.pkl')    
+    # print 'log(lambdas)', np.log(lam2s)
+    # print '1/epsilons', 1/epsilons
+    # print 'product', np.log(lam2s)*epsilons
+    plt.scatter(np.log(1/epsilons), np.log(lam2s), s=50)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.scatter(np.log(lam2s), 1/epsilons, s=50)
+    # ax.set_xlim((np.min(np.log(lam2s)), np.max(np.log(lam2s))))
+    plt.show()
+
+    
+
 class Warning_Catcher():
     def __init__(self):
         self._temp_out = open('tmp.txt', 'w')#tempfile.TemporaryFile(bufsize=1000)
@@ -817,5 +851,6 @@ if __name__=='__main__':
     # mm_contour_grid()
     # mm_contour_grid_mpi()
     # test()
-    mm_contours()
+    # mm_contours()
     # dmaps_contour()
+    dmaps_test()

@@ -1,0 +1,109 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{Nonlinear transformation of parameter space}
+
+\begin{document}
+\maketitle
+
+I used Antonios' model, investigating behavior in a ball in dataspace
+around the point corresponding to
+
+\begin{align*}
+  a &= 1 \\
+  b &= 0.01 \\
+  \lambda &= 1 \\
+  \epsilon &= 0.001
+\end{align*}
+
+Taking constant values for the initial conditions, $b$, and $\epsilon$
+and investigating the values of $a$ and $\lambda$ that keep the model
+response within a certain distance of the true data (here we looked at
+the ball $\| f(a, \lambda) - d \| < 50$), we find that the following
+region of parameter space maps to points within this ball. Please
+forgive the clipping of the ellipse, it'll be remedied in future
+plots. \\
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{original-params}
+  \caption{Preimage of intersection of ball with manifold, an unsloppy
+  ellipse}
+\end{figure}
+
+Successive applications of the H\'{e}non map produce an increasingly
+sloppy set of points as shown in subsequent figures. Color indicates
+distance from original data in dataspace.
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{one-iter-params}
+  \caption{Transformation of parameter set by one iteration of H\'{e}non map}
+\end{figure}
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{two-iter-params}
+  \caption{Transformation of parameter set by two iterations of H\'{e}non map}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{two-iter-params}
+  \caption{Transformation of parameter set by two iterations of H\'{e}non map}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{three-iter-params}
+  \caption{Transformation of parameter set by three iterations of H\'{e}non map}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{four-iter-params}
+  \caption{Transformation of parameter set by four iterations of H\'{e}non map}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

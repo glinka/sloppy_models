@@ -1,0 +1,91 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/dmaps/} }
+
+\title{Diffusion on plane in embedded in $\mathbb{R}^4$}
+\author{}
+
+\begin{document}
+\maketitle
+
+All of the following were run with $\epsilon = 10^{-1}$ and $\alpha =
+10$ so we have essentially used the kernel
+
+\begin{align*}
+  k(d_i, d_j) = \exp(- \frac{\| d_i - d_j\|^2}{\epsilon})
+\end{align*}
+
+
+for $d_i = (x_i, y_i, \lambda_1 x_i, \lambda_2 y_i)$. $\lambda_1$ was
+always set to $\sqrt{\frac{1}{2}}$.
+
+\section{$\lambda_2 = \sqrt{\frac{1}{2}}$}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-2d-dataspace-lam2-0.707106781187-alpha-10-eps-0.1-1}}}
+  \caption{Coloring dataset (image and preimage) with $\Phi_1$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-2d-dataspace-lam2-0.707106781187-alpha-10-eps-0.1-2}}}
+  \caption{Coloring dataset (image and preimage) with $\Phi_2$}
+\end{figure}
+
+\clearpage
+
+\section{$\lambda_2 = \sqrt{\frac{2}{3}}$}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-2d-dataspace-lam2-0.816496580928-alpha-10-eps-0.1-1}}}
+  \caption{Coloring dataset (image and preimage) with $\Phi_1$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{{{./dmaps-2d-dataspace-lam2-0.816496580928-alpha-10-eps-0.1-2}}}
+  \caption{Coloring dataset (image and preimage) with $\Phi_2$}
+\end{figure}
+
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

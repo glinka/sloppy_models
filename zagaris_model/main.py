@@ -50,9 +50,11 @@ def dmaps_two_important_one_sloppy_only_data():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.hold(False)
-    for i in range(1,k):
-        ax.scatter(np.log10(params[:,0]), np.log10(params[:,1]), np.log10(params[:,2]), c=eigvects[:,i])
-        plt.savefig('./figs/pure-data-space/data-space-dmaps' + str(i) + '.png')
+    ax.scatter(np.log10(params[:,0]), np.log10(params[:,1]), np.log10(params[:,2]), c=eigvects[:,i])
+    plt.show()
+    # for i in range(1,k):
+    #     ax.scatter(np.log10(params[:,0]), np.log10(params[:,1]), np.log10(params[:,2]), c=eigvects[:,i])
+    #     plt.savefig('./figs/pure-data-space/data-space-dmaps' + str(i) + '.png')
     
 
 def dmaps_two_important_one_sloppy():
@@ -158,39 +160,95 @@ def dmaps_two_important_one_sloppy():
 
     
     
+def henon(x0, y0, n, a, b):
+    if n > 0:
+        return henon(1 - a*x0*x0 + y0, b*x0, n-1, a, b)
+    else:
+        return [x0, y0]
+
 
 def dmaps_transformed_params():
     """Perform DMAP on nonlinear, swirled transformation of parameters lambda/epsilon (important/sloppy)"""
     
-    if os.path.isfile('./data/lam_eps_ofevals.csv'):
+    if os.path.isfile('./data/a-lam-ofevals-2016.csv'): # os.path.isfile('./data/lam_eps_ofevals-2016.csv'):
         # PERFORM THE DMAP (already generated pts):
 
         print 'Already have sloppy data, transforming and embedding'
 
-        data = np.genfromtxt('./data/lam_eps_ofevals.csv', delimiter=',')
+        data = np.genfromtxt('./data/a-lam-ofevals-2016.csv', delimiter=',')
 
         # extract sloppy parameter combinations
-        tol = 0.01
+        tol = 50 # 0.01
         data = data[data[:,-1] < tol]
 
         # transform into swirl in c1/c2
         S = 1.0 # for now we require S <= 1 to invert back to lambda/epsilon
         # questionable redefinition of max param values
         lam_max, epsmax = np.max(data[:,:2], axis=0)
-        c1 = lambda l, e: np.sqrt(e/epsmax + l/(S*lam_max))*np.cos(2*np.pi*S*e/epsmax)
-        c2 = lambda l, e: np.sqrt(e/epsmax + l/(S*lam_max))*np.sin(2*np.pi*S*e/epsmax)
+        # c1 = lambda l, e: np.sqrt(e/epsmax + l/(S*lam_max))*np.cos(2*np.pi*S*e/epsmax)
+        # c2 = lambda l, e: np.sqrt(e/epsmax + l/(S*lam_max))*np.sin(2*np.pi*S*e/epsmax)
 
+        y1 = lambda l, e: l + np.power(np.log10(e)- np.average(np.log10(e)), 2)
+        y2 = lambda l, e: np.log10(e) - np.average(np.log10(e))
+
+        a = 1.3
+        b = 0.3
+        
         # do the actual transformation
-        cs = np.empty((data.shape[0], 2))
-        cs[:,0] = c1(data[:,0], data[:,1])
-        cs[:,1] = c2(data[:,0], data[:,1])
+        cs1 = np.array(henon(data[:,1], data[:,0], 1, a, b)).T
+        cs2 = np.array(henon(data[:,1], data[:,0], 2, a, b)).T
+        cs3 = np.array(henon(data[:,1], data[:,0], 3, a, b)).T
+        cs4 = np.array(henon(data[:,1], data[:,0], 4, a, b)).T
 
-        neps = 8
-        eps = np.logspace(-3, 3, neps)
+        # look at dataset and subsequent transformations
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(data[:,1], data[:,0], c=data[:,2], s=3)
+        ax.set_xlabel(r'$x_0 (= \lambda)$', fontsize=72)
+        ax.set_ylabel(r'$y_0 (= a)$', fontsize=72)
+        fig.subplots_adjust(bottom=0.15)
+
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(cs1[:,0], cs1[:,1], c=data[:,2], s=3)
+        ax.set_xlabel(r'$x_1$', fontsize=72)
+        ax.set_ylabel(r'$y_1$', fontsize=72)
+        fig.subplots_adjust(bottom=0.15)
+
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(cs2[:,0], cs2[:,1], c=data[:,2], s=3)
+        ax.set_xlabel(r'$x_2$', fontsize=72)
+        ax.set_ylabel(r'$y_2$', fontsize=72)
+        fig.subplots_adjust(bottom=0.15)
+
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(cs3[:,0], cs3[:,1], c=data[:,2], s=3)
+        ax.set_xlabel(r'$x_3$', fontsize=72)
+        ax.set_ylabel(r'$y_3$', fontsize=72)
+        fig.subplots_adjust(bottom=0.15)
+
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(cs4[:,0], cs4[:,1], c=data[:,2], s=3)
+        ax.set_xlabel(r'$x_4$', fontsize=72)
+        ax.set_ylabel(r'$y_4$', fontsize=72)
+        fig.subplots_adjust(bottom=0.15)
+
+
+        plt.show()
+
+        # neps = 8
+        # eps = np.logspace(-3, 3, neps)
         # epsilon_plot(eps, cs)
         eps = 1e-1
-        eigvals, eigvects = dmaps.embed_data(cs, k=12, epsilon=eps)
-        plot_dmaps.plot_xy(cs[:,0], cs[:,1], color=eigvects[:,1], scatter=True, xlabel=r'$c_1$', ylabel=r'$c_2$')
+        eigvals, eigvects = dmaps.embed_data(cs2, k=12, epsilon=eps)
+        plot_dmaps.plot_xy(cs2[:,0], cs2[:,1], color=eigvects[:,1], scatter=True, xlabel=r'$y_1$', ylabel=r'$y_2$')
         # plot_dmaps.plot_embeddings(eigvects, eigvals, k=4)
     else:
         # CREATE DATASET (no dataset exists):
@@ -201,52 +259,73 @@ def dmaps_transformed_params():
 
         # set up base system
         # specify ode parameters
-        (a_true, b_true, lam_true, eps_true) = (0.1, 0.01, 0.1, 0.001)
+        (a_true, b_true, lam_true, eps_true) = (1.0, 0.01, 1.0, 0.001) # (0.1, 0.01, 0.1, 0.001)
         params = np.array((a_true, b_true, lam_true, eps_true))
         # create system with given params
         z_system = ZM.Z_Model(params)
 
         # set up integration times
         t0 = 0
-        tfinal = 1/lam_true
+        tfinal = 1.0/lam_true
         dt = eps_true
         times = np.arange(t0, tfinal, dt)
         ntimes = times.shape[0]
 
         # get true trajectory based on true initial conditions
         x0_true = np.array((1, a_true))
-        x_true_traj = z_system.get_trajectory(x0_true, times)
+        x_true_traj = z_system.get_trajectory_quadratic(x0_true, times)
 
-        # set up sampling grid and storage space for obj. fn. evals
-        lam_max = 1.2
-        epsmax = 1e-1
-        nsamples = 500
-        lam_samples = np.linspace(0.9*lam_true, 1.1*lam_true, nsamples)
-        eps_samples = np.linspace(0, epsmax, nsamples)
+        # # set up sampling grid and storage space for obj. fn. evals
+        # lam_max = 1.2
+        # epsmax = 1e-1
+        # nsamples = 500
+        # lam_samples = np.linspace(0.9*lam_true, 1.1*lam_true, nsamples)
+        # eps_samples = np.linspace(0, epsmax, nsamples)
         # eps_samples = np.logspace(-6, np.log10(epsmax), nsamples)
-        data = np.empty((nsamples*nsamples, 3)) # space for obj. fn. evals
+        # data = np.empty((nsamples*nsamples, 3)) # space for obj. fn. evals
+        nsamples = 40000
+        data = np.empty((nsamples, 3))
+        a_lam_samples = np.random.uniform(size=(nsamples, 2))*np.array((1.5,1.5)) + np.array((0.25, 0.25)) # a \in (7, 9) lamb \in (6, 11)
 
         count = 0
-        for lam in uf.parallelize_iterable(lam_samples, rank, nprocs):
-            for eps in eps_samples:
-                z_system.change_parameters(np.array((a_true, b_true, lam, eps)))
-                try:
-                    x_sample_traj = z_system.get_trajectory(x0_true, times)
-                except CustomErrors.IntegrationError:
-                    continue
-                else:
-                    data[count] = (lam, eps, get_of(x_sample_traj, x_true_traj))
-                    count = count + 1
+        for a, lam in uf.parallelize_iterable(a_lam_samples, rank, nprocs):
+            z_system.change_parameters(np.array((a, b_true, lam, eps_true)))
+            try:
+                x_sample_traj = z_system.get_trajectory_quadratic(x0_true, times)
+            except CustomErrors.IntegrationError:
+                continue
+            else:
+                data[count] = (a, lam, get_of(x_sample_traj, x_true_traj))
+                count = count + 1
+
+
+        # count = 0
+        #     for eps in eps_samples:
+        #         z_system.change_parameters(np.array((a_true, b_true, lam, eps)))
+        #         try:
+        #             x_sample_traj = z_system.get_trajectory(x0_true, times)
+        #         except CustomErrors.IntegrationError:
+        #             continue
+        #         else:
+        #             data[count] = (lam, eps, get_of(x_sample_traj, x_true_traj))
+        #             count = count + 1
 
         data = data[:count]
         all_data = comm.gather(data, root=0)
 
         if rank is 0:
             all_data = np.concatenate(all_data)
-            np.savetxt('./data/lam_eps_ofevals.csv', all_data, delimiter=',')
+            np.savetxt('./data/a-lam-ofevals-2016.csv', all_data, delimiter=',')
             print '******************************\n \
-            Data saved in ./data/lam_eps_ofevals.csv, rerun to perform DMAP\n \
+            Data saved in ./data/a-lam-ofevals-2016.csv, rerun to perform DMAP\n \
             ******************************'
+
+        # if rank is 0:
+        #     all_data = np.concatenate(all_data)
+        #     np.savetxt('./data/lam_eps_ofevals-2016.csv', all_data, delimiter=',')
+        #     print '******************************\n \
+        #     Data saved in ./data/lam_eps_ofevals-2016.csv, rerun to perform DMAP\n \
+            # ******************************'
     
 
 def get_of(sample_traj, true_traj):
@@ -260,7 +339,7 @@ def check_params():
     nprocs = comm.Get_size()
 
     # specify ode parameters
-    (a_true, b_true, lam_true, eps_true) = (0.1, 0.01, 0.1, 0.1)
+    (a_true, b_true, lam_true, eps_true) = (1.0, 0.01, 1.0, 0.001) #(0.1, 0.01, 0.1, 0.1)
     params = np.array((a_true, b_true, lam_true, eps_true))
     # create system with given params
     z_system = ZM.Z_Model(params)
@@ -274,26 +353,27 @@ def check_params():
 
     # get true trajectory based on true initial conditions
     x0_true = np.array((1, a_true))
-    x_true_traj = z_system.get_trajectory(x0_true, times)
+    x_true_traj = z_system.get_trajectory_quadratic(x0_true, times)
 
     # set up sampling grid and storage space for obj. fn. evals
     nsamples = 100
-    a_samples = np.logspace(-2, 2, nsamples)
-    b_samples = np.logspace(-4, -1, nsamples)
+    a_samples = np.logspace(-2, 1, nsamples)
+    lam_samples = np.logspace(-2, 1, nsamples)
+    # b_samples = np.logspace(-4, -1, nsamples)
     # a_samples = np.linspace(-.2, .2, nsamples)
     # b_samples = np.linspace(-3, 3, nsamples)
     data = np.empty((nsamples*nsamples, 3)) # space for obj. fn. evals
 
     count = 0
     for a in uf.parallelize_iterable(a_samples, rank, nprocs):
-        for b in b_samples:
-            z_system.change_parameters(np.array((a, b, lam_true, eps_true)))
+        for lam in lam_samples:
+            z_system.change_parameters(np.array((a, b_true, lam, eps_true)))
             try:
-                x_sample_traj = z_system.get_trajectory(x0_true, times)
+                x_sample_traj = z_system.get_trajectory_quadratic(x0_true, times)
             except CustomErrors.IntegrationError:
                 continue
             else:
-                data[count] = (a, b, get_of(x_sample_traj, x_true_traj))
+                data[count] = (a, lam, get_of(x_sample_traj, x_true_traj))
                 count = count + 1
 
     data = data[:count]
@@ -301,6 +381,7 @@ def check_params():
 
     if rank is 0:
         all_data = np.concatenate(all_data)
+        all_data.dump('./data/a-lam-of.pkl')
 
         # plot output
         fig = plt.figure()
@@ -610,10 +691,7 @@ if __name__=='__main__':
     # check_transformed_params_contours() # unfunctional
     # check_transformed_params()
     # data_space_plot()
-    # check_params()
+    check_params()
     # dmaps_transformed_params()
     # dmaps_two_important_one_sloppy()
     # dmaps_two_important_one_sloppy_only_data()
-
-
-

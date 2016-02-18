@@ -1,0 +1,221 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+% remove numbering
+% \captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/transformed-params/} }
+
+\title{Nonlinear transform of parameter set via H\'{e}non map}
+
+\begin{document} %
+\maketitle
+
+\section{The H\'{e}non map and its inverse}
+
+With parameters $a$ and $b$, the H\'{e}non map is given by
+
+\begin{align*}
+  x_{n+1} &= 1 - ax_n^2 + y_n \\
+  y_{n+1} &= bx_n
+\end{align*}
+
+with inverse
+
+\begin{align*}
+  x_n &= \frac{y_{n+1}}{b} \\
+  y_n &= x_{n+1} - 1 + a \bigg( \frac{y_{n+1}}{b} \bigg)^2
+\end{align*}
+
+Specifically, $x_0$ and $y_0$ in terms of $x_2$ and $y_2$ looks like
+
+\begin{align*}
+  x_0 &= \frac{x_2 - 1 + a \big( \frac{y_2}{b} \big)^2}{b} \\
+  y_0 &= \frac{y_2}{b} - 1 + a \bigg( \frac{x_2 - 1 + a \big(
+        \frac{y_2}{b} \big)^2}{b} \bigg)^2
+\end{align*}
+
+In terms of $x_3$ and $y_3$ we have
+
+\begin{align*}
+  x_0 &= \frac{\frac{y_3}{b} - 1 + a \big( \frac{x_3 - 1 + a
+        (\frac{y_3}{b})^2}{b} \big)^2}{b} \\
+  y_0 &= \frac{x_3 - 1 + a (\frac{y_3}{b})^2}{b} - 1 + a \bigg(
+        \frac{\frac{y_3}{b} - 1 + a \big( \frac{x_3 - 1 + a 
+        (\frac{y_3}{b})^2}{b} \big)^2}{b} \bigg)^2 \\
+\end{align*}
+
+We always set $a = 1.3$ and $b = 0.3$, considered the canonical
+parameters values of the map.
+
+\section{Antonios' model}
+
+We turn now to the model we'll be applying the transformation to,
+namely the pair of differential equations given by
+
+\begin{align*}
+  \begin{bmatrix} \dot{x} \\ \dot{y} \end{bmatrix}  = \frac{1}{1 -
+  4 (\alpha \beta) x y} \begin{bmatrix} 1 & 2\beta y \\ 2\alpha x &
+  1 \end{bmatrix} \begin{bmatrix} -\lambda(x - \beta y^2) \\ -(y -
+  \alpha x^2)/\epsilon \end{bmatrix}
+\end{align*}
+
+which corresponds to taking $\phi(y) = \beta y^2$ and $\mu = \alpha x^2$ in the
+original notes. This system is constructed so that two parameters
+control the geometry of the non-sloppy and sloppy trajectories
+($\alpha$ and $\beta$ respectively), and two control the temporal dynamics on
+the non-sloppy and sloppy trajectories ($\lambda$ and $\epsilon$
+respectively). Thus we have sloppy parameters $\beta$ and $\epsilon$,
+and non-sloppy $\alpha$ and $\lambda$. \\
+
+\subsection{Antonios' model with transformed parameters}
+
+
+To show that sloppiness can arise when one uses poor parameters in the
+model description, and consequently that a suitable transformation of
+parameter space can remove the apparent sloppiness, we will first fix
+sloppy parameters $\beta = 0.01$ and $\epsilon = 0.001$ and consider
+the remaining non-sloppy, two-parameter system. However, we pretend
+that the model has been specified in terms of the transformed
+parameters $\lambda^{(2)}$ and $\alpha^{(2)}$, where the original
+parameters $\alpha = \alpha^{(0)}$ and $\beta = \beta^{(0)}$ are
+considered the initial inputs into the H\'{e}non map, and
+$\lambda^{(k)}$ and $\alpha^{(k)}$ are their $k^{th}$ iterates. In
+terms of these transformed parameters, the model becomes the following
+monstrosity
+
+\begin{align*}
+  \begin{bmatrix} \dot{x} \\ \dot{y} \end{bmatrix}  = \frac{1}{1 -
+  4 \bigg( \frac{\alpha^{(2)}}{b} - 1 + a \bigg( \frac{\lambda^{(2)} - 1 + a \big(
+  \frac{\alpha^{(2)}}{b} \big)^2}{b} \bigg)^2 \bigg) \beta x y} \begin{bmatrix} 1 &
+2\beta y \\ 2 \bigg( \frac{\alpha^{(2)}}{b} - 1 + a \bigg( \frac{\lambda^{(2)} - 1 + a \big(
+  \frac{\alpha^{(2)}}{b} \big)^2}{b} \bigg)^2 \bigg) x  &
+1 \end{bmatrix} \begin{bmatrix} - \frac{\lambda^{(2)} - 1 + a \big(
+  \frac{\alpha^{(2)}}{b} \big)^2}{b}(x - \beta y^2) \\ -(y - \alpha
+x^2)/\epsilon \end{bmatrix} 
+\end{align*}
+
+
+Again, only $\lambda^{(2)}$ and $\alpha^{(2)}$, the transformed versions of $\alpha$ and
+$\lambda$, are considered parameters. Everything else is assumed fixed
+to a constant value as given above. \\
+
+\section{Optimization in transformed parameter space}
+
+% We consider dataspace to be $20$ dimensional, representing $10$
+% samples of both $x$ and $y$'s trajectories from $t_0 = 0$ to
+% $t_f = 1$. We anchor the model in dataspace at $\alpha = \lambda = 1$
+% and examine which parameters map to points within a certain distance
+% of this anchor. 
+In this special case, we will revert to the familiar terms of
+optimization and say the the true parameter values are
+$\alpha^{(2)} = 0.66 \lambda^{(2)} = 0.21$ (this corresponds to
+$\alpha = \lambda = 1$). We then look for other parameter values that
+fit the corresponding true trajectories within some
+tolerance. Previously, this had been accomplished simply by sampling
+parameter space. Here, we instead initiate multiple least-squares
+optimization routines with different initial parameter values (initial
+guesses). These are found by uniformly sampling over the rectangle
+$\alpha^{(2)} \in [-0.5, 0.5]$ and $\lambda^{(2)} \in [-6, 4]$ in
+which we know the half-moon lies. \\
+
+\textbf{Note:} This method was successful, with the caveat that the
+optimization algorithm sometimes converged to spurious points
+($O(10^8)$), perhaps due to numerical overflow. Below a certain
+tolerance these problems disappeared, however setting the tolerance in
+the algorithm seemed ineffective, so after it ``converged'' to a set
+of points, I had to filter out those whose objective function
+evaluations were above some final tolerance. It is a strange problem,
+but I only bring it up because someone cannot simply directly use the
+optimization routine's output as a dataset: some (very reasonable)
+checking is needed to remove diverging values. \\
+
+The final collection of converged-to points is shown in
+Fig. (\ref{fig:tparams}) colored by objective function value. If we
+invert this transformation back int $\alpha$ and $\lambda$ space, we
+find Fig. (\ref{fig:utparams}), again colored by objective function
+value.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{transformed-params-fromoptimization}
+  \caption{Parameter set arising from multiple calls to a
+    least-squares minimization algorithm, performed in transformed
+    $(\alpha^{(2)}, \lambda^{(2)})$ space. \label{fig:tparams}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./inverted-params}
+  \caption{The dataset from Fig. (\ref{fig:tparams}) inverted into
+    $(\alpha, \lambda)$ space. \label{fig:utparams}}
+\end{figure}
+
+\section{DMAP of parameter set}
+
+Finally, we look at the performance of two variants of DMAPS: first we
+simply run the normal algorithm on the transformed set in
+Fig. (\ref{fig:tparams}). This produces a one-dimensional
+embedding. Fig (\ref{fig:utdmaps}) shows a coloring of the dataset by
+the first eigenvector. Calculating the top $25$ eigenvectors, all
+successive eigenvectors were simply harmonics of the first. \\
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-untransformed}
+  \caption{Dataset colored by first eigenvector of normal DMAPS. All
+    subsequent eigenvectors (up to $\Phi_{25}$) were harmonics. \label{fig:utdmaps}}
+\end{figure}
+
+In contrast, when the ``right'' transformation is used, we show that
+DMAPS uncovers both dimensions. This is accomplished by using a kernel
+that first inverts the parameters into $(\alpha, \lambda)$ space, then
+takes Euclidean distances there. Essentially, DMAPS is performed on the
+inverted data set shown in Fig. (\ref{fig:utparams}). Fig
+(\ref{fig:tdmaps14}) plots the first and fourth eigenvectors, colored
+by objective function value. A clear two-dimensional surface is revealed.
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmaps-transformed-phi1-phi4}
+  \caption{DMAPS eigenvectors $\Phi_1$ and $\Phi_4$ resulting from
+    transformed kernel, colored by obj. fn. \label{fig:tdmaps14}}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}
