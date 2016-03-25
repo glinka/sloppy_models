@@ -27,7 +27,7 @@ class Newton:
         self._fargs = fargs
         self._Dfargs = Dfargs
 
-    def find_zero(self, x0, abstol=1e-9, reltol=1e-9, maxiters=10, damping=0, bisection_on_maxiter=False):
+    def find_zero(self, x0, abstol=1e-11, reltol=1e-11, maxiters=10, damping=0, bisection_on_maxiter=False):
         """Attempts to find a zero of 'f' through Newton-GMRES, terminating when :math:`\\|F(x_k)\\| \\leq reltol*\\|F(x_0)\\| + abstol`
 
         Args:
@@ -50,7 +50,7 @@ class Newton:
         try:
             init_error = np.linalg.norm(self._f(x0, *self._fargs))
         except CustomErrors.EvalError:
-            raise
+            raise CustomErrors.EvalError('Could not evaluate initial error')
         error = init_error
         totaltol = init_error*reltol + abstol
 
@@ -59,9 +59,9 @@ class Newton:
             try:
                 dx, convergence_info = spla.gmres(self._Df(x, *self._Dfargs), -self._f(x, *self._fargs), tol=reltol)
             except CustomErrors.EvalError:
-                raise
+                raise CustomErrors.EvalError('Could not evaluate f or Df at newton iteration ' + str(iters + 1))
             if np.any(np.isinf(dx)) or np.any(np.isnan(dx)):
-                raise CustomErrors.EvalError
+                raise CustomErrors.EvalError('Solution at newton iteration ' + str(iters + 1) + ' had NaN or inf')
             else:
                 x = x + (1 - damping)*dx
                 error = np.linalg.norm(self._f(x, *self._fargs))

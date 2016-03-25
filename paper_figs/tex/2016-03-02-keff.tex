@@ -1,0 +1,147 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{Nonlinear contour of simple reaction scheme}
+
+\begin{document}
+\maketitle
+
+To clarify, the reaction we study is given by
+
+\begin{align*}
+  A \xrightleftharpoons[k_{-1}]{k_1} B, \; B \xrightarrow[]{k_2} C
+\end{align*}
+
+and we focus on the parameter regime $k_2 \gg k_1$ and $k_{-1} \gg
+k_1$ corresponding to a small value of $\epsilon = \frac{k_1}{k_{-1} +
+  k_2}$ and an effective parameter of
+
+\begin{align*}
+  k_{eff} = \frac{k_1 k_2}{k_{-1} + k_2}
+\end{align*}
+
+the validity of which was analytically verified in Antonios' most
+recent notes. \\
+
+There were two points to confirm numerically: 
+
+\begin{enumerate}
+\item Is the neutral set nonlinear?
+\item Does the vector normal to the neutral set point in a direction
+  of varying $k_{eff}$?
+\end{enumerate}
+
+To test the first, we sample parameter space in a region in which
+$\epsilon \ll 1$, specifically:
+
+\begin{align*}
+  k_1 &\in [10^{-4}, 10^0] \\
+  k_{-1} &\in [10^1, 10^4] \\
+  k_2 &\in [10^1, 10^4] \\
+\end{align*}
+
+where the true parameter value was set to
+
+\begin{align*}
+  k_1 &= 1 \\
+  k_{-1} &= 10^3 \\
+  k_2 &= 10^3 \\
+\end{align*}
+
+We then keep only those parameter combinations at which the
+least-squares objective function value is less than $10^{-3}$, and are
+left with the following plots. Figs. (\ref{fig:r1}) to
+(\ref{fig:r2-of}) all plot the same data at different viewing
+angles. Figs. (\ref{fig:r1}) to (\ref{fig:r3}) are colored by
+$k_{eff}$ value, while Fig. (\ref{fig:r2-of}) is colored by objective
+function value. The main point in these figures is that
+the level set is indeed nonlinear. \\
+
+While colorings alone strongly suggest that $k_{eff}$ changes along the
+direction normal to the surface, we can confirm this by calculating an
+actual normal vector to the surface (around the point circled in the
+figures) using PCA, and comparing this vector with the gradient of the
+$k_{eff}$ (or equivalently, up to scaling, the gradient of the
+objective function). At the point specified in the plot $p$, we calculate
+a normal vector of
+
+\begin{align*}
+  v(p) = [0.88, -0.32, 0.33]
+\end{align*}
+
+and a gradient of 
+
+\begin{align*}
+  \nabla k_{eff} (p) = [0.87, -0.34, 0.34]
+\end{align*}
+
+for an error of $\| v - \nabla k_{eff} \| = 0.023$. \\
+
+Thus not only is the contour nonlinear, but the direction normal to
+the surface does indeed point in the direction of changing $k_{eff}$
+as desired.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./r1}
+  \caption{Neutral set colored by $k_{eff}$ \label{fig:r1}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./r2}
+  \caption{Neutral set colored by $k_{eff}$ \label{fig:r2}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./r3}
+  \caption{Neutral set colored by $k_{eff}$ \label{fig:r3}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./r2-of}
+  \caption{Neutral set colored by objective function value \label{fig:r2-of}}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

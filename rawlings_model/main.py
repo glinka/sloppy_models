@@ -112,43 +112,72 @@ def sample_param_grid_mpi():
     k2_true = 1000.0
     decay_rate = k1_true*k2_true/(kinv_true + k2_true) # effective rate constant that governs exponential growth rate
     # start at t0 = 0, end at tf*decay_rate = 4
-    ntimes = 20 # arbitrary
+    ntimes = 5 # arbitrary
     times = np.linspace(0, 4/decay_rate, ntimes)
-    model = Rawlings_Model(times, A0, k1_true, kinv_true, k2_true, using_sympy=True)
+    model = Rawlings_Model(times, A0, k1_true, kinv_true, k2_true, using_sympy=False)
+
+    # plot analytical results vs. qssa
+    if rank == 0:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(times, model.gen_timecourse(k1_true, kinv_true, k2_true))
+        ax.plot(times, A0*(1 - np.exp(-k1_true*k2_true*times/(kinv_true + k2_true))))
+        plt.show()
 
     # set up samples of k1, kinv, and k2
-    nk1s = 150
-    k1s = np.logspace(-2, 2, nk1s)
-    nkinvs = 150
-    kinvs = np.logspace(0, 5, nkinvs)
-    nk2s = 150
-    k2s = np.logspace(0, 5, nk2s)
-    nks = nk1s*nkinvs*nk2s # total number of parameter space samples
-    nks_per_proc = (nks/nk1s + 1)*nkinvs*nk2s # add one to avoid rounding errors
+    # nk1s = 150
+    # k1s = np.power(10, np.random.uniform(-2, 2, nk1s))
+    # nkinvs = 150
+    # kinvs = np.power(10, np.random.uniform(0, 5, nkinvs)
+    # nk2s = 150
+    # k2s = np.logspace(0, 5, nk2s)
+
+    nks = 10000000
+    # k1, kinv \in [10^{-4}, 10^0],    k2 \in [10^1, 10^4]
+    ks = np.power(10, np.random.uniform(size=(nks, 3))*np.array((4, 3, 3)) - np.array((4, -1, -1)))
+
+    # nks = nk1s*nkinvs*nk2s # total number of parameter space samples
+    nks_per_proc = nks/nprocs + 1 # add one to avoid rounding errors
     # iterate over all possible combinations of parameters and record obj. fn. eval
     params_and_of_evals = np.empty((nks_per_proc, 4))
     count = 0
-    for k1 in uf.parallelize_iterable(k1s, rank, nprocs):
-        for kinv in kinvs:
-            for k2 in k2s:
-                params_and_of_evals[count] = model.lsq_of(k1, kinv, k2), k1, kinv, k2
-                count = count + 1
+    # for k1 in uf.parallelize_iterable(k1s, rank, nprocs):
+    #     for kinv in kinvs:
+    #         for k2 in k2s:
+    for k in uf.parallelize_iterable(ks, rank, nprocs):
+        params_and_of_evals[count] = model.lsq_of(k[0], k[1], k[2]), k[0], k[1], k[2]
+        count = count + 1
 
     all_params_and_of_evals = comm.gather(params_and_of_evals[:count], root=0)
     if rank == 0:
         all_params_and_of_evals = np.concatenate(all_params_and_of_evals)
         print all_params_and_of_evals.shape
-        np.savetxt('./data/params_and_of_evals.csv', all_params_and_of_evals, delimiter=',')
+        all_params_and_of_evals.dump('./data/params-ofevals.pkl')
 
 
 def dmaps_param_set():
     """Performs DMAP of log(parameter) set that fall within some ob. fn. tolerance"""
     # import data and save only those parameter combinations such that error(k1, kinv, k2) < tol
-    data = np.genfromtxt('./data/params-ofevals.csv', delimiter=',')
-    of_tol = 0.002 # from plotting with scratch.py
-    data = data[data[:,0] < of_tol]
-    slice_size = 4 # used to further trim data
-    data = data[::slice_size]
+
+    data = np.load('./temp.pkl')
+    # data = np.genfromtxt('./data/params-ofevals.csv', delimiter=',')
+
+    of_max = 1e-3
+    k1_max = 10
+    kinv_min = 100
+    k2_min = 100
+    # data = data[data[:,0] < of_max]
+    # data = data[data[:,1] < k1_max]
+    # data = data[data[:,2] > kinv_min]
+    # data = data[data[:,3] > k2_min]
+    # slice = 5000
+    # data = data[::data.shape[0]/slice]
+    # data.dump('./temp.pkl')
+
+    # of_max = 0.002 # from plotting with scratch.py
+    # data = data[data[:,0] < of_max]
+    # slice_size = 4 # used to further trim data
+    # data = data[::slice_size]
     print 'have', data.shape[0], 'pts in dataset'
     keff = data[:,1]*data[:,3]/(data[:,2] + data[:,3])
     log_params_data = np.log10(data[:,1:])
@@ -161,7 +190,7 @@ def dmaps_param_set():
     k = 12 # number of dimensions for embedding
 
     # search through files in ./data to see if the embedding has already been computed
-    filename_id = 'tol-' + str(of_tol) + '-k-' + str(k)
+    filename_id = 'tol-' + str(of_max) + '-k-' + str(k)
     found_previous_embeddings = False
 
     eigvals, eigvects = None, None
@@ -169,19 +198,19 @@ def dmaps_param_set():
     for filename in os.listdir('./data'):
         if filename_id in filename:
             # found previously saved data, import and do not recompute
-            eigvects = np.genfromtxt('./data/dmaps-eigvects--tol-' + str(of_tol) + '-k-' + str(k) + '.csv', delimiter=',')
-            eigvals = np.genfromtxt('./data/dmaps-eigvals--tol-' + str(of_tol) + '-k-' + str(k) + '.csv', delimiter=',')
+            eigvects = np.genfromtxt('./data/dmaps-eigvects--tol-' + str(of_max) + '-k-' + str(k) + '.csv', delimiter=',')
+            eigvals = np.genfromtxt('./data/dmaps-eigvals--tol-' + str(of_max) + '-k-' + str(k) + '.csv', delimiter=',')
             found_previous_embeddings = True
             break
 
     if found_previous_embeddings is False:
         print 'plotting from previous points'
-        eigvals, eigvects = dmaps.embed_data(log_params_data, k)
-        np.savetxt('./data/dmaps-eigvects--tol-' + str(of_tol) + '-k-' + str(k) + '.csv', eigvects, delimiter=',')
-        np.savetxt('./data/dmaps-eigvals--tol-' + str(of_tol) + '-k-' + str(k) + '.csv', eigvals, delimiter=',')
+        eigvals, eigvects = dmaps.embed_data(log_params_data, k, epsilon=epsilon)
+        np.savetxt('./data/dmaps-eigvects--tol-' + str(of_max) + '-k-' + str(k) + '.csv', eigvects, delimiter=',')
+        np.savetxt('./data/dmaps-eigvals--tol-' + str(of_max) + '-k-' + str(k) + '.csv', eigvals, delimiter=',')
 
-    plot_dmaps.plot_xyz(log_params_data[:,0], log_params_data[:,1], log_params_data[:,2], color=eigvects[:,1])
-    plot_dmaps.plot_xyz(log_params_data[:,0], log_params_data[:,1], log_params_data[:,2], color=eigvects[:,2])
+    plot_dmaps.plot_xyz(log_params_data[:,0], log_params_data[:,1], log_params_data[:,2], color=eigvects[:,1], xlabel='\n\n' + r'$\log(k_1)$', ylabel='\n\n' + r'$\log(k_{-1})$', zlabel='\n\n' + r'$\log(k_2)$')
+    plot_dmaps.plot_xyz(log_params_data[:,0], log_params_data[:,1], log_params_data[:,2], color=eigvects[:,2], xlabel='\n\n' + r'$\log(k_1)$', ylabel='\n\n' + r'$\log(k_{-1})$', zlabel='\n\n' + r'$\log(k_2)$')
     # plot_dmaps.plot_embeddings(eigvects, eigvals)
 
 class DMAPS_Gradient_Kernel:
@@ -349,11 +378,11 @@ def test_sympy_of():
 
 def do_the_right_thing():
     """A completely unecesssary function that does the right thing"""
-    # sample_param_grid_mpi()
+    sample_param_grid_mpi()
     # dmaps_param_set()
     # test_sympy_of()
     # dmaps_param_set_grad_kernel()
-    dmaps_param_set()
+    # dmaps_param_set()
     # abc_analytical_contour()
     # qssa_comparison()
     # plot_data_dmaps_results()

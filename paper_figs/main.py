@@ -14,6 +14,7 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from mpi4py import MPI
 # utilities
 import os
+import sys
 
 import colormaps
 import dmaps
@@ -24,9 +25,10 @@ from rawlings_model.main import dmaps_param_set
 from zagaris_model import Z_Model as ZM
 from algorithms import Integration
 import algorithms.CustomErrors as CustomErrors
+from algorithms.PseudoArclengthContinuation import PSA
+from algorithms.Derivatives import gradient
 import util_fns as uf
-
-
+from pca import pca
 
 def henon(x0, y0, n, a, b):
     if n > 0:
@@ -97,7 +99,7 @@ class Normal_Zagaris_Model:
         self._system.change_parameters(np.array((alpha, self._beta, lam, self._epsilon)))
         try:
             new_traj = self._system.get_trajectory_quadratic(self._x0, self._times)
-        except CustomErrors.IntegrationError:
+        except (CustomErrors.IntegrationError, TypeError):
             raise
         else:
             return np.linalg.norm(new_traj - self._true_trajectory)
@@ -127,7 +129,7 @@ def transformed_param_space_fig():
     x0 = np.array((1, a_true))
 
     # set henon transform params
-    nhenon_transforms = 2
+    nhenon_transforms = 18
     a = 1.3
     b = 0.3
 
@@ -151,7 +153,7 @@ def transformed_param_space_fig():
             for params in uf.parallelize_iterable(x2_y2_samples, rank, nprocs):
                 try:
                     result = minimize(z_system.of, params, method='SLSQP', tol=tol, options={'ftol' : tol})
-                except CustomErrors.IntegrationError:
+                except (CustomErrors.IntegrationError, TypeError):
                     continue
                 else:
                     if result.success:
@@ -179,7 +181,7 @@ def transformed_param_space_fig():
 
             nsamples = 8000
             data = np.empty((nsamples, 3))
-            scale = 20
+            scale = 4
             a_lam_samples = np.random.uniform(size=(nsamples,2))*np.array((scale, scale)) # a \in [0,scale], b \in [0,scale]
 
             count = 0
@@ -188,7 +190,7 @@ def transformed_param_space_fig():
                 try:
                     # result = minimize(z_system.of, params, method='SLSQP', tol=tol, options={'ftol' : tol})
                     result = minimize(z_system.of, params, method='SLSQP')
-                except CustomErrors.IntegrationError:
+                except (CustomErrors.IntegrationError, TypeError):
                     continue
                 else:
                     if result.success:
@@ -206,59 +208,130 @@ def transformed_param_space_fig():
                 print '******************************'
         
     else:
-        print 'loading pre-existing data from ./data/x2-y2-ofevals-2016.csv (x2, y2 values from repeated optimization in transformed param space)'
+        have_x2_y2_data = False
+        have_a_lam_data = True
+        if have_x2_y2_data:
+            print 'loading pre-existing data from ./data/x2-y2-ofevals-2016.csv (x2, y2 values from repeated optimization in transformed param space)'
 
-        # perform the dmap on a selection of the optimization results
+            # perform the dmap on a selection of the optimization results
 
-        # slim data, spurious results due to overflow
-        data = np.load('./data/x2-y2-ofevals-2016.csv')
-        # extract sloppy parameter combinations
-        tol = 2.0
-        x2_y2_of = data[data[:,-1] < tol]
-        npts = x2_y2_of.shape[0]
-        print 'Performing analysis on', npts, 'points found through optimization'
+            # slim data, spurious results due to overflow
+            data = np.load('./data/x2-y2-ofevals-2016.csv')
+            # extract sloppy parameter combinations
+            tol = 2.0
+            x2_y2_of = data[data[:,-1] < tol]
+            npts = x2_y2_of.shape[0]
+            print 'Performing analysis on', npts, 'points found through optimization'
 
-        # # plot output
-        scatter_size = 50
-        # plot x2, y2 colored by obj. fn.
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=scatter_size)
-        axins = inset_axes(ax, 6, 5, bbox_to_anchor=(0.45, 0.75), bbox_transform=ax.transAxes)
-        axins.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=scatter_size)
-        axins.set_xlim((-0.5, 1.25))
-        axins.set_ylim((0, 0.35))
-        axins.tick_params(axis='both', which='major', labelsize=0)
-        ax.set_xlabel(r'$p_1$')
-        ax.set_ylabel(r'$p_2$')
-        fig.subplots_adjust(bottom=0.15)
-        mark_inset(ax, axins, 1, 4 , fc='none', ec='0.5', zorder=3)
-        plt.show()
+            # # plot output
+            scatter_size = 50
+            # plot x2, y2 colored by obj. fn.
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=scatter_size)
+            axins = inset_axes(ax, 6, 5, bbox_to_anchor=(0.45, 0.75), bbox_transform=ax.transAxes)
+            axins.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=scatter_size)
+            axins.set_xlim((-0.5, 1.25))
+            axins.set_ylim((0, 0.35))
+            axins.tick_params(axis='both', which='major', labelsize=0)
+            ax.set_xlabel(r'$\theta_1$')
+            ax.set_ylabel(r'$\theta_2$')
+            fig.subplots_adjust(bottom=0.15)
+            mark_inset(ax, axins, 1, 4 , fc='none', ec='0.5', zorder=3)
+            plt.show()
 
-        # # investigate where points lie in (alpha, lambda) space, color by of
-        lam, alpha = henon_inv(x2_y2_of[:,0], x2_y2_of[:,1], nhenon_transforms, a, b)
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.scatter(lam, alpha, c=np.log10(x2_y2_of[:,2]), s=scatter_size)
-        ax.set_xlabel(r'$\lambda$')
-        ax.set_ylabel(r'$\alpha$')
-        fig.subplots_adjust(bottom=0.15)
+            # # investigate where points lie in (alpha, lambda) space, color by of
+            lam, alpha = henon_inv(x2_y2_of[:,0], x2_y2_of[:,1], nhenon_transforms, a, b)
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(lam, alpha, c=np.log10(x2_y2_of[:,2]), s=scatter_size)
+            ax.set_xlabel(r'$\lambda$')
+            ax.set_ylabel(r'$\alpha$')
+            fig.subplots_adjust(bottom=0.15)
 
-        plt.show()
+            plt.show()
 
-        # do dmaps in transformed space
-        # eps = 0.6
-        # k = 12
-        # eigvals, eigvects = dmaps.embed_data(x2_y2_of[:,:2], k=k, epsilon=eps)
-        # for i in range(1,5):
-        #     plot_dmaps.plot_xy(x2_y2_of[:,0], x2_y2_of[:,1], color=eigvects[:,i], scatter=True, xlabel=r'$x_2$', ylabel=r'$y_2$', s=scatter_size)
+            # do dmaps in transformed space
+            # eps = 0.6
+            # k = 12
+            # eigvals, eigvects = dmaps.embed_data(x2_y2_of[:,:2], k=k, epsilon=eps)
+            # for i in range(1,5):
+            #     plot_dmaps.plot_xy(x2_y2_of[:,0], x2_y2_of[:,1], color=eigvects[:,i], scatter=True, xlabel=r'$x_2$', ylabel=r'$y_2$', s=scatter_size)
 
-        # # do dmaps in "correct" transformation (i.e. in the original alpha, lambda)
-        # eps = 0.7
-        # eigvals, eigvects = dmaps.embed_data(x2_y2_of[:,:2], k=k, epsilon=eps, metric=z_system.henon_2inv_dmaps_metric)
-        # plot_dmaps.plot_xy(eigvects[:,1], eigvects[:,4], color=np.log10(x2_y2_of[:,2]), scatter=True, xlabel=r'$\Phi_1$', ylabel=r'$\Phi_4$', s=scatter_size)
-        # for i in range(1,5):
-        #     plot_dmaps.plot_xy(x2_y2_of[:,0], x2_y2_of[:,1], color=eigvects[:,i], scatter=True, xlabel=r'$x_2$', ylabel=r'$y_2$', s=scatter_size)
+            # # do dmaps in "correct" transformation (i.e. in the original alpha, lambda)
+            # eps = 0.7
+            # eigvals, eigvects = dmaps.embed_data(x2_y2_of[:,:2], k=k, epsilon=eps, metric=z_system.henon_2inv_dmaps_metric)
+            # plot_dmaps.plot_xy(eigvects[:,1], eigvects[:,4], color=np.log10(x2_y2_of[:,2]), scatter=True, xlabel=r'$\Phi_1$', ylabel=r'$\Phi_4$', s=scatter_size)
+            # for i in range(1,5):
+            #     plot_dmaps.plot_xy(x2_y2_of[:,0], x2_y2_of[:,1], color=eigvects[:,i], scatter=True, xlabel=r'$x_2$', ylabel=r'$y_2$', s=scatter_size)
+        elif have_a_lam_data:
+            print 'loading pre-existing data from ./data/a-lam-ofevals-2016.csv (a, lambda values from repeated optimization in transformed param space)'
+
+            # perform the dmap on a selection of the optimization results
+
+            # slim data, spurious results due to overflow
+            data = np.load('./data/a-lam-ofevals-2016.csv')
+            # data[:,:2] = 10*data[:,:2]
+            # extract sloppy parameter combinations
+            tol = 1e-4
+            a_lam_of = data[data[:,2] < tol]
+            x2, y2 = henon(a_lam_of[:,1], a_lam_of[:,0], nhenon_transforms, a, b)
+            x2_y2_of = np.array((x2,y2,a_lam_of[:,2])).T
+            npts = x2_y2_of.shape[0]
+            print 'Performing analysis on', npts, 'points found through optimization'
+
+            # # plot output
+            scatter_size = 100
+            # plot x2, y2 colored by obj. fn.
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=scatter_size, cmap='viridis')
+            axins = inset_axes(ax, 6, 5, bbox_to_anchor=(0.45, 0.75), bbox_transform=ax.transAxes)
+            axins.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=50, cmap='viridis')
+            axins.set_xlim((-0.5, 1.25))
+            axins.set_ylim((0, 0.35))
+            axins.tick_params(axis='both', which='major', labelsize=0)
+            ax.set_xlabel(r'$\theta_1$')
+            ax.set_ylabel(r'$\theta_2$')
+            fig.subplots_adjust(bottom=0.15)
+            mark_inset(ax, axins, 1, 4 , fc='none', ec='0.5', zorder=3)
+            plt.show()
+
+            # # investigate where points lie in (alpha, lambda) space, color by of
+            cmap = 'viridis_r'
+            lam, alpha = a_lam_of[:,1], a_lam_of[:,0]
+            gsize = 10
+            gspec = gs.GridSpec(gsize, gsize)
+            fig = plt.figure()
+            ax = fig.add_subplot(gspec[:,:gsize-1])
+            c = ax.scatter(lam, alpha, c=np.log10(x2_y2_of[:,2]), s=100, cmap=cmap)
+            ax.set_xlim((0.99995*np.min(lam), 1.00005*np.max(lam)))
+            ax.set_ylim((0.99995*np.min(alpha), 1.00005*np.max(alpha)))
+            # fig.colorbar(c, format='%1.3e', ticklocation=np.linspace(np.min(np.log10(x2_y2_of[:,2])), np.max(np.log10(x2_y2_of[:,2])), 5), ticks=np.power(10, np.linspace(np.min(np.log10(x2_y2_of[:,2])), np.max(np.log10(x2_y2_of[:,2])), 5)))
+
+            ax_cb = fig.add_subplot(gspec[:,gsize-1])
+            colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colors.Normalize(np.min(np.log10(x2_y2_of[:,2])), np.max(np.log10(x2_y2_of[:,2]))), ticks=np.logspace(np.log10(np.min(np.log10(x2_y2_of[:,2]))), np.log10(np.max(np.log10(x2_y2_of[:,2]))), 3))
+
+            ax.set_xlabel(r'$\lambda$')
+            ax.set_ylabel(r'$\alpha$')
+            # fig.subplots_adjust(bottom=0.15)
+
+            plt.show()
+
+            # do dmaps in transformed space
+            # eps = 0.6
+            # k = 12
+            # eigvals, eigvects = dmaps.embed_data(x2_y2_of[:,:2], k=k, epsilon=eps)
+            # for i in range(1,5):
+            #     plot_dmaps.plot_xy(x2_y2_of[:,0], x2_y2_of[:,1], color=eigvects[:,i], scatter=True, xlabel=r'$x_2$', ylabel=r'$y_2$', s=scatter_size)
+
+            # # do dmaps in "correct" transformation (i.e. in the original alpha, lambda)
+            # eps = 0.7
+            # eigvals, eigvects = dmaps.embed_data(x2_y2_of[:,:2], k=k, epsilon=eps, metric=z_system.henon_2inv_dmaps_metric)
+            # plot_dmaps.plot_xy(eigvects[:,1], eigvects[:,4], color=np.log10(x2_y2_of[:,2]), scatter=True, xlabel=r'$\Phi_1$', ylabel=r'$\Phi_4$', s=scatter_size)
+            # for i in range(1,5):
+            #     plot_dmaps.plot_xy(x2_y2_of[:,0], x2_y2_of[:,1], color=eigvects[:,i], scatter=True, xlabel=r'$x_2$', ylabel=r'$y_2$', s=scatter_size)
+            
 
 
 def comp_coeffs(coeffs, n):
@@ -378,16 +451,20 @@ def discretized_laplacian_dmaps():
 class FormatAxis:
     def __init__(self, ax):
         self._ax = ax
-
-    def format(self, axis, data, format_string, offset=0, nticks=5):
         # dictionary of relevant functions/attributes
-        d = {'x':{'ax':self._ax.xaxis, 'set-tick-pos':self._ax.set_xticks, 'set-tick-labels':self._ax.set_xticklabels, 'tick-pos':self._ax.xaxis.get_majorticklocs()},
-             'y':{'ax':self._ax.yaxis, 'set-tick-pos':self._ax.set_yticks, 'set-tick-labels':self._ax.set_yticklabels, 'tick-pos':self._ax.yaxis.get_majorticklocs()},
-             'z':{'ax':self._ax.zaxis, 'set-tick-pos':self._ax.set_zticks, 'set-tick-labels':self._ax.set_zticklabels, 'tick-pos':self._ax.get_zticks()}}
+        self._d = {'x':{'ax':self._ax.xaxis, 'set-tick-pos':self._ax.set_xticks, 'set-tick-labels':self._ax.set_xticklabels, 'tick-pos':self._ax.xaxis.get_majorticklocs(), 'set-lims':self._ax.set_xlim},
+             'y':{'ax':self._ax.yaxis, 'set-tick-pos':self._ax.set_yticks, 'set-tick-labels':self._ax.set_yticklabels, 'tick-pos':self._ax.yaxis.get_majorticklocs(), 'set-lims':self._ax.set_ylim},
+             'z':{'ax':self._ax.zaxis, 'set-tick-pos':self._ax.set_zticks, 'set-tick-labels':self._ax.set_zticklabels, 'tick-pos':self._ax.get_zticks(), 'set-lims':self._ax.set_zlim}}
+
+
+    def format(self, axis, data, format_string, offset=0, nticks=5, axis_stretch=0.05):
+        # axis_stretch makes the axis limits slightly larger than necessary so that the labels do not overlap
+        # flatten data in case it comes in as a 2d array
+        data = data.flatten()
         # tick positions are constant, regardless of offset
         maxval, minval = np.min(data), np.max(data)
         increment = (maxval - minval)/(nticks-1)
-        d[axis]['set-tick-pos']([minval + i*increment for i in range(nticks)])
+        self._d[axis]['set-tick-pos']([minval + i*increment for i in range(nticks)])
         # subtract offset from data if using
         if offset != 0:
             if offset < 0:
@@ -399,19 +476,24 @@ class FormatAxis:
             for i,key in enumerate(d.keys()):
                 if key is axis:
                     if axis is 'x':
-                        loc[key] = np.min(d[key]['tick-pos']) - 0.00*(np.max(d[key]['tick-pos']) - np.min(d[key]['tick-pos']))
+                        loc[key] = np.min(self._d[key]['tick-pos']) - 0.00*(np.max(self._d[key]['tick-pos']) - np.min(self._d[key]['tick-pos']))
                     else:
-                        loc[key] = np.max(d[key]['tick-pos']) + 0.00*(np.max(d[key]['tick-pos']) - np.min(d[key]['tick-pos']))
+                        loc[key] = np.max(self._d[key]['tick-pos']) + 0.00*(np.max(self._d[key]['tick-pos']) - np.min(self._d[key]['tick-pos']))
                 else:
                     if key is 'x':
-                        loc[key] = np.max(d[key]['tick-pos']) + 0.2*(np.max(d[key]['tick-pos']) - np.min(d[key]['tick-pos']))
+                        loc[key] = np.max(self._d[key]['tick-pos']) + 0.2*(np.max(self._d[key]['tick-pos']) - np.min(self._d[key]['tick-pos']))
                     else:
-                        loc[key] = np.min(d[key]['tick-pos']) - 0.2*(np.max(d[key]['tick-pos']) - np.min(d[key]['tick-pos']))
+                        loc[key] = np.min(self._d[key]['tick-pos']) - 0.2*(np.max(self._d[key]['tick-pos']) - np.min(self._d[key]['tick-pos']))
             self._ax.text(loc['x'], loc['y'], loc['z'], offset_str, fontsize=12) #maxval-0.05*(maxval-minval)
             data = data - offset
         # set axis tick labels
-        minval = np.min(data)
-        d[axis]['set-tick-labels']([format_string % (minval + i*increment) for i in range(nticks)])
+        self._d[axis]['set-tick-labels']([format_string % (minval + i*increment) for i in range(nticks)])
+
+        # stretch axes to prevent label overlap
+        dval = maxval - minval
+        minlim = minval - axis_stretch*dval
+        maxlim = maxval + axis_stretch*dval
+        self._d[axis]['set-lims']((minlim, maxlim))
 
 
 def two_effective_one_neutral_dmaps_fig():
@@ -490,9 +572,9 @@ def rawlings_3d_dmaps_fig():
     ax_dmaps.scatter(paramdata[:,0], paramdata[:,1], paramdata[:,2], c=eigvects[:,3], cmap='gnuplot2')
     for ax in [ax_b, ax_keff, ax_dmaps]:
         # label axes
-        ax.set_xlabel('log(' + r'$k_1$' + ')')
-        ax.set_ylabel('log(' + r'$k_{-1}$' + ')')
-        ax.set_zlabel('log(' + r'$k_2$' + ')')
+        ax.set_xlabel('\n\nlog(' + r'$k_1$' + ')')
+        ax.set_ylabel('\n\nlog(' + r'$k_{-1}$' + ')')
+        ax.set_zlabel('\n\nlog(' + r'$k_2$' + ')')
         # move labels to avoid overlap with numbers
         ax.xaxis._axinfo['label']['space_factor'] = 2.8
         ax.yaxis._axinfo['label']['space_factor'] = 2.8
@@ -503,7 +585,78 @@ def rawlings_3d_dmaps_fig():
         ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
         # # no grid
         # ax.grid(False)
+        # get those ticklabels outta here
+        formatter = FormatAxis(ax)
+        formatter.format('x', paramdata[:,0], '%1.1f', nticks=3)
+        formatter.format('y', paramdata[:,1], '%1.1f', nticks=3)
+        formatter.format('z', paramdata[:,2], '%1.1f', nticks=3)
     plt.show()
+
+def rawlings_surface_normal():
+    """Uses PCA to calculate the direction normal to a patch of the keff = c surface, used to verify this direction actually corresponds to changing keff"""
+    data = np.load('../rawlings_model/data/params-ofevals.pkl')
+    # k1_max = 10
+    # kinv_min = 100
+    # k2_min = 100
+    # data = data[data[:,1] < k1_max]
+    # data = data[data[:,2] > kinv_min]
+    # data = data[data[:,3] > k2_min]
+    of_max = 1e-3
+    data = data[data[:,0] < of_max]
+    print 'shape of data after trimmming:', data.shape
+
+    log_params = np.log10(data[:,1:])
+    delta = 0.2
+    plane_region = np.empty((log_params.shape[0],3))
+    center = log_params[0] # 2 random choice of center for ball
+    count = 0
+    for pt in log_params:
+        if np.linalg.norm(pt - center) < delta:
+            plane_region[count] = pt
+            count = count + 1
+    print 'have', count, 'pts in ball'
+    print 'centered at', center
+    plane_region = plane_region[:count]
+    keff_pr = plane_region[:,0]*plane_region[:,2]/(plane_region[:,1] + plane_region[:,2])
+    keff = data[:,1]*data[:,3]/(data[:,2] + data[:,3])
+    k1s = data[:,1];
+    kinvs = data[:,2];
+    k2s = data[:,3]
+    keff2 = (k1s - kinvs)*k1s/np.power(kinvs + k2s, 2)
+    
+
+    # visualize region
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(plane_region[:,0], plane_region[:,1], plane_region[:,2])
+    slice = 50
+    ax.scatter(log_params[::slice,0], log_params[::slice,1], log_params[::slice,2], c=np.log10(data[::slice,0]))
+    ax.scatter(center[0], center[1], center[2], s=100, lw=20)
+    formatter = FormatAxis(ax)
+    formatter.format('x', log_params[::slice,0], '%1.1f', nticks=3)
+    formatter.format('y', log_params[::slice,1], '%1.1f', nticks=3)
+    formatter.format('z', log_params[::slice,2], '%1.1f', nticks=3)
+    ax.set_xlabel('\n\n' + r'$\log(k_1)$')
+    ax.set_ylabel('\n\n' + r'$\log(k_{-1})$')
+    ax.set_zlabel('\n\n' + r'$\log(k_2)$')
+    plt.show()
+
+    pcs, vars = pca(plane_region, k=3)
+    normal = pcs[:,2]/np.linalg.norm(pcs[:,2])
+    k1 = np.power(10, center[0])
+    kinv = np.power(10, center[1])
+    k2 = np.power(10, center[2])
+    keff_gradient = np.array((k2/(kinv + k2), -k1*k2/np.power(kinv + k2, 2), k1/(kinv + k2) - k1*k2/np.power(kinv + k2, 2)))
+    keff_loggradient = np.array((k1*k2/(kinv + k2), -k1*k2*kinv/np.power(kinv + k2, 2), k1*k2/(kinv + k2) - k1*k2*k2/np.power(kinv + k2, 2)))
+    keff_loggradient = keff_loggradient/np.linalg.norm(keff_loggradient)
+    print '******************************'
+    print 's1/s3, s2/s3:', vars[:2]/vars[2]
+    print 'normal:', normal
+    print 'keff grad:', keff_loggradient
+    print '| normal - keff_grad |', np.linalg.norm(normal - keff_loggradient)
+    print 'keff max, min:', np.max(keff), np.min(keff)
+    
+
 
 def rawlings_2d_dmaps_fig():
     """Plots sloppy manifold in parameter space (here found through sampling), which is colored by the first and second DMAP eigenvectors in two separate subfigures on the right, adapted from rawlings_model.main's dmaps_param_set()"""
@@ -511,16 +664,18 @@ def rawlings_2d_dmaps_fig():
     # eigvals.dump('./data/rawlings-2d-dmaps-eigvals.pkl')
     # eigvects.dump('./data/rawlings-2d-dmaps-eigvects.pkl')
     # log_params_data.dump('./data/rawlings-2d-dmaps-logparams.pkl')
-    log_params_data = np.load('./data/rawlings-2d-dmaps-logparams.pkl')
-    eigvals = np.load('./data/rawlings-2d-dmaps-eigvals.pkl')
-    eigvects = np.load('./data/rawlings-2d-dmaps-eigvects.pkl')
+    params_data = np.load('./data/params-ofevals-slimmed.pkl')
+    
+    log_params_data = np.log10(params_data[:,1:]) # np.load('./data/rawlings-2d-dmaps-logparams.pkl')
+    eigvals = np.genfromtxt('./data/dmaps-eigvals--tol-0.001-k-12.csv', delimiter=',')
+    eigvects = np.genfromtxt('./data/dmaps-eigvects--tol-0.001-k-12.csv', delimiter=',')
 
     # # plot figure (three subfigs total)
     gspec = gs.GridSpec(2,2)
     fig = plt.figure()
-    xlabel = r'$k_1$'
-    ylabel = r'$k_{-1}$'
-    zlabel = r'$k_2$'
+    xlabel = '\n\n' + r'$k_1$'
+    ylabel = '\n\n' + r'$k_{-1}$'
+    zlabel = '\n\n' + r'$k_2$'
     stride = 15 # effectively thins array that is plotted
     cmap = cm.ScalarMappable(cmap='jet')
     # create triangulation in k_2, k_{-1}
@@ -553,6 +708,10 @@ def rawlings_2d_dmaps_fig():
         ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
         ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
         # # hide labels, too squashed
+        formatter = FormatAxis(ax)
+        formatter.format('x', log_params_data[:,0], '%1.1f', nticks=3)
+        formatter.format('y', log_params_data[:,1], '%1.1f', nticks=3)
+        formatter.format('z', log_params_data[:,2], '%1.1f', nticks=3)
         # plt.tick_params(axis='both', which='major', labelsize=0)
         # # hide grid
         # ax.grid(False)
@@ -903,60 +1062,428 @@ def dmaps_line():
     plt.savefig('./figs/1d-dmaps' + str(i) + '.png')
     print eigvals_save
         
-def sing_pert_contours():
-    """Plots contours of system used in 'sing_pert_data_space' in y0 and epsilon"""
+class Singularly_Perturbed_System:
+
+    def __init__(self, eps_true, y0_true, of_val, times):
+        self._lam = 2.0
+        self._x0 = 1.0
+        self._of_val = of_val
+        self._times = times
+        self._traj = self._get_traj(eps_true, y0_true)
+
+    def _get_traj(self, eps, y0):
+        f = lambda t, x: np.dot(np.array(((-self._lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+        integrator = Integration.Integrator(f)
+        traj = integrator.integrate(np.array((self._x0,y0)), self._times)[:,1]
+        return traj
+
+    def change_of_val(self, new_of_val):
+        self._of_val = new_of_val
+
+    def get_f_val(self, eps, y0):
+        """returns value of f = c(eps, y0) - of_val"""
+        return np.array((np.linalg.norm(self._get_traj(eps, y0) - self._traj, 2) - self._of_val,))
+
+    def _get_f_val(self, params):
+        """returns value of f = c(eps, y0) - of_val, but takes argument as np array, only used internally by 'get_Df_val'"""
+        eps, y0 = params
+        return np.linalg.norm(self._get_traj(eps, y0) - self._traj, 2) - self._of_val
+
+    def get_Df_val(self, eps, y0):
+        """Returns 1x2 array [df_deps, df_dy0]"""
+        grad = gradient(self._get_f_val, np.array((eps, y0)), h=1e-5)
+        grad.shape = (1, grad.shape[0])
+        return grad
+        
+class Inverse_Singularly_Perturbed_System:
+
+    def __init__(self, epsinv_true, y0_true, of_val, times):
+        self._lam = 2.0
+        self._x0 = 1.0
+        self._of_val = of_val
+        self._times = times
+        self._traj = self._get_traj(epsinv_true, y0_true)
+
+    def _get_traj(self, epsinv, y0):
+        f = lambda t, x: np.dot(np.array(((-self._lam, 1),(1,(-epsinv)*(1+10/(1.5-np.sin(x[1])))))), x)
+        integrator = Integration.Integrator(f)
+        traj = integrator.integrate(np.array((self._x0,y0)), self._times)[:,1]
+        return traj
+
+    def change_of_val(self, new_of_val):
+        self._of_val = new_of_val
+
+    def get_f_val(self, epsinv, y0):
+        """returns value of f = c(eps, y0) - of_val"""
+        return np.array((np.linalg.norm(self._get_traj(epsinv, y0) - self._traj, 2) - self._of_val,))
+
+    def _get_f_val(self, params):
+        """returns value of f = c(eps, y0) - of_val, but takes argument as np array, only used internally by 'get_Df_val'"""
+        return self.get_f_val(params[0], params[1])
+
+    def get_Df_val(self, epsinv, y0):
+        """Returns 1x2 array [df_deps, df_dy0]"""
+        grad = gradient(self._get_f_val, np.array((epsinv, y0)), h=1e-8)
+        grad.shape = (1, grad.shape[0])
+        return grad
+
+
+class Log_Singularly_Perturbed_System:
+
+    def __init__(self, log_eps_true, y0_true, of_val, times):
+        self._lam = 2.0
+        self._x0 = 1.0
+        self._of_val = of_val
+        self._times = times
+        self._traj = self._get_traj(log_eps_true, y0_true)
+
+    def _get_traj(self, log_eps, y0):
+        f = lambda t, x: np.dot(np.array(((-self._lam, 1),(1,(-1/np.power(10, log_eps))*(1+10/(1.5-np.sin(x[1])))))), x)
+        integrator = Integration.Integrator(f)
+        traj = integrator.integrate(np.array((self._x0,y0)), self._times)[:,1]
+        return traj
+
+    def change_of_val(self, new_of_val):
+        self._of_val = new_of_val
+
+    def get_f_val(self, log_eps, y0):
+        """returns value of f = c(log_eps, y0) - of_val"""
+        return np.array((np.linalg.norm(self._get_traj(log_eps, y0) - self._traj, 2) - self._of_val,))
+
+    def _get_f_val(self, params):
+        """returns value of f = c(log_eps, y0) - of_val, but takes argument as np array, only used internally by 'get_Df_val'"""
+        log_eps, y0 = params
+        return np.linalg.norm(self._get_traj(log_eps, y0) - self._traj, 2) - self._of_val
+
+    def get_Df_val(self, log_eps, y0):
+        """Returns 1x2 array [df_dlog_eps, df_dy0]"""
+        grad = gradient(self._get_f_val, np.array((log_eps, y0)), h=1e-12)
+        grad.shape = (1, grad.shape[0])
+        return grad
+
+
+def sing_pert_contours_fig1():
+    """Plots contours of system used in 'sing_pert_data_space' in y0 and epsilon using arclength continuation"""
     x0 = 1
     lam = 1
     # define times at which to sample data. Always take three points as this leads to three-dimensional data space
     # t0 = 0.01; tf = 3
     # times = np.linspace(t0,tf,3) # for linear eqns
     # x trajectory is constant as x0 and lambda are held constant
-    times = np.linspace(0.01, 0.31, 3) # for nonlinear eqns
+    times = np.array((0.01, 0.1, 0.5))
+    # # working param set
+    # y0_true = 5
+    # eps_true = 0.5
+    # of_val = 0.1
+    # ds = 1e-3
+    # nsteps = 2000
+    # set up base system used by all of_vals
+    y0_true = 5
+    epsinv_true = 100 # eps_true = 0.01
+    of_val = 0.1
+    sp_system = Inverse_Singularly_Perturbed_System(epsinv_true, y0_true, of_val, times)
+    # continue along y0
+    psa_solver = PSA(sp_system.get_f_val, sp_system.get_Df_val)
 
-    # generate true/base trajectory
-    y0_true = 2
-    eps_true = 1e-3
-    yprime = lambda t, y: -y*(1+1/(2*np.sin(y)))/eps_true
-    y_integrator = Integration.Integrator(yprime)
-    traj_true = y_integrator.integrate(np.array((y0_true,)), times)[:,0]
-
-
-    npts = 200
-    y0s = np.linspace(-1, 3, npts)
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # may help visually to set epss = np.logspace(-1, -6, npts), though the resulting plot is not practically useful for the paper
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # epss = np.logspace(3, -3, npts)
-    epss = np.logspace(-3.5, -1, npts)
-    y0mesh, epsmesh = np.meshgrid(y0s, epss)
-    of_evals = np.empty((npts,npts))
-    # record data space output at each value of (y0, eps)
-    for i in range(npts):
-        for j in range(npts):
-            yprime = lambda t, y: -y*(1+1/(2*np.sin(y)))/epsmesh[i,j]
-            y_integrator = Integration.Integrator(yprime)
-            traj = y_integrator.integrate(np.array((y0mesh[i,j],)), times)[:,0]
-            of_evals[i,j] = np.power(np.linalg.norm(traj - traj_true), 2)
-
+    # fig to which every branch will be added
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.set_xscale('log')
-    ax.scatter(epsmesh, y0mesh, c=np.log10(of_evals), s=40)
-    ax.set_xlim((np.min(epsmesh), np.max(epsmesh)))
-    ax.set_ylim((np.min(y0mesh), np.max(y0mesh)))
-    ax.set_xlabel(r'$\epsilon$')
+    lw = 2.0
+
+    # # working param set one
+    # # produces nose at larger of_val
+    of_val = 0.1
+    sp_system.change_of_val(of_val)
+    # start solver three times at different points to flesh out the complete contour
+    # (not stable enough to make it around the full ellipse in a computationally feasible time)
+    ds = 1e-1
+    nsteps = 2500
+
+    for i in range(2):
+        # # continue starting from three distinct points, combine results in plot
+        # if i == 0:
+        #     y0_guess = -0.5
+        #     epsinv_guess = 0.7
+        #     # y0_guess = 3.5
+        #     # epsinv_guess = 120.2
+        # if i == 1:
+        #     y0_guess = 0
+        #     epsinv_guess = 1
+        # if i == 2:
+        #     y0_guess = 4.77078
+        #     epsinv_guess = 99.28641
+        # try:
+        #     branch = psa_solver.find_branch(np.array((epsinv_guess,)), y0_guess, ds, nsteps, progress_bar=True, abstol=1e-9, reltol=1e-9)
+        # except CustomErrors.PSAError as e:
+        #     print e.msg
+        #     exit()
+        # print 'found ' + str(100.0*branch.shape[0]/nsteps) + '% of pts on the level set'
+        # branch.dump('./data/b1' + str(i) + '.pkl')
+
+        # do not re-generate data
+        print 'loading data for contour at of val:', of_val
+
+        branch = np.load('./data/b1' + str(i) + '.pkl')
+
+        label = None
+        # only label once
+        if i == 0:
+            label = r'$c(\theta) = 10^{-1}$'
+        ax.plot(branch[:,0], branch[:,1], c='m', label=label, lw=lw)
+
+    of_val = 0.01
+    sp_system.change_of_val(of_val)
+    # start solver three times at different points to flesh out the complete contour
+    # (not stable enough to make it around the full ellipse in a computationally feasible time)
+    ds = 1e-1
+    nsteps = 2500
+
+
+    for i in range(2):
+        # # continue starting from three distinct points, combine results in plot
+        # if i == 0:
+        #     y0_guess = -0.5
+        #     epsinv_guess = 0.7
+        # if i == 1:
+        #     y0_guess = 0
+        #     epsinv_guess = 1
+        # if i == 2:
+        #     y0_guess = 4.77078
+        #     epsinv_guess = 99.28641
+        # try:
+        #     branch = psa_solver.find_branch(np.array((epsinv_guess,)), y0_guess, ds, nsteps, progress_bar=True, abstol=1e-9, reltol=1e-9)
+        # except CustomErrors.PSAError as e:
+        #     print e.msg
+        #     exit()
+        # print 'found ' + str(100.0*branch.shape[0]/nsteps) + '% of pts on the level set'
+        # branch.dump('./data/b2' + str(i) + '.pkl')
+
+        # do not re-generate data
+        print 'loading data for contour at of val:', of_val
+        branch = np.load('./data/b2' + str(i) + '.pkl')
+
+        label = None
+        # only label once
+        if i == 0:
+            label = r'$c(\theta) = 10^{-2}$'
+        ax.plot(branch[:,0], branch[:,1], c='b', label=label, lw=lw)
+
+
+    of_val = 0.001
+    sp_system.change_of_val(of_val)
+    # start solver three times at different points to flesh out the complete contour
+    # (not stable enough to make it around the full ellipse in a computationally feasible time)
+    ds = 1e-1
+    nsteps = 1000
+    for i in range(4):
+        # # continue starting from three distinct points, combine results in plot
+        # if i == 0:
+        #     y0_guess = -0.005
+        #     epsinv_guess = 54.02
+        # if i == 1:
+        #     y0_guess = -0.015
+        #     epsinv_guess = 54.02
+        # if i == 2:
+        #     y0_guess = 4.96
+        #     epsinv_guess = 90.89
+        # if i == 3:
+        #     y0_guess = 18.19
+        #     epsinv_guess = 133.87
+        # try:
+        #     branch = psa_solver.find_branch(np.array((epsinv_guess,)), y0_guess, ds, nsteps, progress_bar=True, abstol=1e-9, reltol=1e-9)
+        # except CustomErrors.PSAError as e:
+        #     print e.msg
+        #     exit()
+        # print 'found ' + str(100.0*branch.shape[0]/nsteps) + '% of pts on the level set'
+        # branch.dump('./data/b3' + str(i) + '.pkl')
+
+        # do not re-generate data
+        print 'loading data for contour at of val:', of_val
+        branch = np.load('./data/b3' + str(i) + '.pkl')
+
+        label = None
+        # only label once
+        if i == 0:
+            label = r'$c(\theta) = 10^{-3}$'
+        ax.plot(branch[:,0], branch[:,1], c='g', label=label, lw=lw)
+
+
+    of_val = 0.0001
+    sp_system.change_of_val(of_val)
+    # start solver three times at different points to flesh out the complete contour
+    # (not stable enough to make it around the full ellipse in a computationally feasible time)
+    ds = 1e-2
+    nsteps = 250
+
+    for i in range(3):
+        # continue starting from three distinct points, combine results in plot
+        if i == 0:
+            y0_guess = 5
+            epsinv_guess = 105
+        if i == 1:
+            y0_guess = 5.040
+            epsinv_guess = 100.61
+        if i == 2:
+            y0_guess = 4.77078
+            epsinv_guess = 99.28641
+        try:
+            branch = psa_solver.find_branch(np.array((epsinv_guess,)), y0_guess, ds, nsteps, progress_bar=True, abstol=1e-9, reltol=1e-9)
+        except CustomErrors.PSAError as e:
+            print e.msg
+            exit()
+        print 'found ' + str(100.0*branch.shape[0]/nsteps) + '% of pts on the level set'
+        branch.dump('./data/b4' + str(i) + '.pkl')
+
+        # # do not re-generate data
+        # print 'loading data for contour at of val:', of_val
+        # branch = np.load('./data/b4' + str(i) + '.pkl')
+
+        label = None
+        # only label once
+        if i == 0:
+            label = r'$c(\theta) = 10^{-4}$'
+        ax.plot(branch[:,0], branch[:,1], c='r', label=label, lw=lw)
+
+
+    ax.set_xlabel(r'$1/\epsilon$')
     ax.set_ylabel(r'$y_0$')
+    ax.set_ylim((-6.5, 5.5))
+    ax.set_xlim((0, 130))
+    ax.legend(fontsize=40, loc=4)
+    fig.subplots_adjust(bottom=0.2)
     plt.show()
+
+    # # for investigative purposes
+    # sp_system.change_of_val(0.0)
+    # npts = 100
+    # y0_vals = np.linspace(-5,5,npts)
+    # inveps_vals = np.linspace(1, 150, npts) # np.logspace(-5, 0, npts)
+    # ofs = np.empty((npts, npts))
+    # for i, y0 in enumerate(y0_vals):#uf.parallelize_iterable(y0_vals, rank, nprocs):
+    #     for j, eps in enumerate(inveps_vals):
+    #         try:
+    #             ofs[i,j] = sp_system.get_f_val(eps, y0)
+    #         except CustomErrors.IntegrationError:
+    #             print 'no'
+    #             ofs[i,j] = 1e-14
+    #             continue
+    # inveps_vals, y0_vals = np.meshgrid(inveps_vals, y0_vals)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # # ax.set_xscale('log')
+    # c = ax.scatter(inveps_vals, y0_vals, c=np.log10(ofs))
+    # fig.colorbar(c)
+    # plt.show()
+            
+def sing_pert_contours_fig2():
+    """Plots contours of system used in 'sing_pert_data_space' in y0 and epsilon using arclength continuation"""
+    x0 = 1
+    lam = 1
+    # define times at which to sample data. Always take three points as this leads to three-dimensional data space
+    # t0 = 0.01; tf = 3
+    # times = np.linspace(t0,tf,3) # for linear eqns
+    # x trajectory is constant as x0 and lambda are held constant
+    times = np.array((0.01, 0.1, 0.5))
+    # # working param set
+    # y0_true = 5
+    # eps_true = 0.5
+    # of_val = 0.1
+    # ds = 1e-3
+    # nsteps = 2000
+    # set up base system used by all of_vals
+    y0_true = 5
+    epsinv_true = 3 # eps_true = 0.33
+    of_val = 0.1
+    sp_system = Inverse_Singularly_Perturbed_System(epsinv_true, y0_true, of_val, times)
+    # continue along y0
+    psa_solver = PSA(sp_system.get_f_val, sp_system.get_Df_val)
+
+    # fig to which every branch will be added
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    lw = 2.0
+
+    nof_vals = 4
+    of_vals = np.logspace(-4, -1, nof_vals)
+    dss = [3e-6, 3e-5, 3e-4, 3e-3]
+    colornorm = colors.Normalize(vmin=0, vmax=nof_vals - 1) # colors.Normalize(vmin=np.min(embeddings), vmax=np.max(embeddings))
+    colormap = cm.ScalarMappable(norm=colornorm, cmap='viridis_r')
+
+    nsteps = 2000
+    y0_guess = 5
+    epsinv_guess = 2
+    for i, of_val in enumerate([of_vals[2]]):
+        i = 2
+        # sp_system.change_of_val(of_val)
+        # # start solver three times at different points to flesh out the complete contour
+        # # (not stable enough to make it around the full ellipse in a computationally feasible time)
+        # ds = dss[i]
+        # try:
+        #     branch = psa_solver.find_branch(np.array((epsinv_guess,)), y0_guess, ds, nsteps, progress_bar=True, abstol=1e-9, reltol=1e-9)
+        # except CustomErrors.PSAError as e:
+        #     print e.msg
+        #     exit()
+        # print 'found ' + str(100.0*branch.shape[0]/nsteps) + '% of pts on the level set'
+        # branch.dump('./data/large-eps-b' + str(i) + '.pkl')
+
+        # do not re-generate data
+        print 'loading data for contour at of val:', of_val
+        branch = np.load('./data/large-eps-b' + str(i) + '.pkl')
+
+        label = None
+        # only label once
+        label = r'$c(\theta) = 10^{-' + str(4-i) + '}$'
+        ax.plot(branch[:,0], branch[:,1], c=colormap.to_rgba(i), label=label, lw=lw)
+
+
+    ax.set_xlabel(r'$1/\epsilon$')
+    ax.set_ylabel(r'$y_0$')
+    # ax.set_ylim((-6.5, 5.5))
+    # ax.set_xlim((0, 130))
+    ax.legend(fontsize=40, loc=4)
+    fig.subplots_adjust(bottom=0.2)
+    plt.show()
+
+
+    # # for investigative purposes
+    # sp_system.change_of_val(0.0)
+    # npts = 30
+    # y0_vals = np.linspace(0,10,npts)
+    # inveps_vals = np.linspace(1, 10, npts) # np.logspace(-5, 0, npts)
+    # ofs = np.empty((npts, npts))
+    # for i, y0 in enumerate(y0_vals):#uf.parallelize_iterable(y0_vals, rank, nprocs):
+    #     for j, eps in enumerate(inveps_vals):
+    #         try:
+    #             ofs[i,j] = sp_system.get_f_val(eps, y0)
+    #         except CustomErrors.IntegrationError:
+    #             ofs[i,j] = 1e-14
+    #             continue
+    # inveps_vals, y0_vals = np.meshgrid(inveps_vals, y0_vals)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # # ax.set_xscale('log')
+    # c = ax.scatter(inveps_vals, y0_vals, c=np.log10(ofs))
+    # fig.colorbar(c)
+    # plt.show()
+
 
 def sing_pert_data_space_fig():
     """Plots three dimensional data space of the classic singularly perturbed ODE system: x' = -lambda*x, y' = -y/epsilon. Probably will end up plotting {y(t1), y(t2), y(t3)} though may also plot norms {|| (x(t1), y(t1)) ||, ... } though this doesn't represent data space in the traditional sense. In particular we're interested in observing the transition from 2 to 1 to 0 dimensional parameter -> data space mappings, i.e. 2 stiff to 1 stiff to 0 stiff parameters."""
     times = np.array((0.01, 0.1, 0.5))
     npts = 40
-    count = 0
-    lam = 2.0
-    epss = np.logspace(-1, 0, npts)
+    lam = 1.0
     x0s = np.ones((npts,2))
-    x0s[:,1] = np.linspace(0,10,npts)
+    x0s[:,1] = np.linspace(0,10,npts) # x0[0] = 1, x0[1] \in [0,10]
+    gsize = 10
+    gspec = gs.GridSpec(gsize,gsize)
+    cmap = colormaps.viridis
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # start with larger epsilon values (see curvature)
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    epss = np.logspace(-2, 0, npts)
+
     xt1 = np.empty((npts,npts))
     xt2 = np.empty((npts,npts))
     xt3 = np.empty((npts,npts))
@@ -970,84 +1497,91 @@ def sing_pert_data_space_fig():
             epss_copy[i,j] = eps
             y0s[i,j] = x0[1]
             
-    # # save the data
-    # xt1.dump('./data/sing-pert-x1.pkl')
-    # xt2.dump('./data/sing-pert-x2.pkl')
-    # xt3.dump('./data/sing-pert-x3.pkl')
-    # epss_copy.dump('./data/sing-pert-eps-copy.pkl')
-    # y0s.dump('./data/sing-pert-y0s.pkl')
+    # save the data
+    xt1.dump('./data/sing-pert-x1-large.pkl')
+    xt2.dump('./data/sing-pert-x2-large.pkl')
+    xt3.dump('./data/sing-pert-x3-large.pkl')
+    epss_copy.dump('./data/sing-pert-eps-copy-large.pkl')
+    y0s.dump('./data/sing-pert-y0s-large.pkl')
 
-    # xt1 = np.load('./data/sing-pert-x1.pkl')
-    # xt2 = np.load('./data/sing-pert-x2.pkl')
-    # xt3 = np.load('./data/sing-pert-x3.pkl')
-    # epss_copy = np.load('./data/sing-pert-eps-copy.pkl')
-    # y0s = np.load('./data/sing-pert-y0s.pkl')
+    # # load the data
+    # xt1 = np.load('./data/sing-pert-x1-large.pkl')
+    # xt2 = np.load('./data/sing-pert-x2-large.pkl')
+    # xt3 = np.load('./data/sing-pert-x3-large.pkl')
+    # epss_copy = np.load('./data/sing-pert-eps-copy-large.pkl')
+    # y0s = np.load('./data/sing-pert-y0s-large.pkl')
     # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
     # print 'loading previously generated data for plots'
     # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 
-    # # plot points in 2d parameter space
-    x0_grid, epss_grid = np.meshgrid(x0s, epss)
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(epss_grid, x0_grid, s=5)
-    ax.set_xscale('log')
-    ax.set_xlabel(r'$\epsilon$')
-    ax.set_ylabel(r'$y(t_0)$')
-    ax.set_xlim((0.09, 1.1))
-    ax.set_ylim((-1, 11))
+    # # plot a few trajectories to visualize behavior of ODEs
+    # eps_tests = np.logspace(-1, 0, 5)
+    # fig_pp = plt.figure()
+    # ax_pp = fig_pp.add_subplot(111)
+    # fig_y = plt.figure()
+    # ax_y = fig_y.add_subplot(111)
+    # for i in range(5):
+    #     eps = eps_tests[i]
+    #     x0 = np.array((1,5))
+    #     f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+    #     integrator = Integration.Integrator(f)
+    #     ts = np.linspace(0.0001, 1, 1000)
+    #     Xs = integrator.integrate(x0, ts)
+    #     eps_str = '%1.2f' % eps
+    #     ax_pp.plot(Xs[:,0], Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    #     ax_y.plot(ts, Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    # ax_y.set_xlabel(r'$t$')
+    # ax_y.set_ylabel(r'$y$')
+    # ax_pp.set_xlabel(r'$x$')
+    # ax_pp.set_ylabel(r'$y$')
+    # ax_pp.legend(loc=2)
+    # ax_y.legend(loc=1)
+    # plt.show()
+
+    # # # plot points in 2d parameter space
+    # x0_grid, epss_grid = np.meshgrid(x0s, epss)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.scatter(epss_grid, x0_grid, s=5)
+    # ax.set_xscale('log')
+    # ax.set_xlabel(r'$\epsilon$')
+    # ax.set_ylabel(r'$y(t_0)$')
+    # ax.set_xlim((0.09, 1.1))
+    # ax.set_ylim((-1, 11))
 
     # # plot eps and y0 coloring of manifold
-    gspec = gs.GridSpec(5,5)
-    cmap = colormaps.inferno
-
-
     fig1 = plt.figure()
     fig2 = plt.figure()
     # axes
-    ax_eps = fig1.add_subplot(gspec[:,:4], projection='3d')
-    ax_y0 = fig2.add_subplot(gspec[:,:4], projection='3d')
-    # make color data
-    eps_colors = (1/epss_copy)/np.max(1/epss_copy)
+    ax_eps = fig1.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_y0 = fig2.add_subplot(gspec[:,:gsize-1], projection='3d')
+    # # make color data
+    eps_colors = (1/epss_copy)#/np.max(1/epss_copy)
+    eps_colornorm = colors.Normalize(vmin=np.min(eps_colors), vmax=np.max(eps_colors))
+    eps_colormap = cm.ScalarMappable(norm=eps_colornorm, cmap=cmap)
     x0_colors = y0s/np.max(y0s)
-    light = LightSource(0, 65)
-    illuminated_surface_eps = light.shade(eps_colors, cmap=cm.gist_earth, blend_mode='soft')
-    illuminated_surface_y0 = light.shade(x0_colors, cmap=plt.get_cmap('winter'), blend_mode='soft')
     # add scatter plots
 
-    
-    vv.use('gtk')
-    vv.figure()
-    a1 = vv.subplot(111)
-    m1 = vv.surf(xt1, xt2, xt3, eps_colors)
-    m1.colormap = vv.CM_HOT
-    app = vv.use()
-    app.Run()
-
-
-    # ax_eps.plot_surface(xt1, xt2, xt3, facecolors=illuminated_surface_eps, linewidth=0, antialiased=False, cstride=1, rstride=1)
-    # ax_y0.plot_surface(xt1, xt2, xt3, facecolors=illuminated_surface_y0, edgecolors=np.array((0,0,0,0)), linewidth=0, antialiased=False, cstride=1, rstride=1)#, alpha=0.5)
-    # # ax_eps.plot_surface(xt1, xt2, xt3, facecolors=cmap(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.5)
-    # # ax_y0.plot_surface(xt1, xt2, xt3, facecolors=cmap(x0_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.5)
-    # # add unique titles
-    # # ax_eps.set_title('Colored by ' + r'$\epsilon$')
-    # # ax_y0.set_title('Colored by ' + r'$y(t_0)$')
-    # # add colorbars
-    # ax_eps_cb = fig1.add_subplot(gspec[:,4])
-    # ax_y0_cb = fig2.add_subplot(gspec[:,4])
-    # eps_cb = colorbar.ColorbarBase(ax_eps_cb, cmap=cmap, norm=colors.Normalize(np.min(1/epss_copy), np.max(1/epss_copy)), ticks=np.logspace(np.log10(np.min(1/epss_copy)), np.log10(np.max(1/epss_copy)), 2))
-    # ax_eps_cb.text(0.4, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
-    # y0_cb = colorbar.ColorbarBase(ax_y0_cb, cmap=cmap, norm=colors.Normalize(np.min(y0s), np.max(y0s)), ticks=np.linspace(np.min(x0s), np.max(y0s), 5))
-    # ax_y0_cb.text(0.4, 1.05, r'$y(t_0)$', transform=ax_y0_cb.transAxes, fontsize=48)
+    ax_eps.plot_surface(xt1, xt2, xt3, facecolors=eps_colormap.to_rgba(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    ax_y0.plot_surface(xt1, xt2, xt3, facecolors=cmap(x0_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    # add unique titles
+    # add colorbars
+    ax_eps_cb = fig1.add_subplot(gspec[:,gsize-1])
+    ax_y0_cb = fig2.add_subplot(gspec[:,gsize-1])
+    cb_ticks = np.logspace(np.log10(np.min(1/epss_copy)), np.log10(np.max(1/epss_copy)), 2)
+    eps_cb = colorbar.ColorbarBase(ax_eps_cb, cmap=cmap, norm=eps_colornorm, ticks=cb_ticks)
+    ax_eps_cb.text(0.2, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
+    y0_cb = colorbar.ColorbarBase(ax_y0_cb, cmap=cmap, norm=colors.Normalize(np.min(y0s), np.max(y0s)), ticks=np.linspace(np.min(x0s), np.max(y0s), 5))
+    ax_y0_cb.text(0.2, 1.05, r'$y(t_0)$', transform=ax_y0_cb.transAxes, fontsize=48)
             
-    # # # plot a ball in model space
-    # # find points in ball
-    # eps_center = 0.5 # center of ball is (eps_center, y0_center) in parameter space
-    # y0_center = 5.0
-    # model_space_radius_squared = 0.1
-    # f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps_center)*(1+10/(1.5-np.sin(x[1])))))), x)
-    # integrator = Integration.Integrator(f)
-    # xt1_center, xt2_center, xt3_center = integrator.integrate(np.array((1,y0_center)), times)[:,1]
+    # # plot a ball in model space
+    # find points in ball
+    eps_center = 0.33 # center of ball is (eps_center, y0_center) in parameter space
+    y0_center = 5.0
+    model_space_radius_squared = 0.001
+    f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps_center)*(1+10/(1.5-np.sin(x[1])))))), x)
+    integrator = Integration.Integrator(f)
+    xt1_center, xt2_center, xt3_center = integrator.integrate(np.array((1,y0_center)), times)[:,1]
     # surface_colors = np.zeros((npts,npts,4))
     # # also keep track of which parameters the model manifold points correspond to
     # npts_in_ball = 0
@@ -1064,62 +1598,604 @@ def sing_pert_data_space_fig():
     # y0_in_ball = y0_in_ball[:npts_in_ball]
     # print 'found', npts_in_ball, 'points intersecting ball'
 
-    # # plot intersection of full model manifold and ball, colored by x0
-    # gspec = gs.GridSpec(5,5)
-    # fig = plt.figure()
-    # ax_ball = fig.add_subplot(gspec[:,:4], projection='3d')
-    # ax_ball.hold(True)
-    # # plot surface
-    # ax_ball.plot_surface(xt1, xt2, xt3, facecolors=cmap(x0_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.5)
+    # plot intersection of full model manifold and ball, colored by x0
+    fig = plt.figure()
+    ax_ball = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_ball.hold(True)
+    # plot surface
+    ax_ball.plot_surface(xt1, xt2, xt3, facecolors=eps_colormap.to_rgba(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8, zorder=1)
     # # plot intersection
     # ax_ball.plot_surface(xt1, xt2, xt3, facecolors=surface_colors, linewidth=0, cstride=1, rstride=1, antialiased=False)
-    # # plot ball
-    # u = np.linspace(0, 2*np.pi, 500)
-    # v = np.linspace(0, np.pi, 500)
-    # ball_x = np.sqrt(model_space_radius_squared)*np.outer(np.cos(u), np.sin(v)) + xt1_center
-    # ball_y = np.sqrt(model_space_radius_squared)*np.outer(np.sin(u), np.sin(v)) + xt2_center
-    # ball_z = np.sqrt(model_space_radius_squared)*np.outer(np.ones(np.size(u)), np.cos(v)) + xt3_center
-    # ax_ball.plot_surface(ball_x, ball_y, ball_z, color='b', alpha=0.4, linewidth=0)
-    # # colorbar
-    # ax_cb = fig.add_subplot(gspec[:,4])
-    # y0_cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colors.Normalize(np.min(y0s), np.max(y0s)), ticks=np.linspace(np.min(x0s), np.max(y0s), 5))
-    # ax_cb.text(0.4, 1.05, r'$y(t_0)$', transform=ax_cb.transAxes, fontsize=48)
+    # plot ball
+    u = np.linspace(0, 2*np.pi, 100)
+    v = np.linspace(0, np.pi, 100)
 
+    ball_x = np.sqrt(model_space_radius_squared)*np.outer(np.cos(u), np.sin(v))*(np.max(xt1) - np.min(xt1)) + xt1_center
+    ball_y = np.sqrt(model_space_radius_squared)*np.outer(np.sin(u), np.sin(v))*(np.max(xt2) - np.min(xt2)) + xt2_center
+    ball_z = np.sqrt(model_space_radius_squared)*np.outer(np.ones(np.size(u)), np.cos(v))*(np.max(xt3) - np.min(xt3)) + xt3_center
+    ax_ball.plot_surface(ball_x, ball_y, ball_z, color='b', alpha=1.0, linewidth=0, zorder=2)
+    # colorbar
+    ax_cb = fig.add_subplot(gspec[:,gsize-1])
 
-    # # # adjust all figure's properties at once as they're all the same
-    # for ax in [ax_eps, ax_y0, ax_ball]:
-    #     # axis limits
-    #     ax.set_xlim((0.99*np.min(xt1), 1.01*np.max(xt1)))
-    #     ax.set_ylim((0.99*np.min(xt2), 1.01*np.max(xt2)))
-    #     ax.set_zlim((0.99*np.min(xt3), 1.01*np.max(xt3)))
-    #     # axis labels
-    #     ax.set_xlabel(r'$y(t_1)$')
-    #     ax.set_ylabel(r'$y(t_2)$')
-    #     ax.set_zlabel(r'$y(t_3)$')
-    #     # white out the bg
-    #     ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-    #     ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-    #     ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
-    #     # # hide grid
-    #     # ax.grid(False)
-    #     # # hide tick labels
-    #     # plt.tick_params(axis='both', which='major', labelsize=0)
-    #     # move labels to avoid overlap with numbers
-    #     ax.xaxis._axinfo['label']['space_factor'] = 2.2
-    #     ax.yaxis._axinfo['label']['space_factor'] = 2.2
-    #     ax.zaxis._axinfo['label']['space_factor'] = 2.2
+    ax_ball_cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=eps_colornorm, ticks=cb_ticks)
+    ax_cb.text(0.2, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
 
-    # ax_ball.set_zlim((-0.5, 0.5)) # for better visualization of ball
+    # # adjust all figure's properties at once as they're all the same
+    nticks = 3
+    for ax in [ax_eps, ax_y0, ax_ball]:
+        formatter = FormatAxis(ax)
+        formatter.format('x', xt1, '%1.0f', nticks=nticks)
+        formatter.format('y', xt2, '%1.3f', nticks=nticks)
+        formatter.format('z', xt3, '%1.3f', nticks=nticks)
+        # # axis limits
+        # ax.set_xlim((0.99*np.min(xt1), 1.01*np.max(xt1)))
+        # ax.set_ylim((0.99*np.min(xt2), 1.01*np.max(xt2)))
+        # ax.set_zlim((0.99*np.min(xt3), 1.01*np.max(xt3)))
+        # axis labels
+        # when have ticks:
+        # ax.set_xlabel('\n\n' + r'$y(t_1)$')
+        # ax.set_ylabel('\n\n\n' + r'$y(t_2)$')
+        # ax.set_zlabel('\n\n\n' + r'$y(t_3)$')
+        # when no have ticks:
+        ax.set_xlabel('\n' + r'$y(t_1)$')
+        ax.set_ylabel('\n' + r'$y(t_2)$')
+        ax.set_zlabel('\n' + r'$y(t_3)$')
+        # white out the bg
+        ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # orient axes correctly
+        ax.invert_zaxis()
+        ax.invert_yaxis()
+        # hide (technically incorrect) tick labels
+        ax.tick_params(labelsize=0)
+        # # hide grid
+        # ax.grid(False)
+        # # hide tick labels
+        # plt.tick_params(axis='both', which='major', labelsize=0)
+        # move labels to avoid overlap with numbers
+        # ax.xaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.yaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.zaxis._axinfo['label']['space_factor'] = 2.2
 
-    # # map model manifold ball intersection back to parameter space
+    # # change ax_ball's limits separately to ensure no stretching of the sphere occurs
+    # model_space_radius = np.sqrt(model_space_radius_squared)
+    # scale = 50
+    # ax_ball.set_xlim((xt1_center - scale*model_space_radius, xt1_center + scale*model_space_radius))
+    # ax_ball.set_ylim((xt2_center - scale*model_space_radius, xt2_center + scale*model_space_radius))
+    # ax_ball.set_zlim((xt3_center - scale*model_space_radius, xt3_center + scale*model_space_radius))
+    # formatter = FormatAxis(ax_ball)
+    # formatter.format('x', np.linspace(xt1_center - scale*model_space_radius, xt1_center + scale*model_space_radius, 10), '%1.0f', nticks=3)
+    # formatter.format('y', np.linspace(xt2_center - scale*model_space_radius, xt2_center + scale*model_space_radius, 10), '%1.3f', nticks=3)
+    # formatter.format('z', np.linspace(xt3_center - scale*model_space_radius, xt3_center + scale*model_space_radius, 10), '%1.3f', nticks=3)
+    # ax_ball.set_xlabel('\n\n' + r'$y(t_1)$')
+    # ax_ball.set_ylabel('\n\n\n' + r'$y(t_2)$')
+    # ax_ball.set_zlabel('\n\n\n' + r'$y(t_3)$')
+    # # white out the bg
+    # ax_ball.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    # ax_ball.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    # ax_ball.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+
+    # plt.show()
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # repeat with small epsilon values, ball encompasses manifold corner
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    epss = np.logspace(-2, -1.5, npts)
+
+    # xt1 = np.empty((npts,npts))
+    # xt2 = np.empty((npts,npts))
+    # xt3 = np.empty((npts,npts))
+    # epss_copy = np.empty((npts,npts))
+    # y0s = np.empty((npts,npts))
+    # for i, x0 in enumerate(x0s):
+    #     for j, eps in enumerate(epss):
+    #         f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+    #         integrator = Integration.Integrator(f)
+    #         xt1[i,j], xt2[i,j], xt3[i,j] = integrator.integrate(x0, times)[:,1]
+    #         epss_copy[i,j] = eps
+    #         y0s[i,j] = x0[1]
+            
+    # # save the data
+    # xt1.dump('./data/sing-pert-x1-small.pkl')
+    # xt2.dump('./data/sing-pert-x2-small.pkl')
+    # xt3.dump('./data/sing-pert-x3-small.pkl')
+    # epss_copy.dump('./data/sing-pert-eps-copy-small.pkl')
+    # y0s.dump('./data/sing-pert-y0s-small.pkl')
+
+    # load the data
+    xt1 = np.load('./data/sing-pert-x1-small.pkl')
+    xt2 = np.load('./data/sing-pert-x2-small.pkl')
+    xt3 = np.load('./data/sing-pert-x3-small.pkl')
+    epss_copy = np.load('./data/sing-pert-eps-copy-small.pkl')
+    y0s = np.load('./data/sing-pert-y0s-small.pkl')
+    print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    print 'loading previously generated data for plots'
+    print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+
+    # # plot a few trajectories to visualize behavior of ODEs
+    # eps_tests = np.logspace(-1, 0, 5)
+    # fig_pp = plt.figure()
+    # ax_pp = fig_pp.add_subplot(111)
+    # fig_y = plt.figure()
+    # ax_y = fig_y.add_subplot(111)
+    # for i in range(5):
+    #     eps = eps_tests[i]
+    #     x0 = np.array((1,5))
+    #     f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+    #     integrator = Integration.Integrator(f)
+    #     ts = np.linspace(0.0001, 1, 1000)
+    #     Xs = integrator.integrate(x0, ts)
+    #     eps_str = '%1.2f' % eps
+    #     ax_pp.plot(Xs[:,0], Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    #     ax_y.plot(ts, Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    # ax_y.set_xlabel(r'$t$')
+    # ax_y.set_ylabel(r'$y$')
+    # ax_pp.set_xlabel(r'$x$')
+    # ax_pp.set_ylabel(r'$y$')
+    # ax_pp.legend(loc=2)
+    # ax_y.legend(loc=1)
+    # plt.show()
+
+    # # # plot points in 2d parameter space
+    # x0_grid, epss_grid = np.meshgrid(x0s, epss)
     # fig = plt.figure()
     # ax = fig.add_subplot(111)
-    # ax.scatter(eps_in_ball, y0_in_ball, lw=0)
+    # ax.scatter(epss_grid, x0_grid, s=5)
+    # ax.set_xscale('log')
     # ax.set_xlabel(r'$\epsilon$')
     # ax.set_ylabel(r'$y(t_0)$')
-    # ax.set_title('Preimage of model manifold ball')
-    # plt.tight_layout()
+    # ax.set_xlim((0.09, 1.1))
+    # ax.set_ylim((-1, 11))
+
+    # # plot eps and y0 coloring of manifold
+    fig1 = plt.figure()
+    fig2 = plt.figure()
+    # axes
+    ax_eps = fig1.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_y0 = fig2.add_subplot(gspec[:,:gsize-1], projection='3d')
+    # # make color data
+    eps_colors = (1/epss_copy)/np.max(1/epss_copy)
+    x0_colors = y0s/np.max(y0s)
+    # add scatter plots
+
+    ax_eps.plot_surface(xt1, xt2, xt3, facecolors=eps_colormap.to_rgba(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    ax_y0.plot_surface(xt1, xt2, xt3, facecolors=cmap(x0_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    # add unique titles
+    # add colorbars
+    ax_eps_cb = fig1.add_subplot(gspec[:,gsize-1])
+    ax_y0_cb = fig2.add_subplot(gspec[:,gsize-1])
+    eps_cb = colorbar.ColorbarBase(ax_eps_cb, cmap=cmap, norm=eps_colornorm, ticks=cb_ticks)
+    ax_eps_cb.text(0.2, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
+    y0_cb = colorbar.ColorbarBase(ax_y0_cb, cmap=cmap, norm=colors.Normalize(np.min(y0s), np.max(y0s)), ticks=np.linspace(np.min(x0s), np.max(y0s), 5))
+    ax_y0_cb.text(0.2, 1.05, r'$y(t_0)$', transform=ax_y0_cb.transAxes, fontsize=48)
+            
+    # # plot a ball in model space
+    # find points in ball
+    eps_center = 0.01 # center of ball is (eps_center, y0_center) in parameter space
+    y0_center = 5.0
+    model_space_radius_squared = 0.001
+    f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps_center)*(1+10/(1.5-np.sin(x[1])))))), x)
+    integrator = Integration.Integrator(f)
+    xt1_center, xt2_center, xt3_center = integrator.integrate(np.array((1,y0_center)), times)[:,1]
+    # surface_colors = np.zeros((npts,npts,4))
+    # # also keep track of which parameters the model manifold points correspond to
+    # npts_in_ball = 0
+    # eps_in_ball = np.empty(npts*npts)
+    # y0_in_ball = np.empty(npts*npts)
+    # for i, x0 in enumerate(x0s):
+    #     for j, eps in enumerate(epss):
+    #             if np.power(xt1[i,j] - xt1_center, 2) + np.power(xt2[i,j] - xt2_center, 2) + np.power(xt3[i,j] - xt3_center, 2) < model_space_radius_squared:
+    #                 surface_colors[i,j,3] = 0.5 # non-zero alpha
+    #                 eps_in_ball[npts_in_ball] = eps
+    #                 y0_in_ball[npts_in_ball] = x0[1]
+    #                 npts_in_ball = npts_in_ball + 1
+    # eps_in_ball = eps_in_ball[:npts_in_ball]
+    # y0_in_ball = y0_in_ball[:npts_in_ball]
+    # print 'found', npts_in_ball, 'points intersecting ball'
+
+    # plot intersection of full model manifold and ball, colored by x0
+    fig = plt.figure()
+    ax_ball = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_ball.hold(True)
+    # plot surface
+    ax_ball.plot_surface(xt1, xt2, xt3, facecolors=cmap(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=1.0)
+    # # plot intersection
+    # ax_ball.plot_surface(xt1, xt2, xt3, facecolors=surface_colors, linewidth=0, cstride=1, rstride=1, antialiased=False)
+    # plot ball
+    # scale x, y and z components by axis lengths
+    u = np.linspace(0, 2*np.pi, 500)
+    v = np.linspace(0, np.pi, 500)
+    ball_x = np.sqrt(model_space_radius_squared)*np.outer(np.cos(u), np.sin(v))*(np.max(xt1) - np.min(xt1)) + xt1_center
+    ball_y = np.sqrt(model_space_radius_squared)*np.outer(np.sin(u), np.sin(v))*(np.max(xt2) - np.min(xt2)) + xt2_center
+    ball_z = np.sqrt(model_space_radius_squared)*np.outer(np.ones(np.size(u)), np.cos(v))*(np.max(xt3) - np.min(xt3)) + xt3_center
+    ax_ball.plot_surface(ball_x, ball_y, ball_z, color='b', alpha=1.0, linewidth=0)
+    # colorbar
+    ax_cb = fig.add_subplot(gspec[:,gsize-1])
+
+    ax_ball_cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=eps_colornorm, ticks=cb_ticks)
+    ax_cb.text(0.2, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
+
+    # # adjust all figure's properties at once as they're all the same
+    nticks = 3
+    for ax in [ax_eps, ax_y0, ax_ball]:
+        formatter = FormatAxis(ax)
+        formatter.format('x', xt1, '%1.0f', nticks=nticks)
+        formatter.format('y', xt2, '%1.3f', nticks=nticks)
+        formatter.format('z', xt3, '%1.3f', nticks=nticks)
+        # # axis limits
+        # ax.set_xlim((0.99*np.min(xt1), 1.01*np.max(xt1)))
+        # ax.set_ylim((0.99*np.min(xt2), 1.01*np.max(xt2)))
+        # ax.set_zlim((0.99*np.min(xt3), 1.01*np.max(xt3)))
+        # when have ticks:
+        # ax.set_xlabel('\n\n' + r'$y(t_1)$')
+        # ax.set_ylabel('\n\n\n' + r'$y(t_2)$')
+        # ax.set_zlabel('\n\n\n' + r'$y(t_3)$')
+        # when no have ticks:
+        ax.set_xlabel('\n' + r'$y(t_1)$')
+        ax.set_ylabel('\n' + r'$y(t_2)$')
+        ax.set_zlabel('\n' + r'$y(t_3)$')
+        # white out the bg
+        ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.invert_zaxis()
+        ax.invert_yaxis()
+        ax.tick_params(labelsize=0)
+        # # hide grid
+        # ax.grid(False)
+        # # hide tick labels
+        # plt.tick_params(axis='both', which='major', labelsize=0)
+        # move labels to avoid overlap with numbers
+        # ax.xaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.yaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.zaxis._axinfo['label']['space_factor'] = 2.2
+
+    # change ax_ball's limits separately to ensure no stretching of the sphere occurs
+    # model_space_radius = np.sqrt(model_space_radius_squared)
+    # ax_ball.set_xlim((xt1_center - 1.1*model_space_radius, xt1_center + 1.1*model_space_radius))
+    # ax_ball.set_ylim((xt2_center - 1.1*model_space_radius, xt2_center + 1.1*model_space_radius))
+    # ax_ball.set_zlim((xt3_center - 1.1*model_space_radius, xt3_center + 1.1*model_space_radius))
+    # ax_ball.set_xlabel('\n\n' + r'$y(t_1)$')
+    # ax_ball.set_ylabel('\n\n\n' + r'$y(t_2)$')
+    # ax_ball.set_zlabel('\n\n\n' + r'$y(t_3)$')
+    # # white out the bg
+    # ax_ball.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    # ax_ball.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    # ax_ball.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+
+
+    plt.show()
+    
+def sing_pert_data_space_fig_test():
+    """Plots three dimensional data space of the classic singularly perturbed ODE system: x' = -lambda*x, y' = -y/epsilon. Probably will end up plotting {y(t1), y(t2), y(t3)} though may also plot norms {|| (x(t1), y(t1)) ||, ... } though this doesn't represent data space in the traditional sense. In particular we're interested in observing the transition from 2 to 1 to 0 dimensional parameter -> data space mappings, i.e. 2 stiff to 1 stiff to 0 stiff parameters."""
+    times = np.array((0.1, 0.15, 0.2))
+    npts = 40
+    lam = 1.0
+    x0s = np.ones((npts,2))
+    x0s[:,1] = np.linspace(0,10,npts) # x0[0] = 1, x0[1] \in [0,10]
+    gsize = 10
+    gspec = gs.GridSpec(gsize,gsize)
+    cmap = colormaps.viridis
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # repeat for larger epsilon values (see curvature)
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    epss = np.logspace(-1, 0, npts)
+    xt1 = np.empty((npts,npts))
+    xt2 = np.empty((npts,npts))
+    xt3 = np.empty((npts,npts))
+    epss_copy = np.empty((npts,npts))
+    y0s = np.empty((npts,npts))
+    for i, x0 in enumerate(x0s):
+        for j, eps in enumerate(epss):
+            f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+            integrator = Integration.Integrator(f)
+            xt1[i,j], xt2[i,j], xt3[i,j] = integrator.integrate(x0, times)[:,1]
+            epss_copy[i,j] = eps
+            y0s[i,j] = x0[1]
+            
+    # save the data
+    xt1.dump('./data/sing-pert-x1.pkl')
+    xt2.dump('./data/sing-pert-x2.pkl')
+    xt3.dump('./data/sing-pert-x3.pkl')
+    epss_copy.dump('./data/sing-pert-eps-copy.pkl')
+    y0s.dump('./data/sing-pert-y0s.pkl')
+
+    # # load the data
+    # xt1 = np.load('./data/sing-pert-x1.pkl')
+    # xt2 = np.load('./data/sing-pert-x2.pkl')
+    # xt3 = np.load('./data/sing-pert-x3.pkl')
+    # epss_copy = np.load('./data/sing-pert-eps-copy.pkl')
+    # y0s = np.load('./data/sing-pert-y0s.pkl')
+    # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    # print 'loading previously generated data for plots'
+    # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+
+    # # plot a few trajectories to visualize behavior of ODEs
+    # eps_tests = np.logspace(-1, 0, 5)
+    # fig_pp = plt.figure()
+    # ax_pp = fig_pp.add_subplot(111)
+    # fig_y = plt.figure()
+    # ax_y = fig_y.add_subplot(111)
+    # for i in range(5):
+    #     eps = eps_tests[i]
+    #     x0 = np.array((1,5))
+    #     f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+    #     integrator = Integration.Integrator(f)
+    #     ts = np.linspace(0.0001, 1, 1000)
+    #     Xs = integrator.integrate(x0, ts)
+    #     eps_str = '%1.2f' % eps
+    #     ax_pp.plot(Xs[:,0], Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    #     ax_y.plot(ts, Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    # ax_y.set_xlabel(r'$t$')
+    # ax_y.set_ylabel(r'$y$')
+    # ax_pp.set_xlabel(r'$x$')
+    # ax_pp.set_ylabel(r'$y$')
+    # ax_pp.legend(loc=2)
+    # ax_y.legend(loc=1)
     # plt.show()
+
+    # # # plot points in 2d parameter space
+    # x0_grid, epss_grid = np.meshgrid(x0s, epss)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.scatter(epss_grid, x0_grid, s=5)
+    # ax.set_xscale('log')
+    # ax.set_xlabel(r'$\epsilon$')
+    # ax.set_ylabel(r'$y(t_0)$')
+    # ax.set_xlim((0.09, 1.1))
+    # ax.set_ylim((-1, 11))
+
+    # # plot eps and y0 coloring of manifold
+    fig1 = plt.figure()
+    fig2 = plt.figure()
+    # axes
+    ax_eps = fig1.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_y0 = fig2.add_subplot(gspec[:,:gsize-1], projection='3d')
+    # # make color data
+    eps_colors = (1/epss_copy)/np.max(1/epss_copy)
+    x0_colors = y0s/np.max(y0s)
+    # add scatter plots
+
+    ax_eps.plot_surface(xt1, xt2, xt3, facecolors=cmap(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    ax_y0.plot_surface(xt1, xt2, xt3, facecolors=cmap(x0_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    # add unique titles
+    # add colorbars
+    ax_eps_cb = fig1.add_subplot(gspec[:,gsize-1])
+    ax_y0_cb = fig2.add_subplot(gspec[:,gsize-1])
+    eps_cb = colorbar.ColorbarBase(ax_eps_cb, cmap=cmap, norm=colors.Normalize(np.min(1/epss_copy), np.max(1/epss_copy)), ticks=np.logspace(np.log10(np.min(1/epss_copy)), np.log10(np.max(1/epss_copy)), 2))
+    ax_eps_cb.text(0.2, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
+    y0_cb = colorbar.ColorbarBase(ax_y0_cb, cmap=cmap, norm=colors.Normalize(np.min(y0s), np.max(y0s)), ticks=np.linspace(np.min(x0s), np.max(y0s), 5))
+    ax_y0_cb.text(0.2, 1.05, r'$y(t_0)$', transform=ax_y0_cb.transAxes, fontsize=48)
+            
+    # # plot a ball in model space
+    # find points in ball
+    eps_center = 0.33 # center of ball is (eps_center, y0_center) in parameter space
+    y0_center = 5.0
+    model_space_radius_squared = 0.0001
+    f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps_center)*(1+10/(1.5-np.sin(x[1])))))), x)
+    integrator = Integration.Integrator(f)
+    xt1_center, xt2_center, xt3_center = integrator.integrate(np.array((1,y0_center)), times)[:,1]
+    # surface_colors = np.zeros((npts,npts,4))
+    # # also keep track of which parameters the model manifold points correspond to
+    # npts_in_ball = 0
+    # eps_in_ball = np.empty(npts*npts)
+    # y0_in_ball = np.empty(npts*npts)
+    # for i, x0 in enumerate(x0s):
+    #     for j, eps in enumerate(epss):
+    #             if np.power(xt1[i,j] - xt1_center, 2) + np.power(xt2[i,j] - xt2_center, 2) + np.power(xt3[i,j] - xt3_center, 2) < model_space_radius_squared:
+    #                 surface_colors[i,j,3] = 0.5 # non-zero alpha
+    #                 eps_in_ball[npts_in_ball] = eps
+    #                 y0_in_ball[npts_in_ball] = x0[1]
+    #                 npts_in_ball = npts_in_ball + 1
+    # eps_in_ball = eps_in_ball[:npts_in_ball]
+    # y0_in_ball = y0_in_ball[:npts_in_ball]
+    # print 'found', npts_in_ball, 'points intersecting ball'
+
+    # plot intersection of full model manifold and ball, colored by x0
+    fig = plt.figure()
+    ax_ball = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_ball.hold(True)
+    # plot surface
+    ax_ball.plot_surface(xt1, xt2, xt3, facecolors=cmap(x0_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8, zorder=1)
+    # # plot intersection
+    # ax_ball.plot_surface(xt1, xt2, xt3, facecolors=surface_colors, linewidth=0, cstride=1, rstride=1, antialiased=False)
+    # plot ball
+    u = np.linspace(0, 2*np.pi, 100)
+    v = np.linspace(0, np.pi, 100)
+    ball_x = np.sqrt(model_space_radius_squared)*np.outer(np.cos(u), np.sin(v)) + xt1_center
+    ball_y = np.sqrt(model_space_radius_squared)*np.outer(np.sin(u), np.sin(v)) + xt2_center
+    ball_z = np.sqrt(model_space_radius_squared)*np.outer(np.ones(np.size(u)), np.cos(v)) + xt3_center
+    ax_ball.plot_surface(ball_x, ball_y, ball_z, color='b', alpha=1.0, linewidth=0, zorder=2)
+    # colorbar
+    ax_cb = fig.add_subplot(gspec[:,gsize-1])
+    y0_cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colors.Normalize(np.min(y0s), np.max(y0s)), ticks=np.linspace(np.min(x0s), np.max(y0s), 5))
+    ax_cb.text(0.2, 1.05, r'$y(t_0)$', transform=ax_cb.transAxes, fontsize=48)
+
+
+    # # adjust all figure's properties at once as they're all the same
+    for ax in [ax_eps, ax_y0]:
+        formatter = FormatAxis(ax)
+        formatter.format('x', xt1, '%1.0f', nticks=3)
+        formatter.format('y', xt2, '%1.3f', nticks=3)
+        formatter.format('z', xt3, '%1.3f', nticks=3)
+        # # axis limits
+        # ax.set_xlim((0.99*np.min(xt1), 1.01*np.max(xt1)))
+        # ax.set_ylim((0.99*np.min(xt2), 1.01*np.max(xt2)))
+        # ax.set_zlim((0.99*np.min(xt3), 1.01*np.max(xt3)))
+        # axis labels
+        ax.set_xlabel('\n\n' + r'$y(t_1)$')
+        ax.set_ylabel('\n\n\n' + r'$y(t_2)$')
+        ax.set_zlabel('\n\n\n' + r'$y(t_3)$')
+        # white out the bg
+        ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # # hide grid
+        # ax.grid(False)
+        # # hide tick labels
+        # plt.tick_params(axis='both', which='major', labelsize=0)
+        # move labels to avoid overlap with numbers
+        # ax.xaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.yaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.zaxis._axinfo['label']['space_factor'] = 2.2
+
+    # change ax_ball's limits separately to ensure no stretching of the sphere occurs
+    model_space_radius = np.sqrt(model_space_radius_squared)
+    scale = 50
+    ax_ball.set_xlim((xt1_center - scale*model_space_radius, xt1_center + scale*model_space_radius))
+    ax_ball.set_ylim((xt2_center - scale*model_space_radius, xt2_center + scale*model_space_radius))
+    ax_ball.set_zlim((xt3_center - scale*model_space_radius, xt3_center + scale*model_space_radius))
+    formatter = FormatAxis(ax_ball)
+    formatter.format('x', np.linspace(xt1_center - scale*model_space_radius, xt1_center + scale*model_space_radius, 10), '%1.0f', nticks=3)
+    formatter.format('y', np.linspace(xt2_center - scale*model_space_radius, xt2_center + scale*model_space_radius, 10), '%1.3f', nticks=3)
+    formatter.format('z', np.linspace(xt3_center - scale*model_space_radius, xt3_center + scale*model_space_radius, 10), '%1.3f', nticks=3)
+    ax_ball.set_xlabel('\n\n' + r'$y(t_1)$')
+    ax_ball.set_ylabel('\n\n\n' + r'$y(t_2)$')
+    ax_ball.set_zlabel('\n\n\n' + r'$y(t_3)$')
+    # white out the bg
+    ax_ball.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    ax_ball.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    ax_ball.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+
+
+    plt.show()
+
+def rawlings_keff_fig():
+    """Plots level sets/sloppy manifold of rawlings model when k1 << k2, k1 << kinv, showing that keff changes in a direction normal to the surface"""
+    data = np.load('../rawlings_model/data/params-ofevals.pkl')
+
+    gsize = 10
+    gspec = gs.GridSpec(gsize,gsize)
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # plot fat surface with of=1e-3, with three surfaces mapping out different level sets
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    of_max = 1e-3
+    data = data[data[:,0] < of_max]
+    log_data = np.log10(data)
+    keff = data[:,1]*data[:,3]/(data[:,2] + data[:,3])
+    print 'shape of data after trimmming:', data.shape
+
+    # set up colorbar based on log(keff)
+    keffmin, keffmax = np.min(keff), np.max(keff)
+    print 'keff range:', keffmin, keffmax
+    colornorm = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
+    cmap = 'viridis'
+    colormap = cm.ScalarMappable(norm=colornorm, cmap=cmap)
+
+    gsize = 10
+    gspec = gs.GridSpec(gsize,gsize)
+    fig = plt.figure()
+    ax = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
+    slice = data.shape[0]/4000
+    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.2)
+    
+
+    # now plot transparencies of keff = constant
+    k1min, k1max = np.min(data[:,1]), np.max(data[:,1])
+    kinvmin, kinvmax = np.min(data[:,2]), np.max(data[:,2])
+    k2min, k2max = np.min(data[:,3]), np.max(data[:,3])
+    true_data = data[np.argsort(data[:,0])[0]] # pull out parameter combo that has minimum obj. fn. value
+    keff_true = true_data[1]*true_data[3]/(true_data[2] + true_data[3])
+    npts = 200
+    stride = 2
+    kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
+    nkeffs = 2
+    alpha = 0.6
+    for keff in np.logspace(np.log10(keffmin) + 0.1*(np.log10(keffmax) - np.log10(keffmin)), np.log10(keffmax) - 0.2*(np.log10(keffmax) - np.log10(keffmin)), nkeffs):
+        k1s = keff*(kinvs + k2s)/k2s
+        # kinvs = k1s*k2s/keff - k2s
+        cs = np.ones((npts, npts, 4))*colormap.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
+        for i in range(npts):
+            for j in range(npts):
+                # if kinvs[i,j] < 10: # np.log10(kinvs[i,j] < 1): # but have kinvs < 0
+                #     cs[i,j,3] = 0
+                if k1s[i,j] > .99:
+                    cs[i,j,3] = 0
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(np.log10(k1s), np.log10(kinvs), np.log10(k2s), linewidth=0, facecolors=cs, edgecolors=np.array((0,0,0,0)), shade=False, cstride=stride, rstride=stride, antialiased=True)
+
+    ax.set_ylim((np.log10(kinvmin), np.log10(kinvmax)))
+    formatter = FormatAxis(ax)
+    formatter.format('x', log_data[::slice,1], '%1.1f', nticks=3)
+    formatter.format('y', log_data[::slice,2], '%1.1f', nticks=3)
+    formatter.format('z', log_data[::slice,3], '%1.1f', nticks=3)
+    ax.set_xlabel('\n\n' + r'$\log(k_1)$')
+    ax.set_ylabel('\n\n' + r'$\log(k_{-1})$')
+    ax.set_zlabel('\n\n' + r'$\log(k_2)$')
+    ax_cb = fig.add_subplot(gspec[:,gsize-1])
+    ax_cb.text(0.2, 1.05, r'$k_{eff}$', transform=ax_cb.transAxes, fontsize=48)
+    colornorm = colors.Normalize(vmin=keffmin, vmax=keffmax)
+    colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colornorm, ticks=np.linspace(keffmin, keffmax, 5), format='%1.2f')#, label=r'$k_{eff}$')
+    plt.show()
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # now do the same with of = 1e-6, only include one surface
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    of_max = 1e-6
+    data = data[data[:,0] < of_max]
+    log_data = np.log10(data)
+    keff = data[:,1]*data[:,3]/(data[:,2] + data[:,3])
+    print 'shape of data after trimmming:', data.shape
+
+    # set up colorbar based on log(keff)
+    keffmin, keffmax = np.min(keff), np.max(keff)
+    print 'keff range:', keffmin, keffmax
+    colornorm = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
+    cmap = 'viridis'
+    colormap = cm.ScalarMappable(norm=colornorm, cmap=cmap)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
+    slice = 1
+    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.2)
+    
+
+    # now plot transparencies of keff = keff_true
+    k1min, k1max = np.min(data[:,1]), np.max(data[:,1])
+    kinvmin, kinvmax = np.min(data[:,2]), np.max(data[:,2])
+    k2min, k2max = np.min(data[:,3]), np.max(data[:,3])
+    true_data = data[np.argsort(data[:,0])[0]] # pull out parameter combo that has minimum obj. fn. value
+    keff_true = true_data[1]*true_data[3]/(true_data[2] + true_data[3])
+    npts = 100
+    stride = 2
+    kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
+    alpha = 0.2
+    # hard coded keff for nice color
+    keff = 0.502
+    # kinvs = k1s*k2s/keff - k2s
+    k1s = keff_true*(kinvs + k2s)/k2s
+    cs = np.ones((npts, npts, 4))*colormap.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
+    for i in range(npts):
+        for j in range(npts):
+            if k1s[i,j] > .99:
+                cs[i,j,3] = 0
+
+
+    ax.plot_surface(np.log10(k1s), np.log10(kinvs), np.log10(k2s), linewidth=0, facecolors=cs, edgecolors=np.array((0,0,0,0)), shade=False, cstride=stride, rstride=stride, antialiased=True)
+
+    ax.set_ylim((np.log10(kinvmin), np.log10(kinvmax)))
+    formatter = FormatAxis(ax)
+    formatter.format('x', log_data[::slice,1], '%1.1f', nticks=3)
+    formatter.format('y', log_data[::slice,2], '%1.1f', nticks=3)
+    formatter.format('z', log_data[::slice,3], '%1.1f', nticks=3)
+    ax.set_xlabel('\n\n' + r'$\log(k_1)$')
+    ax.set_ylabel('\n\n' + r'$\log(k_{-1})$')
+    ax.set_zlabel('\n\n' + r'$\log(k_2)$')
+    ax_cb = fig.add_subplot(gspec[:,gsize-1])
+    colornorm = colors.Normalize(vmin=keffmin, vmax=keffmax)
+    ax_cb.text(0.2, 1.05, r'$k_{eff}$', transform=ax_cb.transAxes, fontsize=48)
+    colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colornorm, ticks=np.linspace(keffmin, keffmax, 5), format='%1.3f')
+    plt.show()
+
 
 def main():
     # dmaps_2d_epsilon()
@@ -1130,12 +2206,17 @@ def main():
     # analytical_anisotropic_diffusion()
     # analytical_anisotropic_diffusion_eigenfns()
     # dmaps_plane()
-    # sing_pert_data_space_fig()
+    sing_pert_data_space_fig()
+    # sing_pert_data_space_fig_test()
+    # rawlings_surface_normal()
     # rawlings_2d_dmaps_fig()
+    # rawlings_keff_fig()
     # rawlings_3d_dmaps_fig()
     # two_effective_one_neutral_dmaps_fig()
     # discretized_laplacian_dmaps()
-    transformed_param_space_fig()
+    # transformed_param_space_fig()
+    # sing_pert_contours_fig1() # needs work perhaps, particularly to close the contour at 10^{-3}
+    # sing_pert_contours_fig2()
     # test()
     
 if __name__=='__main__':

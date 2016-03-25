@@ -12,3 +12,5 @@ cdef class Z_Model:
     cpdef np.ndarray[np.float64_t] _rhs(self, float t, np.ndarray[np.float64_t] x)
 
     cpdef void change_parameters(self, np.ndarray[np.float64_t] new_params)
+
+    cpdef get_trajectory_quadratic(self, np.ndarray[np.float64_t] x0, np.ndarray[np.float64_t] times)

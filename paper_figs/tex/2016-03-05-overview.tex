@@ -41,7 +41,7 @@
 \setlength\parindent{0pt}
 
 % set folder for imported graphics
-\graphicspath{ {./figs/} }
+\graphicspath{ {../figs/} }
 
 \title{Overview of sloppy models}
 
@@ -94,15 +94,24 @@ It follows that the $2-$D observed model manifold is embedded in $3-$D
 Euclidean space ($N=3$).  A segment of this highly nonlinear manifold
 is plotted in Fig.~\ref{f.elem.ex.1}. \\
 
+Depending on our parameter values, we may encounter parameter
+sloppiness in both $\eps$ and $y_0$. This reveals itself by examining
+level sets of the objective function. Close enough to the minimum, we
+necessarily have elliptical contours in parameter space. However, in a
+sloppy regime, these ellipses quickly become unbounded regions that
+appear as noses. Essentially, as $\eps$ decreases, a larger and larger
+span of $y_0$ values fit the data within some given
+tolerance. Fig.~\ref{f.noses} shows this phenomenon.
+
 \begin{figure}[ht!]
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{model-manifold-y0-coloring}
+    \includegraphics[width=\textwidth]{./model-manifold/model-manifold-y0-coloring}
     \subcaption{Colored by $y_0$}
   \end{subfigure}
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{model-manifold-eps-coloring}
+    \includegraphics[width=\textwidth]{./model-manifold/model-manifold-eps-coloring}
     \subcaption{Colored by $\epsilon$}
   \end{subfigure} %
   \caption{The observed model manifold for
@@ -115,6 +124,14 @@ is plotted in Fig.~\ref{f.elem.ex.1}. \\
     see left panel. In that regime, widely different initial
     conditions yield nearly identical model responses, see right
     panel. \label{f.elem.ex.1}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./rawlings/keff-levelsets-nose}
+  \caption{Different level sets of the objective function in a sloppy
+    regime. As $1/\eps$ increases, a larger range of $y_0$ values give
+    acceptable fits.}
 \end{figure}
 
 \subsection{ABC Reaction}
@@ -150,25 +167,51 @@ as shown below, along with DMAPS parameterization of the sloppy parameter set.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{abc-dataset}
-  \caption{Dataset of sloppy parameter combinations}
+  \includegraphics[width=\linewidth]{./rawlings/keff-neutralset}
+  \caption{Dataset of sloppy parameter combinations overlayed with
+    with a surface of $k_{eff} =0.502$. All points satisfy $c(\theta)
+    \le 10^{-6}$. \label{f.keff-neutralset}}
+\end{figure}
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{./rawlings/keff-with-levelsets-r3}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{./rawlings/keff-with-levelsets-r4}
+  \end{subfigure} %
+  \caption{Dataset of sloppy parameter combinations overlayed with
+    with a surfaces of constant $k_{eff}$. All points satisfy $c(\theta)
+    \le 10^{-3}$. Note that, while Fig. (\ref{f.keff-neutralset}) is
+    a two-dimensional surface, at larger objective function values we
+    begin to see three-dimensional features. \label{f.keff-levelsets}}
+\end{figure}
+
+
+\begin{figure}[htbp]
+  \centering
+  \caption{Dataset of sloppy parameter combinations overlayed with
+    with a surface of $k_{eff} =0.502$. All points satisfy $c(\theta)
+    \le 10^{-6}$.}
 \end{figure}
 
 As expected, it maps out a two-dimensional surface in parameter space over which $k_{eff}$ is nearly constant ($k_{eff} \in (0.4, 1.0)$ in the dataset above).
 
 When DMAPS was applied, the first two eigenvectors parameterized the surface as hoped. This is shown in the two figures below.
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{abc-dmap1}
-  \caption{Coloring the dataset by the first DMAP parameter/coordinate value}
-\end{figure}
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{abc-dmap1}
+%   \caption{Coloring the dataset by the first DMAP parameter/coordinate value}
+% \end{figure}
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{abc-dmap2}
-  \caption{Coloring the dataset by the second DMAP parameter/coordinate value}
-\end{figure}
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{abc-dmap2}
+%   \caption{Coloring the dataset by the second DMAP parameter/coordinate value}
+% \end{figure}
 
 Additionally, we can use the mixed DMAPS kernel to find the important
 parameter $k_{eff}$ if we apply it to a dataset arising from a larger
@@ -178,12 +221,25 @@ that the third eigenvector maps to $k_{eff}$.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{data-keff-coloring}
-  \caption{Coloring the enlarged parameter set by the third DMAPS
-    eigenvector. The color changes along the axis transverse to the
-    neutral sets corresponding to changing values of
-    $k_{eff}$. \label{fig:dmaps-mixed}}
+  \includegraphics[width=\linewidth]{./rawlings/3d-dmaps}
+  \caption{Coloring the enlarged parameter set by $k_{eff}$ (top
+    right) and by the third DMAPS eigenvector (bottom right). The
+    colors are similar in both, suggesting the third eigenvector is
+    one-to-one with $k_{eff}$. \label{fig:dmaps-mixed}}
 \end{figure}
+
+\subsection{The singular regime}
+
+Ideally, we would operate where $k_2 \gg k_1, \; k_{-1}$. However,
+limiting our analysis to this region leads to
+
+\begin{align*}
+  k_{eff} &= \frac{k_1}{\frac{k_{-1}}{k_2} + 1}
+  & \approx k_1
+\end{align*}
+
+which removes the nonlinearity from the contours. If we could ease our
+restrictions to just $k_2 \gg k_1$ we do recover the desired curvature.
 
 
 \section{Regularly perturbed}
@@ -192,7 +248,88 @@ Here we have the Michaelis Menten system. Although it, too, is singularly pertur
 
 \subsection{Michaelis Menten}
 
-This is another reaction system to which we apply the QSSA, but in this case we transform the bare parameters into 
+This reaction system is given by
+%
+\[
+ {\rm S + E}
+\
+ \xrightleftharpoons[k_{-1}]{k_1}
+\
+ {\rm C}
+\
+ \xrightarrow{k_2}
+\
+ {\rm P + E} ,
+\label{s2c2p}
+\]
+%
+
+The initial constituent concentrations are
+%
+\be
+ S(0) = S_0 ,
+\quad
+ E(0) = E_0 ,
+\quad
+ C(0) = C_0
+\quad\mbox{and}\quad
+ P(0) = P_0 ,
+\label{SCEP-IC}
+\ee
+%
+and they supplement the ODEs governing the evolution
+of the constituent concentrations,
+%
+\be
+\begin{array}{rclcl}
+ S' &=& -k_1 E S + k_{-1} C ,
+\\
+ C' &=& \ \ \, k_1 E S - (k_{-1} + k_2) C ,
+\\
+ E' &=& -k_1 E S + (k_{-1} + k_2) C ,
+\\
+ P' &=& \ \ \, k_2 C .
+\end{array}
+\ee
+
+System~\eqref{SCEP-IC}--\eqref{SCEP-ODE} has
+two exact conservation laws expressing mass balance,
+%
+\[
+ S+C+P = S_0+C_0+P_0 =: S_T
+\quad\mbox{and}\quad
+ C+E = C_0+E_0 =: E_T .
+\]
+%
+These may be employed to eliminate two of the ODEs;
+these are traditionally chosen to be
+the equations for $E$ and $P$,
+so that
+%
+\be
+\begin{array}{rclcl}
+ S' &=& -k_1 (E_T-C) S + k_{-1} C ,
+\\
+ C' &=& \ \ \, k_1 (E_T-C) S - (k_{-1} + k_2) C .
+\end{array}
+\label{SC-ODE}
+\ee
+In a typical experimental setting,
+both $C_0$ and $P_0$ equal zero,
+so that $S_0$ and $E_0$ fully determine $S_T$ and $E_T$,
+%
+\be
+ S_0 = S_T
+\quad\mbox{and}\quad
+ C_0 = 0 .
+\label{SC-IP}
+\ee
+%
+We will follow this convention here and consider a problem with five
+parameters: the three kinetic constants $k_{-1}$, $k_1$ and $k_2$, on
+one hand, and the total concentrations $S_T$ and $E_T$ on the other. \\
+
+Next we transform the bare parameters into 
 
 \begin{align*}
   V_M &= k_2 E_T \\
@@ -205,7 +342,7 @@ in which $\kappa$ and $\epsilon$ drop out of the leading dynamics and are thus s
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{k-v-st-contour}
+  \includegraphics[width=\linewidth]{./zagaris/k-v-st-contour}
   \caption{Ellipsoidal contour of Michaelis Menten system in $K_M$, $V_M$ and $S_T$ parameter space.}
 \end{figure}
 
@@ -233,21 +370,17 @@ We are free to choose $\phi(y)$ and $\mu(x)$, which control the shape of the fas
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{zagaris-ic-contours}
+  \includegraphics[width=\linewidth]{./zagaris/sing-pert-init-cond-contours}
   \caption{$x_0$/$y_0$ plane colored by objective function value. The contours follow the fast manifold $x=y^2$.}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{zagaris-le-contours}
-  \caption{$\epsilon$/$\lambda$ plane colored by objective function value. Contours follow lines of constant $\epsilon$.}
+  \includegraphics[width=\linewidth]{./zagaris/sing-pert-phase-plane}
+  \caption{The phase plane showing parabolic fast and slow
+    trajectories on their approach to the stable steady state at the origin.}
 \end{figure}
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{zagaris-ab-contours}
-  \caption{$a$/$b$ plane colored by objective function value. Contours follow lines of constant $a$, the parameter affecting the geometry of the fast manifold.}
-\end{figure}
 
 \subsubsection{Nonlinear parameter transformation}
 
@@ -261,13 +394,13 @@ tolerance, we can make the transformed parameters $(\theta_1,
 \begin{figure}[ht!]
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{transformed-params-fromoptimization-insert}
+    \includegraphics[width=\textwidth]{./transformed-params/transformed-params-fromoptimization-insert}
     \subcaption{Parameter values found through repeated fitting of
       the model with parameters transformed via the H\`{e}non map. \label{f.henon}}
   \end{subfigure}
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{inverted-params}
+    \includegraphics[width=\textwidth]{./transformed-params/inverted-params}
     \subcaption{Original parameter values found by inverting the
       collection in the left panel.  \label{f.henon-inverse}}
   \end{subfigure} %
@@ -286,18 +419,28 @@ We can also hold $b$ constant to obtain a model with two effective
 parameters $\lambda$ and $a$, and one neutral, $\epsilon$. This gives
 us another context in which we can demonstrate the advantage the mixed DMAPS
 kernel offers over the standard gaussian. Here, we uncover both
-effective parameters $\lambda$ and $a$ in the first two DMAPS eigenvectors.
+effective parameters $\lambda$ and $a$ in the first two DMAPS
+eigenvectors despite the much larger variation in $\eps$. This kernel
+is given by
+
+\begin{align*}
+  k(\theta_i, \theta_j) = \exp(- \frac{\|\theta_i -
+  \theta_j\|^2}{\eps}  - \frac{\|f(\theta_i) - f(\theta_j)\|^2}{\eps^2})
+\end{align*}
+
+The results of applying this variant of DMAPS to a set of $(\lambda,
+a, \eps)$ parameters is shown below.
 
 
 \begin{figure}[ht!]
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{dmaps-phi1}
+    \includegraphics[width=\textwidth]{./two-effective-one-neutral/dmaps-phi1}
     \subcaption{Coloring sloppy parameter combinations by $\Phi_1$}
   \end{subfigure}
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{dmaps-phi2}
+    \includegraphics[width=\textwidth]{./two-effective-one-neutral/dmaps-phi2}
     \subcaption{Coloring sloppy parameter combinations by $\Phi_2$}
   \end{subfigure} %
   \caption{The set $\ps_\delta$ corresponding to the point

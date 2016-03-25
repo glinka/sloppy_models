@@ -9,6 +9,8 @@ import numpy as np
 import scipy.sparse.linalg as spla
 import Newton
 
+import matplotlib.pyplot as plt
+
 class PSA:
     """Basic pseudo-arclength continuation which requires an analytic expression for Jacobian
     
@@ -103,6 +105,11 @@ class PSA:
         .. note::
             If :math:`f(x_0,k_0) \\neq 0`, this method automatically searches for an appropriate starting point via a Newton iteration at :math:`k=k_0`
         """
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.hold(True)
+
         # TODO: faster method than defining lambda fn?
         n = x0.shape[0]
         f_init = lambda x: self._f(x, k0)[:n]
@@ -111,8 +118,11 @@ class PSA:
         newton_solver = Newton.Newton(f_init, Df_init)
         try:
             xstart = newton_solver.find_zero(x0, **kwargs)
-        except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
-            raise CustomErrors.PSAError
+        except CustomErrors.EvalError as e:
+            print e.msg
+            raise CustomErrors.PSAError('Initial newton encountered an EvalError')
+        except CustomErrors.ConvergenceError as e:
+            raise CustomErrors.PSAError('Initial newton failed to converge')
         # append parameter value
         xstart = np.hstack((xstart, k0))
         # find initial slopes
@@ -123,7 +133,7 @@ class PSA:
         try:
             xprime = spla.gmres(self._Df_arclength(xstart, tempslopes), tempslopes)[0]
         except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
-            raise CustomErrors.PSAError
+            raise CustomErrors.PSAError('Initial slope not found')
         # normalize
         xprime_start = xprime/np.linalg.norm(xprime)
         # update newton to new functions
@@ -149,16 +159,18 @@ class PSA:
         # found to that point. Otherwise, return the partial branch from (k==0)
         # and the full branch from (k==1).
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ds_divisions = 0
+        ds0 = ds
         max_ds_divisions = 4
         count = 0
         for k in range(2):
             # flip ds to continue in both directions
-            ds = -ds
+            ds0 = -ds0
+            ds = ds0
             # move x back to "center" of branch
             x = np.copy(xstart)
             xprime = np.copy(xprime_start)
             count = 0
+            ds_divisions = 0
             try:
                 for i in range(halfnsteps):
                     if progress_bar:
@@ -171,20 +183,29 @@ class PSA:
                     newton_solver.change_parameters([xprev, xprime, ds], [xprime])
                     try:
                         x = newton_solver.find_zero(x0, **kwargs)
-                    except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
+                    except CustomErrors.EvalError as e:
+                        print e.msg
                         raise
-                        # if ds_divisions > max_ds_divisions:
-                        #     raise
-                    #     else:
-                    #         x = xprev
-                    #         ds = ds/10.0
-                    #         ds_divisions = ds_divisions + 1
+                    except CustomErrors.ConvergenceError:
+                        # raise
+                        # do some ad-hoc stepsize reduction
+                        if ds_divisions > max_ds_divisions:
+                            raise
+                        else:
+                            x = xprev
+                            ds = ds/10.0
+                            ds_divisions = ds_divisions + 1
+                            continue
                     else:
+
+                        # ax.plot([branch_pts[k*ncompleted_pts + count - 1][0], x0[0]], [branch_pts[k*ncompleted_pts + count - 1][1], x0[1]], color='r')
+
                         # use finite diff approx for xprime
                         xprime = (x - xprev)/ds
                         # normalize
                         xprime = xprime/np.linalg.norm(xprime)
-                        branch_pts[k*ncompleted_pts + count] = np.copy(x)
+                        branch_pts[total_pts] = np.copy(x)
+                        # branch_pts[total_pts] = np.copy(x)
                         count = count + 1
                         total_pts = total_pts + 1
             except (CustomErrors.EvalError, CustomErrors.ConvergenceError):
@@ -194,11 +215,17 @@ class PSA:
                     continue
                 # k == 1, copy initial point from end of 'branch' and return whatever was successfully found
                 else:
-                    branch_pts[ncompleted_pts + count] = branch_pts[-1]
+                    branch_pts[:ncompleted_pts] = branch_pts[ncompleted_pts-1::-1]
+                    branch_pts[ncompleted_pts+1:ncompleted_pts+count+1] = branch_pts[ncompleted_pts:ncompleted_pts+count]
+                    branch_pts[ncompleted_pts] = np.copy(xstart)
                     return branch_pts[:ncompleted_pts + count + 1]
             else:
-                ncompleted_pts = count
+                if k == 0:
+                    ncompleted_pts = count
+
         # could have encountered error when k==0, no error when k==1: adjust accordingly
-        branch_pts[total_pts] = branch_pts[-1]
-        return branch_pts[:total_pts + 1]
+        branch_pts[:ncompleted_pts] = branch_pts[ncompleted_pts-1::-1]
+        branch_pts[ncompleted_pts+1:ncompleted_pts+count+1] = branch_pts[ncompleted_pts:ncompleted_pts+count]
+        branch_pts[ncompleted_pts] = np.copy(xstart)
+        return branch_pts[:ncompleted_pts + count + 1]#[:total_pts + 1]
 

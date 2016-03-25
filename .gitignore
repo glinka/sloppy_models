@@ -45,3 +45,8 @@ build*
 zagaris_model/*.c
 zagaris_model/*.so
 zagaris_model/build
+/grad-dmaps/gradient-dmaps
+/michaelis_menten/eps.pkl
+/michaelis_menten/lambdas.pkl
+/paper_figs/colormaps.py
+/rawlings_model/temp.pkl

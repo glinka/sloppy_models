@@ -1,6 +1,6 @@
 """Investigates sloppiness in Antonios' model"""
 
-import matplotlib.pyplot as plt
+from matplotlib import colors, colorbar, cm, pyplot as plt, gridspec as gs, tri
 import numpy as np
 import scipy.integrate as spint
 from mpi4py import MPI
@@ -13,6 +13,9 @@ import Z_Model as ZM
 import Z_Model_Transformed as ZMT
 import algorithms.CustomErrors as CustomErrors
 import util_fns as uf
+from algorithms.Integration import Integrator
+
+
 
 class DMAPS_Data_Kernel:
     """Computes kernel between two points in parameter space, taking into account both the euclidean distance between parameters and the euclidean distance between model predictions at those parameters"""
@@ -585,7 +588,86 @@ def check_x0():
     #
     # NOTE: if 'a' and 'b' are not chosen small enough, the square root evaluated in gen_trajectory will return 'nan'
     #
-    params = np.array((0.5, 0.1, 1, 0.1)) # (a, b, lambda, epsilon)
+    params = np.array((0.1, 2.0, 1.0, 0.1)) # np.array((0.1, 2.0, 1.0, 0.01)) # (a, b, lambda, epsilon)
+    (a, b, lam, eps) = params
+    # create system with given params
+    z_system = ZM.Z_Model(params)
+
+    # set up integration times
+    t0 = 0.0001
+    tfinal = 6
+    dt = 0.001
+    times = np.arange(t0, tfinal, dt)
+    ntimes = times.shape[0]
+
+    # rhs = lambda t, x: -1/((1-4*a*b*x[0]*x[1])*eps)*np.array((2*b*x[1]*(x[1]-a*x[0]**2) + eps*lam*(x[0]-b*x[1]**2), (x[1]-a*x[0]**2) + 2*eps*a*lam*x[0]*(x[0]-b*x[1]**2))) # the quadratic model
+    rhs = lambda t, x: 1/(1 - 4*a*b*x[0]*x[1])*np.dot(np.array(((1,2*b*x[1]),(2*a*x[0],1))), np.array((-lam*(x[0]-b*x[1]*x[1]), -(x[1]-a*x[0]*x[0])/eps)))
+    integrator = Integrator(rhs)
+
+    # get true trajectory based on true initial conditions
+    x0_true = np.array((2., 2.))
+    # x_true_traj = z_system.get_trajectory_quadratic(x0_true, times)
+    x_true_traj = integrator.integrate(x0_true, times)
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.plot(times, x_true_traj[:,0])
+    # ax.plot(times, x_true_traj[:,1])
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.plot(x_true_traj[:,0], x_true_traj[:,1])
+    # plt.show()
+
+    npts = 1000
+    # x0 \in [0, 3]
+    x0s = np.random.uniform(size=(npts, 2))*np.array((4,5)) - np.array((-1,2))
+    data = np.empty((npts,3))
+    trajs = np.empty((npts, ntimes, 2))
+    count = 0
+
+
+    # for x0 in x0s:
+    #     try:
+    #         # traj = z_system.get_trajectory_quadratic(x0, times)
+    #         traj = integrator.integrate(x0, times)
+    #     except CustomErrors.IntegrationError as e:
+    #         print e.msg
+    #         continue
+    #     else:
+    #         data[count] = x0[0], x0[1], get_of(traj, x_true_traj)
+    #         trajs[count] = traj
+
+    #         count = count + 1
+    # trajs = trajs[:count]
+    # trajs.dump('./tempt.pkl')
+    # data = data[:count]
+    # data.dump('./tempd.pkl')
+    # print 'have', count, 'pts'
+
+    trajs = np.load('./tempt.pkl')
+    data = np.load('./tempd.pkl')
+    print 'have', data.shape[0], 'pts'
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    colornorm = colors.Normalize(vmin=np.min(trajs[:,0,1]), vmax=np.max(trajs[:,0,1]))
+    colormap = cm.ScalarMappable(norm=colornorm, cmap='PuOr')
+
+    for i in range(data.shape[0]):
+        ax.plot(trajs[i,:,0], trajs[i,:,1], c=colormap.to_rgba(trajs[i,0,1]), alpha=0.3)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(data[:,0], data[:,1], c=data[:,2], s=60)
+    plt.show()
+
+
+def sing_pert_fig():
+    """Generates plots showing how both eps and init conds can be sloppy in sing. pert. system (aiche 2015)"""
+    params = np.array((2.0, 4.0, 1, 0.01)) # (a, b, lambda, epsilon)
     (a, b, lam, eps) = params
     # create system with given params
     z_system = ZM.Z_Model(params)
@@ -593,7 +675,7 @@ def check_x0():
     # set up integration times
     t0 = 0.0
     tfinal = 1
-    dt = 0.001
+    dt = 0.1
     times = np.arange(t0, tfinal, dt)
     ntimes = times.shape[0]
 
@@ -653,45 +735,45 @@ def check_x0():
     
     
 
-    # # set up sampling grid and storage space for obj. fn. evals
-    # nsamples_per_axis = 100
-    # nsamples = nsamples_per_axis**2
-    # x10s, x20s = np.meshgrid(np.linspace(1, 2, nsamples_per_axis), np.linspace(1, 2, nsamples_per_axis))
-    # x10s.shape = (nsamples,)
-    # x20s.shape = (nsamples,)
-    # x0_samples = np.array((x10s, x20s)).T # all samples of initial conditions in two columns
-    # of_evals = np.empty(nsamples) # space for obj. fn. evals
-    # x0s = np.empty((nsamples, 2))
+    # set up sampling grid and storage space for obj. fn. evals
+    nsamples_per_axis = 100
+    nsamples = nsamples_per_axis**2
+    x10s, x20s = np.meshgrid(np.linspace(1, 2, nsamples_per_axis), np.linspace(1, 2, nsamples_per_axis))
+    x10s.shape = (nsamples,)
+    x20s.shape = (nsamples,)
+    x0_samples = np.array((x10s, x20s)).T # all samples of initial conditions in two columns
+    of_evals = np.empty(nsamples) # space for obj. fn. evals
+    x0s = np.empty((nsamples, 2))
 
-    # # loop through different initial conditions and record obj. fn. value
-    # count = 0
-    # for i, x0 in enumerate(x0_samples):
-    #     uf.progress_bar(i, nsamples) # optional progress bar
-    #     x_sample_traj = z_system.get_trajectory(x0, times)
-    #     temp_eval = get_of(x_sample_traj, x_true_traj)
-    #     if not np.isnan(temp_eval):
-    #         of_evals[count] = temp_eval
-    #         x0s[count] = x0
-    #         count = count + 1
+    # loop through different initial conditions and record obj. fn. value
+    count = 0
+    for i, x0 in enumerate(x0_samples):
+        uf.progress_bar(i, nsamples) # optional progress bar
+        x_sample_traj = z_system.get_trajectory(x0, times)
+        temp_eval = get_of(x_sample_traj, x_true_traj)
+        if not np.isnan(temp_eval):
+            of_evals[count] = temp_eval
+            x0s[count] = x0
+            count = count + 1
         
 
-    # print count
-    # x0s = x0s[:count]
-    # of_evals = of_evals[:count]
-    # # plot grid of sampled points colored by obj. fn. value
-    # print np.any(np.isnan(of_evals)), np.any(np.isinf(of_evals))
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # ax.scatter(x0s[:,0], x0s[:,1])
-    # plt.show()
+    print count
+    x0s = x0s[:count]
+    of_evals = of_evals[:count]
+    # plot grid of sampled points colored by obj. fn. value
+    print np.any(np.isnan(of_evals)), np.any(np.isinf(of_evals))
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(x0s[:,0], x0s[:,1])
+    plt.show()
 
 if __name__=='__main__':
-    pass
-    # check_x0()
+    # pass
+    check_x0()
     # check_transformed_params_contours() # unfunctional
     # check_transformed_params()
     # data_space_plot()
-    check_params()
+    # check_params()
     # dmaps_transformed_params()
     # dmaps_two_important_one_sloppy()
     # dmaps_two_important_one_sloppy_only_data()

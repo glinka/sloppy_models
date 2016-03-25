@@ -34,7 +34,7 @@ class Integrator:
         for i, t in enumerate(times):
             trajectory[i] = self._integrator.integrate(t)
             if not self._integrator.successful():
-                raise CustomErrors.IntegrationError
+                raise CustomErrors.IntegrationError('Failed to integrate function')
         return trajectory
 
 def integrate(f, x0, times, algorithm='lsoda'):

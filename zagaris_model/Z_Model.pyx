@@ -8,9 +8,6 @@ import algorithms.CustomErrors as CustomErrors
 cdef class Z_Model:
     """Implementation of Antonios' custom-built model with four parameters: a, b, lambda and epsilon. 'a' controls the curvature of the slow manifold, 'b' the curvature of the fast manifold, 'lambda' the rate of motion along the slow manifold and 'epsilon' the rate of motion along the fast manifold"""
 
-    # cdef double _a, _b, _lam, _eps
-    # cdef object _integrator
-
     def __init__(self, np.ndarray[np.float64_t] params):
         """Sets up integrator and system's parameters
 
@@ -68,7 +65,7 @@ cdef class Z_Model:
         return alg_trajectory
 
 
-    def get_trajectory_quadratic(self, np.ndarray[np.float64_t] x0, np.ndarray[np.float64_t] times):
+    cpdef get_trajectory_quadratic(self, np.ndarray[np.float64_t] x0, np.ndarray[np.float64_t] times):
         """Returns complete trajectory of 'x' at 'times' starting from x(0) = x0. **This function is hardcoded with :math:`\mu = a x^2` and :math:`\phi = b y^2`**
 
         .. note::
@@ -95,7 +92,7 @@ cdef class Z_Model:
         for i, t in enumerate(times_to_integrate):
             trajectory[i+offset] = self._integrator.integrate(t)
             if not self._integrator.successful():
-                raise CustomErrors.IntegrationError
+                raise CustomErrors.IntegrationError('Could not integrate the traj')
         # print np.linalg.norm(alg_trajectory - trajectory)
         return trajectory
 
