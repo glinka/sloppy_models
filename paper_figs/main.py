@@ -2,6 +2,8 @@
 import numpy as np
 # scipy
 from scipy.optimize import minimize
+# PyDSTool
+import PyDSTool as pc
 # matplotlib
 from matplotlib import colors, colorbar, cm, pyplot as plt, gridspec as gs, tri
 from mpl_toolkits.mplot3d import Axes3D
@@ -179,30 +181,67 @@ def transformed_param_space_fig():
 
             z_system = Normal_Zagaris_Model(params, times, x0)
 
-            nsamples = 8000
+            nsamples = 10000
             data = np.empty((nsamples, 3))
-            scale = 4
-            a_lam_samples = np.random.uniform(size=(nsamples,2))*np.array((scale, scale)) # a \in [0,scale], b \in [0,scale]
+            data2 = np.empty((nsamples, 3))
+            scale = 3
+            a_lam_samples = np.random.uniform(size=(nsamples,2))*np.array((scale, scale)) # a \in [0,scale], lam \in [0,scale]
+            # offset = 1
+            # a_lam_samples = np.array((a_true - offset/2.0, lam_true - offset/2.0)) + np.random.uniform(size=(nsamples,2))*np.array((offset, offset)) # a \in [a_true - offset/2, a_true + offset/2], lam \in [lam_true - offset/2, lam_true + offset/2]
 
             count = 0
-            # tol = 0.01
+            count2 = 0
+            tol = 1.0
+            # max_of = -1
             for params in uf.parallelize_iterable(a_lam_samples, rank, nprocs):
                 try:
-                    # result = minimize(z_system.of, params, method='SLSQP', tol=tol, options={'ftol' : tol})
-                    result = minimize(z_system.of, params, method='SLSQP')
+                    pt = np.empty(3)
+                    of_val = z_system.of(params)
+                    success = True
+                    if of_val > tol:
+                        result = minimize(z_system.of, params, method='SLSQP') #, tol=1, options={'ftol' : 1})
+                        if result.fun < tol:
+                            pt = (result.x[0], result.x[1], result.fun)
+                        else:
+                            pt = (a_true, lam_true, 0)
+                        # print result.fun
+                        # max_of = np.max(np.array((max_of, result.fun)))
+                        # print result.fun
+                    else:
+                        pt = (params[0], params[1], of_val)
+                        
                 except (CustomErrors.IntegrationError, TypeError):
                     continue
                 else:
-                    if result.success:
-                        data[count] = (result.x[0], result.x[1], result.fun)
-                        count = count + 1
-
+                    data[count] = pt
+                    count = count + 1
+                #     if result.success:
+                #         data[count] = (result.x[0], result.x[1], result.fun)
+                #         count = count + 1
+                # try:
+                #     result = z_system.of(params)
+                # except (CustomErrors.IntegrationError, TypeError):
+                #     continue
+                # else:
+                #     if result < tol:
+                #         data2[count2] = (params[0], params[1], result)
+                #         count2 = count2 + 1
+                
+            # print rank, max_of
+            
             data = data[:count]
             all_data = comm.gather(data, root=0)
+
+            data2 = data2[:count]
+            all_data2 = comm.gather(data2, root=0)
 
             if rank is 0:
                 all_data = np.concatenate(all_data)
                 all_data.dump('./data/a-lam-ofevals-2016.csv')
+
+                all_data2 = np.concatenate(all_data2)
+                all_data2.dump('./data/a-lam-ofevals-2016-2.csv')
+
                 print '******************************'
                 print 'Data saved in ./data/a-lam-ofevals-2016.csv, rerun to perform DMAP'
                 print '******************************'
@@ -1162,6 +1201,55 @@ class Log_Singularly_Perturbed_System:
         return grad
 
 
+def sing_pert_contours_pydstool():
+    """Uses PyDSTool to continue along level-sets"""
+    # define times at which to sample data. Always take three points as this leads to three-dimensional data space
+    # t0 = 0.01; tf = 3
+    # times = np.linspace(t0,tf,3) # for linear eqns
+    # x trajectory is constant as x0 and lambda are held constant
+    times = np.array((0.01, 0.1, 0.5))
+    # # working param set
+    # y0_true = 5
+    # eps_true = 0.5
+    # of_val = 0.1
+    # ds = 1e-3
+    # nsteps = 2000
+    # set up base system used by all of_vals
+    y0_true = 5.0
+    epsinv_true = 3.0 # eps_true = 0.01
+    of_val = 0.1
+    sp_system = Inverse_Singularly_Perturbed_System(epsinv_true, y0_true, of_val, times)
+
+    # the following are pre-computed points on the branch with of_val = 0.1, for which f(epsinv_guess, y0_guess) = 1e-13
+    y0_guess = 5.02738659854498859403
+    epsinv_guess = 2.74346589102169380325
+
+    print sp_system.get_f_val(epsinv_guess, y0_guess)
+
+    DSargs = pc.common.args(name='SPSys')
+    # DSargs.pars = {'epsinv': 101, 'y0': 4.9}
+    DSargs.pars = {'epsinv': epsinv_guess}
+    DSargs.varspecs = {'y0': 'of_rhs_val'}
+    DSargs.vfcodeinsert_start = 'of_rhs_val = ds.of_rhs(epsinv, y0)'
+    DSargs.ignorespecial = ['of_rhs_val']
+    DSargs.ics = {'y0': y0_guess}
+    ode = pc.Generator.Vode_ODEsystem(DSargs)
+    ode.of_rhs = sp_system.get_f_val
+
+    PyCont = pc.ContClass(ode)
+    PCargs = pc.common.args(name='SPcont', type='EP-C')
+    PCargs.freepars = ['epsinv']
+    PCargs.StepSize = 1e-8
+    PCargs.MaxNumPoints = 100
+    PCargs.MaxStepSize = 5e-2
+    PyCont.newCurve(PCargs)
+
+    PyCont['SPcont'].forward()
+
+    curve = PyCont['SPcont'].sol
+
+    print 'found', len(curve), 'pts'
+
 def sing_pert_contours_fig1():
     """Plots contours of system used in 'sing_pert_data_space' in y0 and epsilon using arclength continuation"""
     x0 = 1
@@ -1868,6 +1956,249 @@ def sing_pert_data_space_fig():
 
     plt.show()
     
+def sing_pert_data_space_fig_test2_gendata():
+    """Plots three dimensional data space of the classic singularly perturbed ODE system: x' = -lambda*x, y' = -y/epsilon. Probably will end up plotting {y(t1), y(t2), y(t3)} though may also plot norms {|| (x(t1), y(t1)) ||, ... } though this doesn't represent data space in the traditional sense. In particular we're interested in observing the transition from 2 to 1 to 0 dimensional parameter -> data space mappings, i.e. 2 stiff to 1 stiff to 0 stiff parameters."""
+    # init MPI
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    nprocs = comm.Get_size()
+
+    times = np.array((0.01, 0.1, 0.5))
+    npts = 1000
+    lam = 1.0
+    x0s = np.ones((npts,2))
+    x0s[:,1] = np.linspace(-5,5,npts) # x0[0] = 1, x0[1] \in [0,10]
+    gsize = 10
+    gspec = gs.GridSpec(gsize,gsize)
+    cmap = colormaps.viridis
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # start with larger epsilon values (see curvature)
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    epss = np.logspace(-2, 0, npts)
+
+    xt1 = np.zeros((npts,npts))
+    xt2 = np.zeros((npts,npts))
+    xt3 = np.zeros((npts,npts))
+    epss_copy = np.zeros((npts,npts))
+    y0s = np.zeros((npts,npts))
+    if rank == 0:
+        xt1o = np.zeros((npts,npts))
+        xt2o = np.zeros((npts,npts))
+        xt3o = np.zeros((npts,npts))
+        epss_copyo = np.zeros((npts,npts))
+        y0so = np.zeros((npts,npts))
+    else:
+        xt1o = None
+        xt2o = None
+        xt3o = None
+        epss_copyo = None
+        y0so = None
+
+    for i, x0 in uf.parallelize_iterable(zip(range(npts), x0s), rank, nprocs):
+        for j, eps in enumerate(epss):
+            f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+            integrator = Integration.Integrator(f)
+            xt1[i,j], xt2[i,j], xt3[i,j] = integrator.integrate(x0, times)[:,1]
+            epss_copy[i,j] = eps
+            y0s[i,j] = x0[1]
+            
+    # gather the data
+    comm.Reduce([xt1, MPI.DOUBLE], [xt1o, MPI.DOUBLE], op = MPI.SUM, root = 0)
+    comm.Reduce([xt2, MPI.DOUBLE], [xt2o, MPI.DOUBLE], op = MPI.SUM, root = 0)
+    comm.Reduce([xt3, MPI.DOUBLE], [xt3o, MPI.DOUBLE], op = MPI.SUM, root = 0)
+    comm.Reduce([epss_copy, MPI.DOUBLE], [epss_copyo, MPI.DOUBLE], op = MPI.SUM, root = 0)
+    comm.Reduce([y0s, MPI.DOUBLE], [y0so, MPI.DOUBLE], op = MPI.SUM, root = 0)
+
+    # save the data
+    if rank == 0:
+        xt1o.dump('./data/sing-pert-x1-large.pkl')
+        xt2o.dump('./data/sing-pert-x2-large.pkl')
+        xt3o.dump('./data/sing-pert-x3-large.pkl')
+        epss_copyo.dump('./data/sing-pert-eps-copy-large.pkl')
+        y0so.dump('./data/sing-pert-y0s-large.pkl')
+        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+        print 'saved the data'
+        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+
+def sing_pert_data_space_fig_test2_plotdata():
+
+    # # load the data
+    # xt1 = np.load('./data/sing-pert-x1-large.pkl')
+    # xt2 = np.load('./data/sing-pert-x2-large.pkl')
+    # xt3 = np.load('./data/sing-pert-x3-large.pkl')
+    # epss_copy = np.load('./data/sing-pert-eps-copy-large.pkl')
+    # y0s = np.load('./data/sing-pert-y0s-large.pkl')
+    # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    # print 'loading previously generated data for plots'
+    # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+
+    # # plot a few trajectories to visualize behavior of ODEs
+    # eps_tests = np.logspace(-1, 0, 5)
+    # fig_pp = plt.figure()
+    # ax_pp = fig_pp.add_subplot(111)
+    # fig_y = plt.figure()
+    # ax_y = fig_y.add_subplot(111)
+    # for i in range(5):
+    #     eps = eps_tests[i]
+    #     x0 = np.array((1,5))
+    #     f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps)*(1+10/(1.5-np.sin(x[1])))))), x)
+    #     integrator = Integration.Integrator(f)
+    #     ts = np.linspace(0.0001, 1, 1000)
+    #     Xs = integrator.integrate(x0, ts)
+    #     eps_str = '%1.2f' % eps
+    #     ax_pp.plot(Xs[:,0], Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    #     ax_y.plot(ts, Xs[:,1], label=r'$\epsilon=$' + eps_str)
+    # ax_y.set_xlabel(r'$t$')
+    # ax_y.set_ylabel(r'$y$')
+    # ax_pp.set_xlabel(r'$x$')
+    # ax_pp.set_ylabel(r'$y$')
+    # ax_pp.legend(loc=2)
+    # ax_y.legend(loc=1)
+    # plt.show()
+
+    # # # plot points in 2d parameter space
+    # x0_grid, epss_grid = np.meshgrid(x0s, epss)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.scatter(epss_grid, x0_grid, s=5)
+    # ax.set_xscale('log')
+    # ax.set_xlabel(r'$\epsilon$')
+    # ax.set_ylabel(r'$y(t_0)$')
+    # ax.set_xlim((0.09, 1.1))
+    # ax.set_ylim((-1, 11))
+
+    # # plot eps and y0 coloring of manifold
+    fig1 = plt.figure()
+    fig2 = plt.figure()
+    # axes
+    ax_eps = fig1.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_y0 = fig2.add_subplot(gspec[:,:gsize-1], projection='3d')
+    # # make color data
+    eps_colors = (1/epss_copy)#/np.max(1/epss_copy)
+    eps_colornorm = colors.Normalize(vmin=np.min(eps_colors), vmax=np.max(eps_colors))
+    eps_colormap = cm.ScalarMappable(norm=eps_colornorm, cmap=cmap)
+    x0_colors = y0s/np.max(y0s)
+    # add scatter plots
+
+    ax_eps.plot_surface(xt1, xt2, xt3, facecolors=eps_colormap.to_rgba(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    ax_y0.plot_surface(xt1, xt2, xt3, facecolors=cmap(x0_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8)
+    # add unique titles
+    # add colorbars
+    ax_eps_cb = fig1.add_subplot(gspec[:,gsize-1])
+    ax_y0_cb = fig2.add_subplot(gspec[:,gsize-1])
+    cb_ticks = np.logspace(np.log10(np.min(1/epss_copy)), np.log10(np.max(1/epss_copy)), 2)
+    eps_cb = colorbar.ColorbarBase(ax_eps_cb, cmap=cmap, norm=eps_colornorm, ticks=cb_ticks)
+    ax_eps_cb.text(0.2, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
+    y0_cb = colorbar.ColorbarBase(ax_y0_cb, cmap=cmap, norm=colors.Normalize(np.min(y0s), np.max(y0s)), ticks=np.linspace(np.min(x0s), np.max(y0s), 5))
+    ax_y0_cb.text(0.2, 1.05, r'$y(t_0)$', transform=ax_y0_cb.transAxes, fontsize=48)
+            
+    # # plot a ball in model space
+    # find points in ball
+    eps_center = 0.33 # center of ball is (eps_center, y0_center) in parameter space
+    y0_center = 5.0
+    model_space_radius_squared = 0.001
+    f = lambda t, x: np.dot(np.array(((-lam, 1),(1,(-1/eps_center)*(1+10/(1.5-np.sin(x[1])))))), x)
+    integrator = Integration.Integrator(f)
+    xt1_center, xt2_center, xt3_center = integrator.integrate(np.array((1,y0_center)), times)[:,1]
+    # surface_colors = np.zeros((npts,npts,4))
+    # # also keep track of which parameters the model manifold points correspond to
+    # npts_in_ball = 0
+    # eps_in_ball = np.empty(npts*npts)
+    # y0_in_ball = np.empty(npts*npts)
+    # for i, x0 in enumerate(x0s):
+    #     for j, eps in enumerate(epss):
+    #             if np.power(xt1[i,j] - xt1_center, 2) + np.power(xt2[i,j] - xt2_center, 2) + np.power(xt3[i,j] - xt3_center, 2) < model_space_radius_squared:
+    #                 surface_colors[i,j,3] = 0.5 # non-zero alpha
+    #                 eps_in_ball[npts_in_ball] = eps
+    #                 y0_in_ball[npts_in_ball] = x0[1]
+    #                 npts_in_ball = npts_in_ball + 1
+    # eps_in_ball = eps_in_ball[:npts_in_ball]
+    # y0_in_ball = y0_in_ball[:npts_in_ball]
+    # print 'found', npts_in_ball, 'points intersecting ball'
+
+    # plot intersection of full model manifold and ball, colored by x0
+    fig = plt.figure()
+    ax_ball = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
+    ax_ball.hold(True)
+    # plot surface
+    ax_ball.plot_surface(xt1, xt2, xt3, facecolors=eps_colormap.to_rgba(eps_colors), edgecolors=np.array((0,0,0,0)), linewidth=0, shade=False, cstride=1, rstride=1, alpha=0.8, zorder=1)
+    # # plot intersection
+    # ax_ball.plot_surface(xt1, xt2, xt3, facecolors=surface_colors, linewidth=0, cstride=1, rstride=1, antialiased=False)
+    # plot ball
+    u = np.linspace(0, 2*np.pi, 100)
+    v = np.linspace(0, np.pi, 100)
+
+    ball_x = np.sqrt(model_space_radius_squared)*np.outer(np.cos(u), np.sin(v))*(np.max(xt1) - np.min(xt1)) + xt1_center
+    ball_y = np.sqrt(model_space_radius_squared)*np.outer(np.sin(u), np.sin(v))*(np.max(xt2) - np.min(xt2)) + xt2_center
+    ball_z = np.sqrt(model_space_radius_squared)*np.outer(np.ones(np.size(u)), np.cos(v))*(np.max(xt3) - np.min(xt3)) + xt3_center
+    ax_ball.plot_surface(ball_x, ball_y, ball_z, color='b', alpha=1.0, linewidth=0, zorder=2)
+    # colorbar
+    ax_cb = fig.add_subplot(gspec[:,gsize-1])
+
+    ax_ball_cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=eps_colornorm, ticks=cb_ticks)
+    ax_cb.text(0.2, 1.05, r'$1/\epsilon$', transform=ax_eps_cb.transAxes, fontsize=48)
+
+    # # adjust all figure's properties at once as they're all the same
+    nticks = 3
+    for ax in [ax_eps, ax_y0, ax_ball]:
+        formatter = FormatAxis(ax)
+        formatter.format('x', xt1, '%1.0f', nticks=nticks)
+        formatter.format('y', xt2, '%1.3f', nticks=nticks)
+        formatter.format('z', xt3, '%1.3f', nticks=nticks)
+        # # axis limits
+        # ax.set_xlim((0.99*np.min(xt1), 1.01*np.max(xt1)))
+        # ax.set_ylim((0.99*np.min(xt2), 1.01*np.max(xt2)))
+        # ax.set_zlim((0.99*np.min(xt3), 1.01*np.max(xt3)))
+        # axis labels
+        # when have ticks:
+        # ax.set_xlabel('\n\n' + r'$y(t_1)$')
+        # ax.set_ylabel('\n\n\n' + r'$y(t_2)$')
+        # ax.set_zlabel('\n\n\n' + r'$y(t_3)$')
+        # when no have ticks:
+        ax.set_xlabel('\n' + r'$y(t_1)$')
+        ax.set_ylabel('\n' + r'$y(t_2)$')
+        ax.set_zlabel('\n' + r'$y(t_3)$')
+        # white out the bg
+        ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+        # orient axes correctly
+        ax.invert_zaxis()
+        ax.invert_yaxis()
+        # hide (technically incorrect) tick labels
+        ax.tick_params(labelsize=0)
+        # # hide grid
+        # ax.grid(False)
+        # # hide tick labels
+        # plt.tick_params(axis='both', which='major', labelsize=0)
+        # move labels to avoid overlap with numbers
+        # ax.xaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.yaxis._axinfo['label']['space_factor'] = 2.2
+        # ax.zaxis._axinfo['label']['space_factor'] = 2.2
+
+    # # change ax_ball's limits separately to ensure no stretching of the sphere occurs
+    # model_space_radius = np.sqrt(model_space_radius_squared)
+    # scale = 50
+    # ax_ball.set_xlim((xt1_center - scale*model_space_radius, xt1_center + scale*model_space_radius))
+    # ax_ball.set_ylim((xt2_center - scale*model_space_radius, xt2_center + scale*model_space_radius))
+    # ax_ball.set_zlim((xt3_center - scale*model_space_radius, xt3_center + scale*model_space_radius))
+    # formatter = FormatAxis(ax_ball)
+    # formatter.format('x', np.linspace(xt1_center - scale*model_space_radius, xt1_center + scale*model_space_radius, 10), '%1.0f', nticks=3)
+    # formatter.format('y', np.linspace(xt2_center - scale*model_space_radius, xt2_center + scale*model_space_radius, 10), '%1.3f', nticks=3)
+    # formatter.format('z', np.linspace(xt3_center - scale*model_space_radius, xt3_center + scale*model_space_radius, 10), '%1.3f', nticks=3)
+    # ax_ball.set_xlabel('\n\n' + r'$y(t_1)$')
+    # ax_ball.set_ylabel('\n\n\n' + r'$y(t_2)$')
+    # ax_ball.set_zlabel('\n\n\n' + r'$y(t_3)$')
+    # # white out the bg
+    # ax_ball.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    # ax_ball.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    # ax_ball.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+
+    # plt.show()
+
+
 def sing_pert_data_space_fig_test():
     """Plots three dimensional data space of the classic singularly perturbed ODE system: x' = -lambda*x, y' = -y/epsilon. Probably will end up plotting {y(t1), y(t2), y(t3)} though may also plot norms {|| (x(t1), y(t1)) ||, ... } though this doesn't represent data space in the traditional sense. In particular we're interested in observing the transition from 2 to 1 to 0 dimensional parameter -> data space mappings, i.e. 2 stiff to 1 stiff to 0 stiff parameters."""
     times = np.array((0.1, 0.15, 0.2))
@@ -2206,7 +2537,8 @@ def main():
     # analytical_anisotropic_diffusion()
     # analytical_anisotropic_diffusion_eigenfns()
     # dmaps_plane()
-    sing_pert_data_space_fig()
+    # sing_pert_data_space_fig_test2_gendata()
+    # sing_pert_contours_pydstool()
     # sing_pert_data_space_fig_test()
     # rawlings_surface_normal()
     # rawlings_2d_dmaps_fig()
@@ -2214,7 +2546,7 @@ def main():
     # rawlings_3d_dmaps_fig()
     # two_effective_one_neutral_dmaps_fig()
     # discretized_laplacian_dmaps()
-    # transformed_param_space_fig()
+    transformed_param_space_fig()
     # sing_pert_contours_fig1() # needs work perhaps, particularly to close the contour at 10^{-3}
     # sing_pert_contours_fig2()
     # test()
