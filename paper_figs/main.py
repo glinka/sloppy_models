@@ -131,7 +131,7 @@ def transformed_param_space_fig():
     x0 = np.array((1, a_true))
 
     # set henon transform params
-    nhenon_transforms = 18
+    nhenon_transforms = 2
     a = 1.3
     b = 0.3
 
@@ -142,25 +142,32 @@ def transformed_param_space_fig():
     if nprocs > 1:
 
         # perform optimization in transformed parameter space
-        do_transformed_optimization = False
+        do_transformed_optimization = True
         if do_transformed_optimization:
             if rank == 0:
                 print 'running in parallel, generating transformed x2, y2 parameters through repeated optimization'
             # optimize over range of TRANSFORMED initial conditions
-            nsamples = 8000
+            nsamples = 1000000
             data = np.empty((nsamples, 3))
-            x2_y2_samples = np.random.uniform(size=(nsamples, 2))*np.array((6,1)) + np.array((-4, -0.5)) # a \in (7, 9) lamb \in (6, 11)
+            # x2_y2_samples = np.random.uniform(size=(nsamples, 2))*np.array((1, 0.2)) + np.array((1, -0.2))
+            x2_y2_samples = np.random.uniform(size=(nsamples, 2))*np.array((32,2.2)) + np.array((-30, -1.5)) # a \in (7, 9) lamb \in (6, 11)
             count = 0
             tol = 1.0
             for params in uf.parallelize_iterable(x2_y2_samples, rank, nprocs):
                 try:
-                    result = minimize(z_system.of, params, method='SLSQP', tol=tol, options={'ftol' : tol})
+                    of_val = z_system.of(params)
+                    pt = np.empty(3)
+                    if of_val < tol:
+                        pt = (params[0], params[1], of_val)
+                    else:
+                        result = minimize(z_system.of, params, method='SLSQP')#, tol=tol, options={'ftol' : tol})
+                        pt = (result.x[0], result.x[1], result.fun)
                 except (CustomErrors.IntegrationError, TypeError):
                     continue
                 else:
-                    if result.success:
-                        data[count] = (result.x[0], result.x[1], result.fun)
-                        count = count + 1
+                    # if result.success:
+                    data[count] = pt
+                    count = count + 1
 
             data = data[:count]
             all_data = comm.gather(data, root=0)
@@ -174,7 +181,7 @@ def transformed_param_space_fig():
 
 
         # perform optimization in normal parameter space
-        do_normal_optimization = True
+        do_normal_optimization = False
         if do_normal_optimization:
             if rank == 0:
                 print 'running in parallel, generating normal alpha, lambda parameters through repeated optimization'
@@ -606,9 +613,9 @@ def rawlings_3d_dmaps_fig():
     ax_keff = fig.add_subplot(gspec[0,1], projection='3d')
     ax_dmaps = fig.add_subplot(gspec[1,1], projection='3d')
     # add scatter plots with correct colorings
-    ax_b.scatter(paramdata[:,0], paramdata[:,1], paramdata[:,2], c='b', cmap='gnuplot2')
-    ax_keff.scatter(paramdata[:,0], paramdata[:,1], paramdata[:,2], c=keff, cmap='gnuplot2')
-    ax_dmaps.scatter(paramdata[:,0], paramdata[:,1], paramdata[:,2], c=eigvects[:,3], cmap='gnuplot2')
+    ax_b.scatter(paramdata[:,0], paramdata[:,1], paramdata[:,2], c='b', cmap='jet')
+    ax_keff.scatter(paramdata[:,0], paramdata[:,1], paramdata[:,2], c=keff, cmap='jet')
+    ax_dmaps.scatter(paramdata[:,0], paramdata[:,1], paramdata[:,2], c=eigvects[:,1], cmap='jet')
     for ax in [ax_b, ax_keff, ax_dmaps]:
         # label axes
         ax.set_xlabel('\n\nlog(' + r'$k_1$' + ')')
@@ -629,6 +636,7 @@ def rawlings_3d_dmaps_fig():
         formatter.format('x', paramdata[:,0], '%1.1f', nticks=3)
         formatter.format('y', paramdata[:,1], '%1.1f', nticks=3)
         formatter.format('z', paramdata[:,2], '%1.1f', nticks=3)
+
     plt.show()
 
 def rawlings_surface_normal():
@@ -706,6 +714,7 @@ def rawlings_2d_dmaps_fig():
     params_data = np.load('./data/params-ofevals-slimmed.pkl')
     
     log_params_data = np.log10(params_data[:,1:]) # np.load('./data/rawlings-2d-dmaps-logparams.pkl')
+    
     eigvals = np.genfromtxt('./data/dmaps-eigvals--tol-0.001-k-12.csv', delimiter=',')
     eigvects = np.genfromtxt('./data/dmaps-eigvects--tol-0.001-k-12.csv', delimiter=',')
 
@@ -2395,6 +2404,136 @@ def sing_pert_data_space_fig_test():
 
     plt.show()
 
+def linear_sing_pert_model_manifold_fig():
+    """Plotting model manifold of y' = -1/eps * y"""
+
+    cmap ='viridis'
+    
+    gsize = 40
+    gspec = gs.GridSpec(gsize, gsize)
+
+    t1, t2, t3 = (1.,2.,6.)# np.linspace(1,3,3)
+
+    npts = 100
+    xss = np.linspace(0,1,npts)
+    yss = np.linspace(0,1,npts)
+    xg, yg = np.meshgrid(xss,yss)
+    xkept = np.empty(npts*npts)
+    ykept = np.empty(npts*npts)
+    count = 0
+    origin = None
+    for i in range(npts):
+        for j in range(npts):
+            if yg[i,j] <= xg[i,j]:
+                # keep track of which point is the origin for subsequent settings of y0, eps and z to 0 or inf
+                if xg[i,j] == 0:
+                    origin = count
+                xkept[count] = xg[i,j]
+                ykept[count] = yg[i,j]
+                count = count + 1
+    xkept = xkept[:count]
+    ykept = ykept[:count]
+
+    z = np.power(xkept, (t2 - t3)/(t2 - t1))*np.power(ykept, (t3 - t1)/(t2 - t1))
+    z[origin] = 0 # z(0,0) = 0
+
+    epss = (t2 - t1)/np.log(xkept/ykept)
+    epss[np.isnan(epss)] = np.inf # eps(0,0,0) = inf
+    epss_transformed = np.tanh(epss)
+
+    y0s = xkept*np.power(xkept/ykept, t1/(t2 - t1))
+    y0s[origin] = 0 # y0(origin) = 0
+    y0s[np.isnan(y0s)] = np.inf
+    y0s_transformed = np.tanh(y0s)
+
+    xyz = np.array((xkept, ykept, z)).T
+
+    y0s_colornorm = colors.Normalize(vmin=np.min(y0s_transformed), vmax=np.max(y0s_transformed))
+    y0s_colormap = cm.ScalarMappable(norm=y0s_colornorm, cmap=cmap)
+
+    tris = tri.Triangulation(xkept, ykept).triangles
+    triangle_vertices = np.array([np.array((xyz[T[0]], xyz[T[1]], xyz[T[2]])) for T in tris]) # plot in k1, k-1, k2
+    # create polygon collections that will be plotted (seems impossible to completely erase edges)
+    coll_y0 = Poly3DCollection(triangle_vertices, facecolors=y0s_colormap.to_rgba(calc_tri_avg(tris, y0s_transformed)), linewidths=0, edgecolors='w')
+    # coll_eps = Poly3DCollection(triangle_vertices, facecolors=eps_colormap.to_rgba(calc_tri_avg(tris, epss_transformed)), linewidths=0, edgecolors='w')
+    
+    # plot surface
+    fig = plt.figure()
+    ax = fig.add_subplot(gspec[:,gsize/2:gsize-1], projection='3d')
+    ax.add_collection(coll_y0)
+
+    ax_cb = fig.add_subplot(gspec[:,gsize-1])
+    cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=y0s_colornorm, ticks=[0,1.], label=r'$y_0$')
+    cb.ax.set_yticklabels([r'$0$', r'$\infty$'])
+
+    # add lines of constant epsilon
+    epss_samples = np.array((1e-3, 1, 3.5, 10, 1e3)) # hand picked for nice visuals
+    eps_colornorm = colors.Normalize(vmin=np.min(np.log10(epss_samples)), vmax=1.5*np.max(np.log10(epss_samples))) # scale vmax by 1.5 to remove whiter part of cmap from use
+    eps_colormap = cm.ScalarMappable(norm=eps_colornorm, cmap='Oranges_r')
+    lw = 3
+    for i, eps in enumerate(epss_samples):
+        xss = np.linspace(0,1,npts)
+        yss = xss*np.exp((t1 - t2)/eps)
+        zss = np.power(xss, (t2 - t3)/(t2 - t1))*np.power(yss, (t3 - t1)/(t2 - t1))
+        ax.plot(xss, yss, zss, lw=lw, color=eps_colormap.to_rgba(np.log10(eps)))
+
+    ax.set_xlabel('\n' + r'$f_1$')
+    ax.set_ylabel('\n' + r'$f_2$')
+    ax.set_zlabel('\n' + r'$f_3$')
+    formatter = FormatAxis(ax)
+    formatter.format('x', xkept, '%1.0f', nticks=2)
+    formatter.format('y', ykept, '%1.0f', nticks=2)
+    formatter.format('z', z[::-1], '%1.0f', nticks=2)
+    ax.invert_zaxis()
+    ax.invert_yaxis()
+
+    # plot y0, eps plane
+    npts = 50
+    y0max = 2
+    logeps_min = -3
+    logeps_max = 3
+    y0s = np.linspace(y0max,0,npts) # reverse ordering to get meshgrid output correctly oriented
+    epss = np.logspace(logeps_min, logeps_max, npts)
+    epsg, y0g = np.meshgrid(epss, y0s)
+
+    ax = fig.add_subplot(gspec[:,:gsize/2-2])
+    lw = 5
+    ax.imshow(np.tanh(y0g), extent=(1e-3,1e3,0,2), cmap='viridis', norm=y0s_colornorm) # show coloring of y0
+    # add lines of constant eps
+    for i, eps in enumerate(epss_samples):
+        ax.plot(eps*np.ones(npts), y0s, lw=lw, color=eps_colormap.to_rgba(np.log10(eps)))
+
+    ax.set_yticks([0,1,2])
+    ax.set_xscale('log')
+    ax.set_xticks([1e-3, 1e0, 1e3])
+    ax.set_xlabel(r'$\epsilon$')
+    ax.set_ylabel(r'$y_0$')
+
+    fig.subplots_adjust(bottom=0.13, left=0.06)
+
+    plt.show()
+
+def temp_fig():
+    """Plotting dmaps output of rawlings model - AZ visit"""
+    data = np.load('../rawlings_model/data/params-ofevals.pkl')
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # plot fat surface with of=1e-3, with three surfaces mapping out different level sets
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    of_max = 1e-5
+    data = data[data[:,0] < of_max]
+    log_data = np.log10(data)
+    print log_data.shape
+
+    epsilon = 0.3 # from epsilon_plot
+    k = 12 # number of dimensions for embedding
+
+    eigvals, eigvects = dmaps.embed_data(log_data[:,1:], k, epsilon=epsilon)
+
+    eigvects.dump('./temp.pkl')
+
+
 def rawlings_keff_fig():
     """Plots level sets/sloppy manifold of rawlings model when k1 << k2, k1 << kinv, showing that keff changes in a direction normal to the surface"""
     data = np.load('../rawlings_model/data/params-ofevals.pkl')
@@ -2423,8 +2562,8 @@ def rawlings_keff_fig():
     gspec = gs.GridSpec(gsize,gsize)
     fig = plt.figure()
     ax = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
-    slice = data.shape[0]/4000
-    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.2)
+    slice = data.shape[0]/20000
+    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.5)
     
 
     # now plot transparencies of keff = constant
@@ -2437,7 +2576,7 @@ def rawlings_keff_fig():
     stride = 2
     kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
     nkeffs = 2
-    alpha = 0.6
+    alpha = 0.5
     for keff in np.logspace(np.log10(keffmin) + 0.1*(np.log10(keffmax) - np.log10(keffmin)), np.log10(keffmax) - 0.2*(np.log10(keffmax) - np.log10(keffmin)), nkeffs):
         k1s = keff*(kinvs + k2s)/k2s
         # kinvs = k1s*k2s/keff - k2s
@@ -2546,10 +2685,12 @@ def main():
     # rawlings_3d_dmaps_fig()
     # two_effective_one_neutral_dmaps_fig()
     # discretized_laplacian_dmaps()
-    transformed_param_space_fig()
+    # transformed_param_space_fig()
     # sing_pert_contours_fig1() # needs work perhaps, particularly to close the contour at 10^{-3}
     # sing_pert_contours_fig2()
     # test()
+    # temp_fig()
+    linear_sing_pert_model_manifold_fig()
     
 if __name__=='__main__':
     main()
