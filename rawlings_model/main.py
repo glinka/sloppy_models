@@ -378,8 +378,8 @@ def test_sympy_of():
 
 def do_the_right_thing():
     """A completely unecesssary function that does the right thing"""
-    sample_param_grid_mpi()
-    # dmaps_param_set()
+    # sample_param_grid_mpi()
+    dmaps_param_set()
     # test_sympy_of()
     # dmaps_param_set_grad_kernel()
     # dmaps_param_set()

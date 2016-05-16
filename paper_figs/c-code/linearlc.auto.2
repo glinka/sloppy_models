@@ -1,0 +1,12 @@
+import numpy as np
+
+# continue down through minimum (continue along contour value)
+sln1 = loadbd('linearlc-start')
+sln2 = run(sln1('UZ')[0], c='linearlc.2', DS='-')
+
+# save output
+save(sln2,'linearlc-descent')
+np.array(sln2.toArray()).dump('./linearlc-descent.pkl')
+
+print "\n***Clean the directory***"
+cl()

@@ -1,0 +1,171 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+% \captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/outliers/} }
+
+\title{Intermediate mixed kernel results and analysis of
+  $k_{eff}$ outliers}
+
+\begin{document}
+\maketitle
+
+\section{Intermediate mixed kernel}
+
+We investigate the DMAPS kernel
+
+\begin{align}
+  k(\theta_i, \theta_j) = \exp \bigg( -\frac{1}{\lambda^2} \bigg( \frac{\|\theta_i
+  - \theta_j\|^2}{\epsilon^2} + \|\mu(\theta_i) -
+  \mu(\theta_j)\|^2\bigg) \bigg)
+  \label{eqn1}
+\end{align}
+
+with parameter values $\epsilon = 10$ and $\lambda = 1$. This smaller
+value of $\lambda$ biases the diffusion along directions in which
+$\mu(\theta)$ changes, i.e. along important parameter
+directions. However, $\epsilon$ is not so large as to completely
+remove the effects of $\| \theta_i - \theta_j \|$ on the DMAPS
+results, and as a result, we find that the first two eigenvectors
+$\Phi_1$ and $\Phi_2$ parameterize the sloppy directions while
+$\Phi_3$ parameterizes the important direction in which $k_{eff}$
+changes. This is shown in Figs. (\ref{fig1}-\ref{fig3}) below. \\
+
+As a reminder, we have sampled the three-dimensional parameter space
+$\{k_1, k_{-1}, k_2 \}$ around some true values $k_1 = 1$,
+$k_{-1} = 1000$ and $k_2 = 1000$, keeping those parameter combinations that
+predict a concentration profile of species $C$ within some error
+tolerance (here we require $\| \mu(\theta) - \mu(\theta^*) \| <
+10^{-3}$). This leaves us with the slightly thick parameter set shown
+in Fig. (\ref{fig0}), which we then apply Eqn. (\ref{eqn1}) to.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../rawlings/keff-large-delta}
+  \caption{The dataset we will be applying DMAPS to, colored by
+    $k_{eff}$. \label{fig0}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./phi1}
+  \caption{Dataset colored by $\Phi_1$, parameterizing a sloppy
+    direction. \label{fig1}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./phi2}
+  \caption{Dataset colored by $\Phi_2$, parameterizing another sloppy
+    direction. \label{fig2}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./phi3}
+  \caption{Dataset colored by $\Phi_3$, parameterizing the important
+    direction, $k_{eff}$. \label{fig3}}
+\end{figure}
+
+\clearpage
+
+\section{$k_{eff}$ outliers}
+
+We switch now to the problem of seemingly spurious values of $k_{eff}$
+that appear within the dataset. Namely, if we simply color the dataset
+by $k_{eff}$ as we have done in Fig. (\ref{figk}), we see that a small
+corner of the volume is colored yellow. Professor Gear suggested this
+might be a result of including small contributions of
+$\| \theta_i - \theta_j \|$ in the DMAPS kernel, but I believe this
+behavior is inherent in the model itself as we will see. First, in
+Fig. (\ref{fignc}) we plot $k_{eff}$ vs.
+$\| \mu(\theta) - \mu(\theta^*) \|$, essentially looking at how well
+$k_{eff}$ predicts deviations from the true trajectory. If we actually
+had that $C(t) = f(k_{eff})$ as we claim with the QSSA, this figure
+should yield a one-dimensional curve; however, we are apparently
+sampling in regions of $\{k_1, k_{-1}, k_2\}$ in which this
+approximation breaks down, and $C(t) = f(k_1, k_{-1}, k_2)$. Thus, at
+every value of $k_{eff}$ we find a scattered range of values for $\| \mu(\theta) - \mu(\theta^*) \|$. \\
+
+In Fig. (\ref{figc}) we plot the same points, but now colored by
+$\Phi_1$ from the previous DMAPS output. We see that the points that
+lie off the curve fall in the upper ranges of $\Phi_1$, and so in
+Fig. (\ref{figrb}) we partition the points into those for which
+$\Phi_1 < 0.01$ and those with $\Phi_1 \ge 0.01$, providing a nice
+separation. We then examine what this corresponds to in full parameter
+space, shown in Fig. (\ref{fig3dc}). The red points neatly fall into a
+specific region of parameter space, generally with smaller values of
+$k_2$ where one might not expect the QSSA to apply. Thus greater care
+must be taken when sampling parameter space if we desire to restrict
+ourselves to examining $k_{eff}$ as the single important parameter.
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./3d-outliers-c}
+  \caption{Dataset colored by $k_{eff}$ highlighting a small region of
+    abnormally high values of $k_{eff}$. \label{figk}}
+\end{figure}
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./cost-keff-plain}
+  \caption{Distance from true trajectory vs. $k_{eff}$. \label{fignc}}
+\end{figure}
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./cost-keff-phi1}
+  \caption{Same as Fig. (\ref{fignc}) but colored by $\Phi_1$. \label{figc}}
+\end{figure}
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./cost-keff-partition}
+  \caption{Partitioned based on $\Phi_1$. \label{figrb}}
+\end{figure}
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./3d-partition}
+  \caption{Dataset in partitioned by $\Phi_1$. \label{fig3dc}}
+\end{figure}
+
+\end{document}

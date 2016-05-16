@@ -1,0 +1,83 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{H\'{e}non map and anisotropic DMAPS figures}
+
+\begin{document}
+\maketitle
+
+\section{H\'{e}non map figures}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./transformed-params/henon-combined}
+  \caption{Here we show a dataset found through optimization (left)
+    and its image under two inverse H\'{e}non mappings (right),
+    illustrating that properly chosen nonlinear transformations may
+  remove sloppiness. We use Antonios' model here.}
+\end{figure}
+
+\section{Anisotropic DMAPS figures}
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./rawlings/data-dmaps-keff-a}
+  \caption{Here we use the reversible reaction system, and look at a
+    collection of parameter combinations that predict concentration
+    profiles close to some ``base'' profile. We allow large enough
+    deviations to see some fattening of the dataset, and apply the new
+  DMAPS with a large value of $\epsilon$ and small $\lambda$. The
+  first eigenvector of this embedding aligns well with $k_{eff}$ as
+  hoped. The dataset is colored by $\Phi_1$ and two surfaces of
+  constant $k_{eff}$ are added to show how the level sets of $\Phi_1$
+  and the level sets of $k_{eff}$ coincide.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./rawlings/phi1-keff}
+  \caption{Here we directly plot $\Phi_1$ against $k_{eff}$ to show
+    that they are approximately one-to-one.}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

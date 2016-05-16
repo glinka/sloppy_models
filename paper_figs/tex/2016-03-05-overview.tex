@@ -128,7 +128,7 @@ tolerance. Fig.~\ref{f.noses} shows this phenomenon.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{./rawlings/keff-levelsets-nose}
+  \includegraphics[width=\linewidth]{./rawlings/keff-with-levelsets}
   \caption{Different level sets of the objective function in a sloppy
     regime. As $1/\eps$ increases, a larger range of $y_0$ values give
     acceptable fits.}
@@ -240,111 +240,6 @@ limiting our analysis to this region leads to
 
 which removes the nonlinearity from the contours. If we could ease our
 restrictions to just $k_2 \gg k_1$ we do recover the desired curvature.
-
-
-\section{Regularly perturbed}
-
-Here we have the Michaelis Menten system. Although it, too, is singularly perturbed, the parameter transformation we apply reveals two \textit{regular} perturbation paramters $\kappa$ and $\epsilon$.
-
-\subsection{Michaelis Menten}
-
-This reaction system is given by
-%
-\[
- {\rm S + E}
-\
- \xrightleftharpoons[k_{-1}]{k_1}
-\
- {\rm C}
-\
- \xrightarrow{k_2}
-\
- {\rm P + E} ,
-\label{s2c2p}
-\]
-%
-
-The initial constituent concentrations are
-%
-\be
- S(0) = S_0 ,
-\quad
- E(0) = E_0 ,
-\quad
- C(0) = C_0
-\quad\mbox{and}\quad
- P(0) = P_0 ,
-\label{SCEP-IC}
-\ee
-%
-and they supplement the ODEs governing the evolution
-of the constituent concentrations,
-%
-\be
-\begin{array}{rclcl}
- S' &=& -k_1 E S + k_{-1} C ,
-\\
- C' &=& \ \ \, k_1 E S - (k_{-1} + k_2) C ,
-\\
- E' &=& -k_1 E S + (k_{-1} + k_2) C ,
-\\
- P' &=& \ \ \, k_2 C .
-\end{array}
-\ee
-
-System~\eqref{SCEP-IC}--\eqref{SCEP-ODE} has
-two exact conservation laws expressing mass balance,
-%
-\[
- S+C+P = S_0+C_0+P_0 =: S_T
-\quad\mbox{and}\quad
- C+E = C_0+E_0 =: E_T .
-\]
-%
-These may be employed to eliminate two of the ODEs;
-these are traditionally chosen to be
-the equations for $E$ and $P$,
-so that
-%
-\be
-\begin{array}{rclcl}
- S' &=& -k_1 (E_T-C) S + k_{-1} C ,
-\\
- C' &=& \ \ \, k_1 (E_T-C) S - (k_{-1} + k_2) C .
-\end{array}
-\label{SC-ODE}
-\ee
-In a typical experimental setting,
-both $C_0$ and $P_0$ equal zero,
-so that $S_0$ and $E_0$ fully determine $S_T$ and $E_T$,
-%
-\be
- S_0 = S_T
-\quad\mbox{and}\quad
- C_0 = 0 .
-\label{SC-IP}
-\ee
-%
-We will follow this convention here and consider a problem with five
-parameters: the three kinetic constants $k_{-1}$, $k_1$ and $k_2$, on
-one hand, and the total concentrations $S_T$ and $E_T$ on the other. \\
-
-Next we transform the bare parameters into 
-
-\begin{align*}
-  V_M &= k_2 E_T \\
-  K_M &= \frac{k_{-1} + k_2}{k_1} \\
-  \kappa &= \frac{k_{-1}}{k_2} \\
-  \epsilon &= \frac{E_T}{S_T + K_M} \\
-\end{align*}
-
-in which $\kappa$ and $\epsilon$ drop out of the leading dynamics and are thus sloppy. However, these parameter combinations \textbf{do not} yield nonlinear contours in the original parameter space as desired. The figure below shows the ellipsoidal contour produced by this system in the $K_M$, $V_M$ and $S_T$ parameter space, combinations of which are also sloppy in certain regimes.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{./zagaris/k-v-st-contour}
-  \caption{Ellipsoidal contour of Michaelis Menten system in $K_M$, $V_M$ and $S_T$ parameter space.}
-\end{figure}
 
 \section{Singularly and regularly perturbed}
 

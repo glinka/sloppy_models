@@ -1,0 +1,13 @@
+import numpy as np
+
+print "\n***Compute stationary solution families***"
+# find initial ellipse (continue along epsinv)
+sln1 = run(e='lc', c='lc.1', DS='-')
+sln1 = sln1 + run(e='lc', c='lc.1')
+
+# save output
+save(sln1,'lc-start')
+np.array(sln1.toArray()).dump('./lc-start.pkl')
+
+print "\n***Clean the directory***"
+cl()

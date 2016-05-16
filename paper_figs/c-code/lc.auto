@@ -1,0 +1,26 @@
+import numpy as np
+
+print "\n***Compute stationary solution families***"
+# find initial ellipse
+sln = run(e='lc', c='lc.1', DS='-')
+sln = sln + run(e='lc', c='lc.1')
+
+# # continue along obj. fn. value
+# sln = sln + run(sln('UZ')[0], c='lc.2')
+
+# # # continue along opposite direction
+# # sln = sln + run(sln('LP')[0], c='lc.2', DS='-')
+
+# # continue along each ellipse
+# for pt in sln[2]():
+#     sln = sln + run(pt, c='lc.3')
+
+print "\n***Relabel the output***"
+lc=rl(sln)
+save(lc,'lc-beak')
+
+data = loadbd('lc-beak')
+np.array(data.toArray()).dump('./lc-beak.pkl')
+
+print "\n***Clean the directory***"
+cl()

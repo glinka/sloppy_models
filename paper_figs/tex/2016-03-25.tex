@@ -1,0 +1,117 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {/home/alexander/Dropbox/Research/Kevrekidis/sloppiness-manuscript/MS/figs/} }
+
+\title{Some initial paper figures}
+\author{}
+
+\begin{document}
+\maketitle
+
+\section{Dataspace example}
+
+These are essentially clones of Antonios' plots made with Python
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./model-manifold-eps-coloring-medium-eps}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./levelsets-medium-eps}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./model-manifold-eps-coloring-small-eps}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./levelsets-small-eps}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./ball-fig}
+\end{figure}
+
+\clearpage
+
+\section{DMAPS}
+
+\subsection{2d vanilla}
+
+Results from the reaction network model
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./keff-small-delta}
+  \caption{Plain dataset (left), colored by $\Phi_1$ (upper right), colored by $\Phi_2$ (lower right)}
+\end{figure}
+
+\clearpage
+
+\subsection{3d with dataspace kernel}
+
+Results from the custom kernel
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./keff-large-delta}
+  \caption{Plain dataset (left), colored by $k_{eff}$ (upper right), colored by $\Phi_1$ (lower right)}
+\end{figure}
+
+
+\subsection{Henon map}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./Henon2}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./transformed-params-fromoptimization-insert}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

@@ -1,0 +1,15 @@
+import numpy as np
+
+# continue down through minimum (continue along contour value)
+sln2 = loadbd('lc-descent')
+sln3 = []
+for pt in sln2():
+    sln3 = sln3 + run(pt, c='lc.3')
+    sln3 = sln3 + run(pt, c='lc.3', DS='-')
+
+# save output
+save(sln3,'lc-full')
+np.array(sln3.toArray()).dump('./lc-full.pkl')
+
+print "\n***Clean the directory***"
+cl()

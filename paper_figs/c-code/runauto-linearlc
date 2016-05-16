@@ -1,0 +1,7 @@
+#!/bin/bash
+make clean; make
+auto linearlc.auto.1 > auto.out
+make clean; make
+auto linearlc.auto.2 >> auto.out
+make clean; make
+auto linearlc.auto.3 >> auto.out
