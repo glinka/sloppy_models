@@ -7,10 +7,10 @@ CXX = gcc
 
 CXXFLAGS = -g -Wall -std=c99 -lgsl -lblas -O3 -I/home/alexander/local/auto/07p/include
 
-all: lc_auto #linearlc_auto 
+all: linearlc_auto #lc_auto 
 
 %.o: %.c
-	$(CXX) -c $< $(CXXFLAGS)
+	$(CXX) $(CXXFLAGS) -c $< 
 
 lc_auto: $(OBJECTS)
 	gfortran -L/home/alexander/local/auto/07p/lib -fopenmp -O sing-pert-sys.o lc.o -o lc.exe /home/alexander/local/auto/07p/lib/*.o -lauto_c  -lgsl -lopenblas

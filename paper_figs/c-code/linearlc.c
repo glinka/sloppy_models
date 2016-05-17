@@ -29,10 +29,14 @@ int stpnt (integer ndim, doublereal t, doublereal *u, doublereal *par) {
   /* par[0] = 1.00001; */
   /* par[1] = 3.009172445201692e-11; */
 
-  /* for other ellipses: */
-  u[0] = 2.001;
-  par[0] = 1.001;
-  par[1] = 3.0069575426966934e-07;
+  /* /\* for other ellipses: *\/ */
+  /* u[0] = 2.001; */
+  /* par[0] = 1.001; */
+  /* par[1] = 3.0069575426966934e-07; */
+
+  u[0] = 1.001;
+  par[0] = 5;
+  par[1] = 4.5401990916097867e-11;
 
   /* // for divergence upwards */
   /* u[0] = 2.; */
@@ -60,9 +64,9 @@ int pvls (integer ndim, const doublereal *u,
   CONSTANTS->TIMES[0] = 1;
   CONSTANTS->TIMES[1] = 2;
   CONSTANTS->TIMES[2] = 6;
-  CONSTANTS->Y0_TRUE = 2;
+  CONSTANTS->Y0_TRUE = 1;
   // for ellipses:
-  CONSTANTS->EPSINV_TRUE = 1;
+  CONSTANTS->EPSINV_TRUE = 5;
   /* // for beaks: */
   /* CONSTANTS->EPSINV_TRUE = 1; */
 

@@ -4,12 +4,19 @@ import numpy as np
 sln2 = loadbd('linearlc-descent')
 sln3 = []
 for pt in sln2():
-    sln3 = sln3 + run(pt, c='linearlc.3')
     sln3 = sln3 + run(pt, c='linearlc.3', DS='-')
 
 # save output
-save(sln3,'linearlc-full')
-np.array(sln3.toArray()).dump('./linearlc-full.pkl')
+save(sln3,'linearlc-fullminus')
+np.array(sln3.toArray()).dump('./linearlc-fullminus.pkl')
+
+sln3 = []
+for pt in sln2():
+    sln3 = sln3 + run(pt, c='linearlc.3')
+
+# save output
+save(sln3,'linearlc-fullplus')
+np.array(sln3.toArray()).dump('./linearlc-fullplus.pkl')
 
 print "\n***Clean the directory***"
 cl()

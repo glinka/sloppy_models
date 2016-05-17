@@ -50,3 +50,10 @@ zagaris_model/build
 /michaelis_menten/lambdas.pkl
 /paper_figs/colormaps.py
 /rawlings_model/temp.pkl
+*.pkl
+/paper_figs/c-code/b.lc
+paper_figs/c-code/b.*
+paper_figs/c-code/d.*
+/grad-dmaps/output-eigvects.odt
+/paper_figs/c-code/test
+/paper_figs/c-code/void-ptr-test

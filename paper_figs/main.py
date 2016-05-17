@@ -36,81 +36,89 @@ from pca import pca
 def linear_sing_pert_param_space_fig():
     """plots output from auto goodly"""
     # load pre-computed data
-    lcs = np.load('c-code/linearlc-full.pkl')
+    lcsplus = np.load('c-code/linearlc-fullplus.pkl')
+    lcsminus = np.load('c-code/linearlc-fullminus.pkl')
+    lcsplus[:,3] = np.log10(lcsplus[:,3])
+    lcsminus[:,3] = np.log10(lcsminus[:,3])
+
+    colornorm = colors.Normalize(-9.24, np.max(lcsminus[:,3]))
+    colormap = cm.ScalarMappable(norm=colornorm)
+    print np.min(lcsminus[:,3]), np.max(lcsminus[:,3])
+
+    # loop through each unique value of lcs[:,3], the delta value
+
+    branches = []
+    current_delta = lcsplus[0,3]
+    start = 0
+    npts = lcsplus.shape[0]
+    for i in range(npts):
+        if lcsplus[i,3] != current_delta:
+            branches.append(lcsplus[start:i])
+            current_delta = lcsplus[i,3]
+            start = i
+    branches.append(lcsplus[start:npts])
+
+    print 'have', len(branches), 'branches'
+        
+    # # # remove any branches for which 1/eps goes below zero
+    # kept_pts = np.empty((npts, 4))
+    # nkept_branches = 0
+    # for i in range(nbranches):
+    #     branch = lcs[i*npts_per_branch:(i+1)*npts_per_branch]
+    #     if branch[branch < 0].shape[0] == 0:
+    #         kept_pts[nkept_branches*npts_per_branch:(nkept_branches+1)*npts_per_branch] = np.copy(lcs[i*npts_per_branch:(i+1)*npts_per_branch])
+    #         nkept_branches = nkept_branches + 1
+    # # relabel kept pts
+    # nbranches = nkept_branches
+    # lcs = kept_pts
+    # npts = lcs.shape[0]
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
     axins = inset_axes(ax, 7, 6, bbox_to_anchor=(0.5, 0.95), bbox_transform=ax.transAxes)
 
-    # loop through each unique value of lcs[:,3], the delta value
-    npts = lcs.shape[0]
-    npts_per_run = 4000
-    npts_per_branch = 2*npts_per_run # twice the value of 'NMX' in linearlc.auto.3 (forward and backward)
-    nbranches = npts/npts_per_branch
-
-    # # remove any branches for which 1/eps goes below zero
-    kept_pts = np.empty((npts, 4))
-    nkept_branches = 0
-    for i in range(nbranches):
-        branch = lcs[i*npts_per_branch:(i+1)*npts_per_branch]
-        if branch[branch < 0].shape[0] == 0:
-            kept_pts[nkept_branches*npts_per_branch:(nkept_branches+1)*npts_per_branch] = np.copy(lcs[i*npts_per_branch:(i+1)*npts_per_branch])
-            nkept_branches = nkept_branches + 1
-
-    # relabel kept pts
-    nbranches = nkept_branches
-    lcs = kept_pts
-    npts = lcs.shape[0]
-
-    colornorm = colors.Normalize(vmin=np.min(lcs[:,3]), vmax=np.max(lcs[:,3]))
-    colormap = cm.ScalarMappable(norm=colornorm)
-
-    # plot each branch
-    tol = 1e-14
+    # # plot each branch
+    # first the 'plus' branches
     lw = 3
     lw_inset = 1
-    for i in range(nbranches):
-        branch = lcs[npts_per_branch*i:npts_per_branch*i + npts_per_run]
-        ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
-        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw_inset)
-        branch = lcs[npts_per_branch*i + npts_per_run:npts_per_branch*i + 2*npts_per_run]
+    bslice = 50
+    custom_indices = [0, 18, 100, 200]
+    for i in custom_indices:
+        branch = branches[i]
         ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
         axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw_inset)
 
-        # # same for inset
-        # axins.plot(lcs[npts_per_branch*i:npts_per_branch*i + npts_per_run,0], lcs[npts_per_branch*i:npts_per_branch*i + npts_per_run:,1], color=colormap.to_rgba(lcs[npts_per_branch*i,3]), lw=lw_inset)
-        # axins.plot(lcs[npts_per_branch*i + npts_per_run:npts_per_branch*i + 2*npts_per_run,0], lcs[npts_per_branch*i + npts_per_run:npts_per_branch*i + 2*npts_per_run,1], color=colormap.to_rgba(lcs[npts_per_branch*i,3]), lw=lw_inset)
-        
+    # second, the 'minus' branches
+    branches = []
+    current_delta = lcsminus[0,3]
+    npts = lcsminus.shape[0]
+    start = 0
+    for i in range(npts):
+        if lcsminus[i,3] != current_delta:
+            branches.append(lcsminus[start:i])
+            current_delta = lcsminus[i,3]
+            start = i
+    branches.append(lcsminus[start:npts])
 
-    # tidy up
+    for i in custom_indices:
+        branch = branches[i]
+        ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
+        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw_inset)
+
+    # # tidy up
     ax.set_xlabel(r'$1/\epsilon$')
-    ax.set_ylabel(r'$x_0$')
-    ax.set_ylim((0,120))
-    ax.set_xlim(right=6)
+    ax.set_ylabel(r'$y_0$')
+    ax.set_ylim((0,60))
+    ax.set_xlim((2,9))
     fig.subplots_adjust(bottom=0.15)
 
-    # add an inset
-    axins.set_xlim((0.5, 3.0))
-    axins.set_ylim((0, 16))
+    # add an inset marker
+    # axins.set_xlim((4.99, 5.01))
+    # axins.set_ylim((0.99, 1.01))
+    axins.set_xlim((4.9, 5.1))
+    axins.set_ylim((0.9, 1.1))
     axins.tick_params(axis='both', which='major', labelsize=0)
-    mark_inset(ax, axins, loc1=1, loc2=2, fc='none', ec='0.5', zorder=3)
-
-    # # show where these curves lie in 3d
-    # times = np.array((1.,2.,6.))
-    # times.shape = (3,1)
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # for i in range(nbranches):
-    #     branch = lcs[npts_per_branch*i:npts_per_branch*i + npts_per_run]
-    #     yvals = branch[:,1]*np.exp(-times*branch[:,0])
-    #     print 
-    #     ax.plot(yvals[:,0], yvals[:,1], yvals[:,2], color=colormap.to_rgba(branch[0,3]), lw=lw)
-    #     branch = lcs[npts_per_branch*i + npts_per_run:npts_per_branch*i + 2*npts_per_run]
-    #     ax.plot(yvals[:,0], yvals[:,1], yvals[:,2], color=colormap.to_rgba(branch[0,3]), lw=lw)
-
-    # ax.set_xlim((0,0.001))
-    # ax.set_ylim((0,0.001))
-    # ax.set_zlim((0,0.001))
+    mark_inset(ax, axins, loc1=4, loc2=3, fc='none', ec='0.5', zorder=3)
 
     plt.show()
 
@@ -3206,8 +3214,8 @@ def main():
     # test()
     # temp_fig()
     # linear_sing_pert_model_manifold_fig()
-    # linear_sing_pert_param_space_fig()
-    outlier_plot()
+    linear_sing_pert_param_space_fig()
+    # outlier_plot()
     
 if __name__=='__main__':
     main()
