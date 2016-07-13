@@ -1,0 +1,1090 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Proceedings of the National Academy of Sciences (PNAS)
+% LaTeX Template
+% Version 1.0 (19/5/13)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% The PNAStwo class was created and is owned by PNAS:
+% http://www.pnas.org/site/authors/LaTex.xhtml
+% This template has been modified from the blank PNAS template to include
+% examples of how to insert content and drastically change commenting. The
+% structural integrity is maintained as in the original blank template.
+%
+% Original header:
+%% PNAStmpl.tex
+%% Template file to use for PNAS articles prepared in LaTeX
+%% Version: Apr 14, 2008
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+%------------------------------------------------
+% BASIC CLASS FILE
+%------------------------------------------------
+
+%% PNAStwo for two column articles is called by default.
+%% Uncomment PNASone for single column articles. One column class
+%% and style files are available upon request from pnas@nas.edu.
+
+%\documentclass{pnasone}
+\documentclass{pnastwo}
+
+%------------------------------------------------
+% POSITION OF TEXT
+%------------------------------------------------
+
+%% Changing position of text on physical page:
+%% Since not all printers position
+%% the printed page in the same place on the physical page,
+%% you can change the position yourself here, if you need to:
+
+% \advance\voffset -.5in % Minus dimension will raise the printed page on the 
+                         %  physical page; positive dimension will lower it.
+
+%% You may set the dimension to the size that you need.
+
+%------------------------------------------------
+% GRAPHICS STYLE FILE
+%------------------------------------------------
+
+%% Requires graphics style file (graphicx.sty), used for inserting
+%% .eps/image files into LaTeX articles.
+%% Note that inclusion of .eps files is for your reference only;
+%% when submitting to PNAS please submit figures separately.
+
+%% Type into the square brackets the name of the driver program 
+%% that you are using. If you don't know, try dvips, which is the
+%% most common PC driver, or textures for the Mac. These are the options:
+
+% [dvips], [xdvi], [dvipdf], [dvipdfm], [dvipdfmx], [pdftex], [dvipsone],
+% [dviwindo], [emtex], [dviwin], [pctexps], [pctexwin], [pctexhp], [pctex32],
+% [truetex], [tcidvi], [vtex], [oztex], [textures], [xetex]
+
+\usepackage{graphicx}
+\graphicspath{ {./figs/} }
+
+%------------------------------------------------
+% OPTIONAL POSTSCRIPT FONT FILES
+%------------------------------------------------
+
+%% PostScript font files: You may need to edit the PNASoneF.sty
+%% or PNAStwoF.sty file to make the font names match those on your system. 
+%% Alternatively, you can leave the font style file commands commented out
+%% and typeset your article using the default Computer Modern 
+%% fonts (recommended). If accepted, your article will be typeset
+%% at PNAS using PostScript fonts.
+
+% Choose PNASoneF for one column; PNAStwoF for two column:
+%\usepackage{PNASoneF}
+%\usepackage{PNAStwoF}
+
+%------------------------------------------------
+% ADDITIONAL OPTIONAL STYLE FILES
+%------------------------------------------------
+
+%% The AMS math files are commonly used to gain access to useful features
+%% like extended math fonts and math commands.
+
+\usepackage{amssymb,amsfonts,amsmath}
+%% user-included, maybe not kosher
+\usepackage{subcaption, empheq, setspace, lscape}
+
+%------------------------------------------------
+% OPTIONAL MACRO FILES
+%------------------------------------------------
+
+%% Insert self-defined macros here.
+%% \newcommand definitions are recommended; \def definitions are supported
+
+%\newcommand{\mfrac}[2]{\frac{\displaystyle #1}{\displaystyle #2}}
+%\def\s{\sigma}
+\newcommand{\mbf}[1]{\mathbf{x}}
+\newcommand{\eps}{\varepsilon}
+
+%------------------------------------------------
+% DO NOT EDIT THIS SECTION
+%------------------------------------------------
+
+%% For PNAS Only:
+\contributor{Submitted to Proceedings of the National Academy of Sciences of the United States of America}
+\url{www.pnas.org/cgi/doi/10.1073/pnas.0709640104}
+\copyrightyear{2008}
+\issuedate{Issue Date}
+\volume{Volume}
+\issuenumber{Issue Number}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+%	TITLE AND AUTHORS
+%----------------------------------------------------------------------------------------
+
+\title{Look ma, no parameters! Effective model parameterization through data-mining} % For titles, only capitalize the first letter
+
+%------------------------------------------------
+
+%% Enter authors via the \author command.  
+%% Use \affil to define affiliations.
+%% (Leave no spaces between author name and \affil command)
+
+%% Note that the \thanks{} command has been disabled in favor of
+%% a generic, reserved space for PNAS publication footnotes.
+
+%% \author{<author name>
+%% \affil{<number>}{<Institution>}} One number for each institution.
+%% The same number should be used for authors that
+%% are affiliated with the same institution, after the first time
+%% only the number is needed, ie, \affil{number}{text}, \affil{number}{}
+%% Then, before last author ...
+%% \and
+%% \author{<author name>
+%% \affil{<number>}{}}
+
+%% For example, assuming Garcia and Sonnery are both affiliated with
+%% Universidad de Murcia:
+%% \author{Roberta Graff\affil{1}{University of Cambridge, Cambridge,
+%% United Kingdom},
+%% Javier de Ruiz Garcia\affil{2}{Universidad de Murcia, Bioquimica y Biologia
+%% Molecular, Murcia, Spain}, \and Franklin Sonnery\affil{2}{}}
+
+\author{A legion of good people\affil{1}{diverse affiliations}
+}
+
+%
+
+\contributor{Submitted to Proceedings of the National Academy of Sciences
+of the United States of America}
+
+%----------------------------------------------------------------------------------------
+
+\maketitle % The \maketitle command is necessary to build the title page
+
+\begin{article}
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT, KEYWORDS AND ABBREVIATIONS
+%----------------------------------------------------------------------------------------
+
+\begin{abstract}
+Detailed dynamical models can often be summarized in terms of only a few components, reducing complexity and making exploration easier and more insightful.
+Pen-and-paper reduction is tedious and impractical for most models, however it has the added benefit of unveiling the parameter combinations that matter most.
+Recently developed frameworks computerizing model reduction leave the dual aspect of effective parameter identification unaddressed, subjugating parameter space exploration to ineffective sampling strategies.
+Here, we lay the foundation for systematic parameter reduction, rooting it in the same nonlinear data mining techniques that power model reduction in our equation-free framework.
+Our ambition is to extend the data-driven determination of effective variables and of their dynamics, by integrating into it that of effective model parameters.
+In this manner, both dynamical simulations and parametric explorations will be accelerated, allowing us to map out the behavior of complex models efficiently.
+
+\end{abstract}
+
+%------------------------------------------------
+
+\keywords{parameter sloppiness | model reduction | multiscale dynamics} % When adding keywords, separate each term with a straight line: |
+
+%------------------------------------------------
+
+%% Optional for entering abbreviations, separate the abbreviation from
+%% its definition with a comma, separate each pair with a semicolon:
+%% for example:
+%% \abbreviations{SAM, self-assembled monolayer; OTS,
+%% octadecyltrichlorosilane}
+
+% \abbreviations{}
+\abbreviations{DOF, degrees of freedom;
+SVD, singular value decomposition;
+DMAPS, diffusion maps;
+PCA, principal component analysis;
+MMH, Michaelis--Menten--Henri}
+
+%----------------------------------------------------------------------------------------
+%	PUBLICATION CONTENT
+%----------------------------------------------------------------------------------------
+
+%% The first letter of the article should be drop cap: \dropcap{} e.g.,
+%\dropcap{I}n this article we study the evolution of ''almost-sharp'' fronts
+
+\dropcap{M}athematical modeling is a way of making sense of the world, and modeling in terms of dynamical systems is an immensely successful way of understanding spatiotemporal variability.
+As scientific priorities shift from the part to the whole, models incorporate an ever increasing number of components and interactions.
+The advent of inexpensive computing power has greatly assisted this process, but it has also brought along a commensurate increase in complexity that remains largely unmatched by theoretical advances.
+
+A particular facet of complexity for multi-DOF dynamical systems is our lack of understanding of what constitutes good observables and of the laws governing their evolution.
+Colloquially, one can assert that a revolution akin to that of Statistical Physics for particle systems is pending.
+In that theory, although the detailed dynamics involve a stupefying number of DOF, the observable dynamics are described through a few macroscopic quantities such as density, momentum and kinetic energy.
+A dual of this picture plays out in parameter space, with the coarse-grained model incorporating a handful of parameter combinations instead of the much larger number of parameters that the detailed model may contain.
+Identifying these combinations enables us to map out system dynamics in parameter space intelligently by exploring those directions that affect system dynamics.
+
+In the past, we have pioneered a framework to reduce complex systems on-the-fly which we termed \emph{equation-free modeling}.
+In it, we work with reduced models generated through brief, judicious bursts of simulation of a high-dimensional detailed model but unavailable in closed form.
+The \emph{variable-free component} in that approach amounts to casting the reduced model in effective state variables which are suggested by mining the rich, high-dimensional data sets produced by simulation.
+This combination of simulation and data mining assumes center stage in our approach, effectively substituting theoretical and empirical determinations of appropriate variables.
+
+Here we take this one step further.
+
+%------------------------------------------------
+
+\section{Model manifolds and parameter sloppiness}
+
+We start with a dynamical model
+%
+\begin{equation}
+ \dot{\mathbf{x}}(t \vert \mathbf{p})
+=
+ \mathbf{v}(\mathbf{x} \vert \mathbf{p}) ,
+\ \mbox{where} \
+ \dot{\mathbf{x}}
+=
+ \frac{d\mathbf{x}}{dt}
+\ \mbox{and} \
+ \mathbf{x}(t_0 \vert \mathbf{p}) = \mathbf{x}_0(\mathbf{p}) .
+\label{x'=v}
+\end{equation}
+%
+The vector $\mathbf{x}(t \vert \mathbf{p}) \in \mathbf{R}^d$ collects the values of the system variables at time $t$ and for parameter values $\mathbf{p} \in \mathbf{R}^M$, $\mathbf{x}_0(\mathbf{p})$ denotes its initial state for those parameters, and the function $\mathbf{v} : \mathbf{R}^d \times \mathbf{R}^M \to \mathbf{R}^d$ codifies the physical law governing system evolution.
+The output of \eqref{x'=v} is the system state $\mathbf{x}(t \vert \mathbf{p})$ for all times $t>t_0$, written $\mathbf{x}(\cdot\vert\mathbf{p})$, and data are observations of that time course.
+By observation we understand \emph{quantification} through a set of measurement functions $f_1,\ldots,f_N$ transforming the time course into numbers,
+so that data have the form
+%
+\begin{equation}
+ \mathbf{f}(\mathbf{p})
+=
+\big[
+ f_1(\mathbf{x}(\cdot\vert\mathbf{p})) \, ,
+\ldots \, ,
+ f_N(\mathbf{x}(\cdot\vert\mathbf{p}))
+\big]
+\in
+ \mathbf{R}^N .
+\label{f(x)}
+\end{equation}
+%
+This maps parameter values $\mathbf{p}$ to a point in data space $\mathbf{R}^N$ through the mediation of the time course $\mathbf{x}$.
+We limit ourselves here to recording specific $\mathbf{x}-$components at specific times but present a general analytical framework in the SI.
+We work throughout with more observations than parameters, $M<N$, so that parameter inference is possible.
+
+As $\mathbf{p}$ traverses $\mathbf{R}^M$, the data point $\mathbf{f}(\mathbf{p})$ traces out an $M-$dimensional surface $\mathcal{M}$ in the data space $\mathbf{R}^N$.
+Figure~\ref{f-1D-model} shows this \emph{model manifold} for the prototypical model
+%
+\begin{equation}
+ y' = -\frac{1}{\eps} y ,
+\ \mbox{subject to the initial condition} \
+ y(0) = y_0 .
+\label{1D-model}
+\end{equation}
+%
+For this model, we choose both $\eps$ and $y_0$ as parameters and monitor system evolution at distinct times $0 < t_1 < t_2 < t_3$,
+%
+\begin{equation}
+ \mathbf{p} = (\eps , y_0)
+\ \mbox{and} \
+ \mathbf{f}(\mathbf{p})
+=
+\big[
+ y(t_1 \vert \mathbf{p}) \, ,
+ y(t_2 \vert \mathbf{p}) \, ,
+ y(t_3 \vert \mathbf{p})
+\big] .
+\label{1D-pf}
+\end{equation}
+%
+Sliding down $\mathcal{M}$ in the plot amounts to decreasing $\eps$ and increasing $y_0$.
+For $\eps \gg t_3$ (top boundary), $y$ effectively retains in time its initial value and varying the initial condition traces out the diagonal bounding the surface.
+At the other extreme where $\eps \ll t_1$ (bottom boundary), $y$ decays rapidly and effectively vanishes at $t_2,t_3$ for a wide range of $y_0$.
+Varying the initial condition in this regime outlines curves arbitrarily close to the other boundary, namely the $f_1-$axis.
+
+Parameter inference works as follows
+Parameter sloppiness builds on the observation that different parameter perturbations can affect the generated data drastically differently, despite there being a one-to-one correspondence between data and parameters.
+This is reflected in eigenvalue disparities in an SVD of the Jacobian $D_\mathbf{p}\mathbf{f}(\mathbf{p})$, with small eigenvalues tied to \emph{sloppy parameter directions} that hardly affect the data.
+In the reverse picture, where parameter values are inferred by 
+
+Although this sort of sensitivity analysis is local, the footprint of sloppiness is the existence of \emph{extended} regions in parameter space evoking nearly identical data.
+Such neutral sets are effectively lower-dimensional and roughly foliate parameter space, while effective system parameters remain approximately constant on them.
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=1.0\linewidth]{f-1D-model}}
+\caption{Model manifold $\mathcal{M}$ for dynamical system~\eqref{1D-model} and monitoring function~\eqref{1D-pf}.
+(Left) Parameter plane with lines of constant $\eps$ and coloring by $y_0$.
+(Right) $3$D data space with embedded $2$D model surface.
+Each pair $(\eps,y_0)$ is mapped to a point on $\mathcal{M}$ through $\mathbf{f}$.
+The coloring is also by $y_0$ and lines emanating from the origin have constant $\eps$ along them.
+The surface is bounded by the diagonal $f_1=f_2=f_3$ ($\eps\to\infty$) and the $f_1-$axis ($\eps\downarrow0$) but unbounded along lines $\eps=constant$.
+The mirror image of the surface through the origin (not shown) also belongs to $\mathcal{M}$ ($y_0<0$), as does the grey part above the diagonal ($\eps<0$).
+}\label{f-1D-model}
+\end{figure}
+
+In the linear pic- ture we painted above, an M?dimensional ball around ?(?) is pulled back to an ellipsoid centered at ? with widely disparate principal axes. The smallest principal directions correspond to sloppy parameter combinations, and they can be unraveled by Linear Algebra techniques such as Principal Component Analysis [2]. In reality, pronounced deviations of ? from linearity mean that neighborhoods of ?(?) are mapped to curved neutral sets in parameter space with disparate characteristic length scales. These are not directly amenable to linear techniques, requiring instead the development of a nonlinear data mining framework to identify them and the associated effective parameters. We will make these ideas concrete below through a series of examples.
+
+
+As emphasized earlier, different regions of M may or may not be sloppy. For the setup described in (4)–(5), sloppiness arises in the regime ? ? 1 where the system is singularly perturbed. In that regime, and during an initial fast transient, all trajectories enter an O(?) neighborhood of the x?axis containing9
+an attracting, global slow manifold. They subsequently remain exponentially close to that manifold, so that their fast component y remains uniformly O(?). In that manner, information on each trajectory’s initial fast component is ef- fectively erased during the transient, making y0 a sloppy parameter. This last observation is crucial in understanding the emergence of sloppiness in multiscale settings. As ? ? 0, the slow phase sets on earlier and t3 > t2 > t1 fall in it one after another. When this happens for e.g. t3, the partial observation y(t3) col- lapses to zero irrespectively of the y0?value that generated it. This process is evident in the right panel of Fig. 1. As ? ? 0, the outputs generated by all initial fast components within a bounded interval collapse to the origin, as y(t3), y(t2) and y(t1) become zero one after another. This situation generalizes to generic multiscale systems with an attracting slow manifold and a fast fibration over it. Plainly, points in compact subsets of a fast fiber possess matching outer solutions and thus generate similar observations in the slow timescale.Figure 2 shows the neutral set in parameter space for a particular observation, advertised above as the hallmark of sloppiness. Specifically, we have plotted a portion of the model manifold M together with a point p? = ?(??) in its sloppy regime and a ??neighborhood (ball) B?(p?) around it. The ball encloses the submanifold M ? B?(p?) whose inverse image under ??1, shown in the right panel, constitutes the neutral set ??(??) at level ?; all parameter values in it yield observed model responses ??close to p?. This set is specific to our choice of model space metric and grows with ?, namely from ?0(??) = {??} to a “pinched” elliptic disk. This chirality reflects that smaller ??values can accommodate wider intervals of y0 within the same tolerance ?, as they yield stronger fast contraction. For ? past a certain threshold, ??(??) opens up and becomes unbounded. Evidently, that threshold is reached when the ball B?(p?) reaches the ? = 0 boundary of M.A corollary of this last observation is that, as p? moves towards the ? = 0 boundary of M, the critical tolerance ? at which ??(??) becomes unbounded vanishes. This is evident in Fig. 3 (do we want such a figure?), where we have plotted the neutral sets ??(??) corresponding to various points ?? and toler- ances ?. A direct implication is that the system is effectively parameter-free in the singularly perturbed regime, as all parameter combinations in a wide set yield responses within tolerance.
+
+
+[ANTONIOS STOPS HERE]
+
+
+\section{Nonlinear examples}
+
+\subsection{H\'{e}non Map} \label{sec:hm}
+
+As a first approximation, one might analyze parameter sensitivities by
+inspecting the singular values of $D_uf$. Large disparities in the
+singular value magnitudes would suggest directions in parameter space
+along which the model response $\mu$ remain essentially constant. This
+analysis assumes that $\mu$ is locally a linear function of
+$\theta$. While this will always hold within some small neighborhood
+of a point $p \in \mathcal{M}$, in practice if the system is highly
+nonlinear the linear approximation will quickly fail, and a basic
+analysis of the SVD will be insufficient to assess model
+sloppiness. \\
+
+The following system, while contrived, directly illustrates this
+behavior. We first introduce an ODE model with four parameters: two
+effective and two sloppy. This two-dimensional system is governed by
+
+\begin{align}
+  \begin{aligned}
+    X' &= -\lambda X \\
+    \epsilon Y' &= -Y
+    \label{eqn:sp}
+% \frac{d}{dt} \begin{bmatrix} x \\ y \end{bmatrix} = 
+  \end{aligned}
+\end{align}
+
+which we transform $(X, Y) \rightarrow (x,y)$ via
+
+\begin{align}
+  \begin{aligned}
+    x &= X + b y^2 \\
+    y &= Y + a x^2
+    \label{eqn:sp-t}
+  \end{aligned}
+\end{align}
+
+When $\epsilon \ll \lambda$, (\ref{eqn:sp}) becomes singularly
+perturbed, and $Y$ quickly decays to zero. The transformation in
+(\ref{eqn:sp-t}) serves to create nonlinear fast and slow manifolds in
+the $(x,y)$ plane: $x = X(t_0) + b y^2$ and $y = a x^2$
+respectively. % This leads to a final set of nonlinear, coupled ODEs
+
+% \begin{align}
+%   \begin{aligned}
+%     \begin{bmatrix} x' \\ y' \end{bmatrix} = \frac{1}{1 - 4 a b x
+%       y} \begin{bmatrix} \lambda(x - b y^2) - 2 b y (y - a x^2)/\epsilon
+%       \\ -2 a x \lambda (x - b y^2) - (y - a x^2)/\epsilon \end{bmatrix}
+%   \end{aligned}
+% \end{align}
+
+
+
+Traditionally, parameter sensitivities have been analyzed by
+inspecting the eigenvalues of some objective function's Hessian near a
+minimum. Vanishingly small eigenvalues suggest directions
+in parameter space in which the model response remains nearly
+invariant. However, this analysis assumes a locally quadratic form of
+the objective function or, equivalently, elliptical objective function
+contours in parameter space near the minimum. While this approximation
+nearly always holds close enough to the minimum, in practice
+nonlinearities in the system may quickly dominate the objective
+function, causing the locally-quadratic assumption to fail at points
+unexpectedly close to the minimum.
+
+We demonstrate this phenomenon using a slightly contrived but
+illustrative example: a modified version of (\ref{eqn:sp-t}) in which
+the parameters $a$ and $\lambda$ are transformed by two applications
+of the nonlinear H\'{e}non map, a single iteration of which is given by
+
+\begin{align}
+  \begin{aligned}
+    u_{n+1} &= 1 - \gamma u_n^2 + w_n \\
+    w_{n+1} &= \zeta u_n
+    \label{eqn:henon}
+  \end{aligned}
+\end{align}
+
+where we choose the classical values of $\gamma = 1.4$ and $\zeta =
+0.3$. Thus, instead of $a$ and $\lambda$ we have as parameters
+
+\begin{align}
+  \begin{aligned}
+    u_2 &= 1 - 1.4 (1 - 1.4 \lambda^2 + a)^2 + 0.3 (1 - 1.4 \lambda^2 +
+    a) \\
+    w_2 &= b (1 - 1.4 \lambda^2 + a)
+  \end{aligned}
+\end{align}
+
+As (\ref{eqn:henon}) is an invertible transformation, every value of
+$(u_2, w_2)$ corresponds to a unique value of $(\lambda, a)$.
+
+We fix a base value of $(u_2^*, w_2^*) = (0.7956, 1.8)$ corresponding
+to $(\lambda^*, a^*) = (1, 1)$ and compute the model response
+
+\begin{align}
+  \mu^*(\theta) = \begin{bmatrix} x(t_0; u, w) & y(t_0; u, w) \\
+    x(t_1; u, w) & y(t_1; u, w) \\ \vdots & \vdots \\ x(t_{N}; u, w) & y(t_{N}; u, w) \end{bmatrix}
+\end{align}
+
+where here we take $t_i$ as $N=10$ evenly spaced points in $[0.1,
+1.0]$. To investigate which parameter values $\theta_i = (u_2, w_2)_i$
+generate points on the model manifold close to $\mu^*$, we sampled
+$(u_2, w_2)$ uniformly on the rectangle $u_2 \in (-2, 30)$, $w_2 \in
+(-1.5, 0.7)$ and used each point as an initial value for a least
+squares minimization routine with objective function
+
+\begin{align}
+  c(\theta) = \| \mu(\theta) - \mu^* \|^2_F
+\end{align}
+
+where $\| \cdot \|_F$ denotes the Frobenius norm. As we don't consider
+noise in this problem, our objective function has a unique minimum
+exactly at $\theta^* = (u_2^*, w_2^*)$; however, we set the tolerance of our
+minimization routine to terminate at any point $\theta_i$ for which
+$c(\theta_i) < 1.0$. As the algorithm will naturally converge to
+different points depending on the initial value, our procedure
+generates the desired sample of parameters which map to points on the
+model manifold close to $\mu^*$. This set of parameter combinations is
+shown in Fig. (\ref{fig:trans-params}), where each point $\theta_i$ is
+colored by the objective function value $c(\theta_i)$. The model's
+nonlinearity is evident in this set's deviation from an elliptical
+shape. If we transform this set back into parameter values $(a,
+\lambda)$, we recover the typical, elliptical structure expected
+around the minimum. 
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{x1-x2-fromopt}
+    \subcaption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{inverted-params}
+    \subcaption{}
+  \end{subfigure} %
+  \caption{ \label{fig:trans-params}}
+\end{figure}
+
+
+The significance of this example is twofold. First, parameter
+sloppiness may be accompanied by nonlinearities in the underlying
+model that invalidate traditional sensitivity analysis. Second, we see
+that this phenomenon is really a result of a poorly paramaterized
+model, and that an appropriate transformation of parameter space, here
+$(u_2, w_2) \rightarrow (a, \lambda)$, we can remove the nonlinear
+structure. This suggests two approaches to address model sloppiness:
+develop techniques capable of handling nonlinearity and work with the
+original, nonlinear model, or develop techniques to directly remove
+the nonlinearity from the model. This paper takes the former
+approach.
+
+\subsection{Reversible reactions} \label{sec:rr}
+
+We now turn our attention to a more familiar model: that of a
+reversible reaction with three species. The mechanism is given by
+
+\begin{align}
+  A \xrightleftharpoons[k_{-1}]{k_1} B, \; B \xrightarrow[]{k_2} C
+  \label{mech:abc}
+\end{align}
+
+The corresponding set of linear differential equations traditionally
+used to model this reaction has an analytical solution for the
+concentration of $C$ which is given by
+
+\begin{align}
+  C(t) = A_0(\frac{k_1 k_2}{\alpha \beta} + \frac{k_1
+  k_2}{\alpha(\alpha - \beta)} e^{-\alpha t} - \frac{k_1
+  k_2}{\beta(\alpha - \beta)} e^{-\beta t})
+  \label{eq:cfull}
+\end{align}
+
+where
+
+\begin{align}
+  \alpha &= \frac{1}{2}\big(k_1 + k_{-1} + k_2 + \sqrt{(k_1 + k_{-1} + k_2)^2 - 4 k_1 k_2}\big) \\
+  \beta &=  \frac{1}{2}\big(k_1 + k_{-1} + k_2 - \sqrt{(k_1 + k_{-1} + k_2)^2 - 4 k_1 k_2}\big)
+\end{align}
+
+However, we may apply the quasi stead-state approximation (QSSA) to
+obtain a simplified model in which
+
+\begin{align}
+  C(t) = A_0(1 - e^{-\frac{k_1 k_2}{k_{-1} + k_2} t})
+\end{align}
+
+This simplification is based on a separation of timescales in the
+reaction kinetics, and as explained in Appendix (\ref{ap:abc}),
+the approximation is only valid in the parameter regime
+$\frac{k_1 k_2}{(k_1 + k_{-1} + k_2)^2} \ll 1$ where
+$k_1 \ll k_{-1} + k_2$. In this region we see that
+$C(t) \approx f(k_{eff}) = f(\frac{k_1 k_2}{k_{-1} + k_2})$. We have
+thus reduced the model from the three base parameters $k_1, k_{-1}$
+and $k_2$ to the single parameter $k_{eff}$. If we try to fit our
+three base parameters to data collected in this QSSA regime, we expect
+to find an entire two-dimensional surface in parameter space along
+which model predictions are approximately constant: the surface of
+constant $k_{eff}$ on which $\frac{k_1 k_2}{k_{-1} + k_2} = c$. In
+other words, we expect a two dimensional, nonlinear sloppy manifold in
+parameter space as model output $C(t)$ changes only with $k_{eff}$.
+
+For the moment, let us view the problem through the eyes of the
+experimenter. We have collected laboratory data of the product
+concentration over time $\{ C^*(t_i) \}_{i=1}^N$. We
+believe Mechanism (\ref{mech:abc}) accurately describes the chemical
+reactions under investigation, and use Eq. (\ref{eq:cfull}) to fit
+parameters $k_1, k_{-1}$ and $k_2$ to our data using some
+least-squares objective function
+
+\begin{align}
+  c(k_1, k_{-1}, k_2) = \sum_i \big(C^*(t_i) - C(t_i; k_1, k_{-1}, k_2)\big)^2
+  \label{eq:abc-of}
+\end{align}
+
+However, our experiment was carried out at conditions such that
+$\frac{k_1 k_2}{(k_1 + k_{-1} + k_2)^2} \ll 1$ and
+$k_1 \ll k_{-1} + k_2$. Thus, just as in Section (\ref{sec:hm}), our
+optimization routine would converge not to a single point but to some
+collection of points lying on a two-dimensional surface in parameter
+space, all of which fit the experimental data well.
+
+To illustrate this concept, we created a trajectory $C^*(t_i)$ using
+the analytical Eq. (\ref{eq:cfull}) with $k_1^* = 10^{-1}$,
+$k_{-1}^* = k_2^* = 10^3$, $A_0 = 1$ and sampling times
+$t_i, \; i=1,\hdots,5$ chosen as explained in Appendix
+(\ref{ap:abc}). We then sampled log-parameter space uniformly in the
+region $\log(k_1) \in -4, -1]$, $\log(k_2), \log(k_{-1}) \in [1, 4]$,
+calculating the value of the objective function,
+Eq. (\ref{eq:abc-of}), at each of the randomly chosen points. Finally,
+we inspect the subset of points for which $c(\theta_i) < 10^{-6}$,
+that is, the set of parameter values that predict the true trajectory
+within a squared error of $10^{-6}$. This collection of points is
+plotted in Fig. (\ref{fig:abc-keff-1}), along with the surface
+$k_{eff} = k_{eff}^*$. As expected, the points cover this
+two-dimensional nonlinear, sloppy manifold: each point on the surface
+fits the data very well despite large variations of many orders of
+magnitude in individual parameters.
+
+Fig. (\ref{fig:abc-keff-2}) shows a larger subset of points for which
+$c(\theta_i) < 10^{-3}$. By coloring these points by $c(\theta)$, we
+can observe the direction in parameter space along which $c(\theta)$
+varies, or, equivalently, along which model response changes. This
+naturally corresponds to the directions orthogonal to the sloppy
+manifold, but more importantly, the figure shows that it also matches
+the direction in which $k_{eff}$ changes. This follows from our
+previous result that, in this region of parameter space,
+$c(\theta) \approx c(\k_{eff})$.
+
+Note that, in fact, even when our parameters do not obey
+Eqns. (\ref{eq:ieq1} and \ref{eq:ieq2}), we will still be faced
+with sloppy parameters. This arises from the fact that regardless
+which parameters are used, $C(t)$ is always a function of just two overall
+parameters, giving rise to a one-dimensional sloppy manifold. Further
+details on this non-identifiable parameter are given in Appendix
+(\ref{ap:abc}).
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-small-delta}
+    \subcaption{ \label{fig:abc-keff-1}}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-large-delta-A2}
+    \subcaption{ \label{fig:abc-keff-2}}
+  \end{subfigure} %
+  \caption{ \label{fig:abc-keff}}
+\end{figure}
+
+
+Unfortunately, typical models involve tens or hundreds of parameters,
+making a simple visual analysis of sloppiness as we have presented
+impossible. Thus we turn now to the main contribution of this paper:
+an automated method of uncovering parameter sloppiness in high
+dimensional datasets. The foundation of this method is the manifold
+learning technique Diffusion Maps (DMAPS). Broadly speaking, given a
+set of high-dimensional data points that actually lie on some hidden,
+lower-dimensional manifold, DMAPS will uncover this hidden surface and
+will provide a set of coordinates on it. By applying it to a set of
+parameter values that lie on some sloppy manifold, we will use this
+technique to reveal the sloppiness in our model.
+
+\subsubsection{Diffusion Maps}
+
+We now present the DMAPS algorithm; further details can be found in
+\cite{this}. We begin with a set of $N$ points in $\mathbb{R}^p$,
+$\{\theta_i\}_{i=1}^N$, here a set of parameter combinations. Next we
+calculate a kernel matrix whose entries are given by
+
+\begin{align}
+  W_{ij} = \exp\bigg(-\frac{\| x_i - x_j \|^2}{\epsilon^2}\bigg)
+  \label{eq:dmaps-w}
+\end{align}
+
+where $\epsilon$ is a tunable parameter that defines the neighborhood
+of each point in that pairs of points for which $\|\theta_i - \theta_j\| >
+\epsilon$ lead to $W_{ij} \approx 0$ while if $\|\theta_i - \theta_j\| <b
+\epsilon$ we have $W_{ij} \approx 1$. We normalize the entries of this
+matrix to create a new matrix $A$ in which
+
+\begin{align}
+  A_{ij} = \frac{W_{ij}}{d_i} = \frac{W_{ij}}{\sum_j W_{ij}}
+  \label{eq:dmaps-a}
+\end{align}
+
+Note that $0 < A_{ij} < 1$ and $\sum_i A_{ij} = 1$; thus, $A$ is a
+Markov matrix and we can interpret $A_{ij}$ as the probability of
+hopping from point $x_i$ to $x_j$. Intuitively, as the distance
+between points decreases, this probability increases. It can be shown
+that this matrix $A$ approximates the Laplace-Beltrami operator on the
+manifold, and that under certain conditions, its eigenvectors and
+eigenvalues converge to the eigenfunctions and eigenvectors of the
+Laplace-Beltrami operator with homogeneous Neumann boundary
+conditions. It is these eigenvectors that provide the desired
+parameterization of the manifold.
+
+The final step in the algorithm is then to compute a partial
+eigendecomposition of $A$ to find a set of $k$ eigenvalues and
+eigenvectors $\{v_i, \lambda_i\}_{i=0}^k$. The diffusion map is
+finally given by the function $\Phi_t : \mathbb{R}^p \rightarrow
+\mathbb{R}^k$
+
+\begin{align}
+  \Phi_t(x_i) = \begin{bmatrix} \lambda_1^t v_1(i) \\ \lambda_2^t
+    v_2(i) \\ \vdots \\ \lambda_k^t v_k(i) \end{bmatrix}
+\end{align}
+
+where $v(i)$ represents the $i^{th}$ componenet of vector $v$. The
+idea is that these eigenvectors parameterize the manifold on which our
+points lie, and that if we can find this parameterization for some $k
+\ll p$ we can describe our dataset using this alternative
+parameterization to achieve dimensionality reduction. 
+
+When we apply this method to our dataset shown in
+Fig. (\ref{fig:abc-keff-2}) we find that the eigenvectors $v_2$ and
+$v_3$ provide the desired coordinates on the nonlinear surface. This
+is illustrated in Fig. (\ref{fig:abc-dmaps-1}) in which the surface is
+colored by $v_2$ and $v_3$ values. As these eigenvectors map out
+independent directions on the data, we may use them as an alternative
+coordinate system for our points. In effect, DMAPS has given us a
+parameterization of the sloppiness in our model.
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-small-delta}
+    \subcaption{ \label{fig:abc-dmaps-1}}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-large-delta-A2}
+    \subcaption{ \label{fig:abc-dmaps-2}}
+  \end{subfigure} %
+  \caption{ \label{fig:abc-dmaps}}
+\end{figure}
+
+This is a useful result in itself, but we are typically more
+interested in the directions along which model predictions vary than
+those along which predictions are constant: the influential directions
+in parameter space as opposed to the sloppy directions. In fact, by
+employing a modified version of DMAPS we can recover such important
+directions.
+
+\subsubsection{Anisotropic Diffusion Maps}
+
+The key is to modify the kernel in Eq. (\ref{eq:dmaps-w}) to bias our
+random walk along parameter directions in which model predictions
+change. This is achieved through the form
+
+\begin{align}
+  W_{ij} = \exp\bigg(-\frac{1}{\lambda^2} \big(\frac{\| \theta_i - \theta_j
+  \|^2}{\epsilon^2} + \|f(\theta_i) - f(\theta_j) \|^2 \big) \bigg)
+  \label{eq:dmaps-w-mod}
+\end{align}
+  
+By adding the $\|f(\theta_i) - f(\theta_j) \|$ term we create an
+anisotropic diffusion on the parameter set that we can bias, through
+the parameters $\epsilon$ and $\lambda$, in directions along which
+model predictions change. We then expect the leading eigenvectors of
+the modified diffusion map to parameterize these directions, giving
+coordinates for the important parameter space directions. 
+
+We apply this method to the dataset shown in Fig. (\ref{fig:abc-keff-1})
+in which all parameter combinations satisfy $c(\theta_i) <
+10^{-3}$. The results are shown in Fig. (\ref{fig:abc-dmaps-mod}). The
+first eigenvector $v_2$ parameterizes the direction along which
+$k_{eff}$ changes as desired. The subsequent $v_3$ and $v_4$ map out
+the same sloppy directions found in Fig. (\ref{fig:abc-dmaps}). By
+using the modified kernel in Eq. (\ref{eq:dmaps-w-mod}) we have
+succeeded in uncovering both the important and sloppy directions in
+parameter space.
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-small-delta}
+    \subcaption{ \label{fig:abc-dmaps-mod-1}}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-large-delta-A2}
+    \subcaption{ \label{fig:abc-dmaps-mod-2}}
+  \end{subfigure} %
+  \caption{ \label{fig:abc-dmaps-mod}}
+\end{figure}
+
+
+To offer another example of this method's utility, we apply our
+modified DMAPS to the model introduced in Eqs. (\ref{eq:sp}) and
+(\ref{eq:sp-t}) in which there are two sloppy parameters, $(b,
+\epsilon)$, and two important, $(a, \lambda)$. Here we fix $b = 1$ and
+allow the set $\theta = (a, \lambda, \epsilon)$ to vary. We set base
+values of $a^* = 0.1$, $\lambda^* = 0.1$ and $\epsilon^* = 10^{-3}$
+and investigate the parameters in a $\delta$-ball around $f(\theta^*)$
+where $f(\theta)$ is the same as that described in
+Sec. (\label{sec:hm}). We set the radius of the model-manifold ball to
+$r=10^{-2}$. Similar to Sec. (\ref{sec:rr}) we are left with a cloud
+of points $\{\theta_i\}_{i=1}^N$ in
+$\mathbb{R}^3$. Fig. (\ref{fig:sp-dmaps}) shows the result of applying
+the anisotropic diffusion map to this dataset. Here, the top two
+eigenvectors $v_2$ and $v_3$ have captured the two important
+directions $a$ and $\lambda$, while $v_4$ parameterizes
+$\epsilon$. Our modified diffuion map algorithm has again succeeded in
+providing coordinates for both important and sloppy parameter directions.
+
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-small-delta}
+    \subcaption{ \label{fig:sp-dmaps-1}}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{keff-large-delta-A2}
+    \subcaption{ \label{fig:sp-dmaps-2}}
+  \end{subfigure} %
+  \caption{ \label{fig:sp-dmaps}}
+\end{figure}
+
+%------------------------------------------------
+
+\section{Discussion}
+
+Nam fermentum sapien at enim varius consectetur. Quisque lobortis imperdiet mauris, et accumsan libero vulputate vitae. Integer lacinia purus vel metus tempus suscipit. Curabitur ac sapien quis mauris euismod commodo. Sed pharetra sem elit. Fusce ultrices, mauris eu fermentum tempor, tellus sem ornare lectus, in convallis nunc urna id dolor. Donec convallis ligula vitae sem viverra fermentum. Mauris in ullamcorper erat. Donec ultrices tempus nibh quis vestibulum.
+
+Praesent volutpat, nibh in dignissim commodo, tellus justo consequat erat, vel consequat mi arcu vel lectus. Aliquam a tellus nec felis sagittis consequat. Quisque convallis imperdiet neque a tempor. Nulla non erat urna. Mauris vel lorem magna, tristique auctor ipsum. Aliquam pharetra eleifend massa. Donec porttitor sagittis luctus. Aliquam pretium luctus leo quis congue. Morbi vel felis mi. Suspendisse viverra tortor pretium orci lacinia eleifend. Phasellus aliquam, nunc eu cursus feugiat, erat odio porttitor libero, quis accumsan orci ipsum ut lorem. Vestibulum pharetra malesuada egestas. Sed non orci sit amet erat suscipit fringilla in et diam. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Nunc ut rhoncus nulla. Aenean porta rhoncus suscipit.
+
+Vivamus magna enim, aliquet id cursus a, pharetra ut purus. Phasellus suscipit nisi iaculis mi vulputate id interdum velit dictum. Nam ullamcorper elit in lectus ultrices vitae volutpat massa gravida. Etiam sagittis commodo neque eget placerat. Sed et nisi faucibus metus interdum adipiscing id nec lacus. Donec ipsum diam, malesuada at euismod consectetur, placerat quis diam. Phasellus cursus semper viverra. Proin magna tortor, blandit in ultricies id, facilisis at nibh. Proin eu neque est. Etiam euismod auctor ante. Mauris mauris sem, tincidunt a placerat rutrum, porta id est. Aenean non velit porta eros condimentum facilisis at in nibh. Etiam cursus purus ut orci rhoncus sit amet semper eros porttitor. Etiam ac leo at ipsum tincidunt consequat ac non sapien. Aenean sed leo diam, venenatis pharetra odio.
+
+Suspendisse viverra eleifend nulla at facilisis. Nullam eget tellus orci. Cras sit amet lorem velit. Maecenas rhoncus pellentesque orci eget vulputate. Phasellus massa nisi, mattis nec elementum accumsan, blandit non neque. In ac enim elit, sit amet luctus ante. Cras feugiat commodo lectus, vitae convallis dui sagittis id. In in tellus lacus, sed lobortis eros. Phasellus sit amet eleifend velit. Duis ornare dapibus porttitor. Maecenas eros velit, dignissim at egestas in, tincidunt lacinia erat. Proin elementum mi vel lectus suscipit fringilla. Mauris justo est, ullamcorper in rutrum interdum, accumsan eget mi. Maecenas ut massa aliquet purus eleifend vehicula in a nisi. Fusce molestie cursus lacinia.
+
+%----------------------------------------------------------------------------------------
+%	MATERIALS AND METHODS
+%----------------------------------------------------------------------------------------
+
+%% Optional Materials and Methods Section
+%% The Materials and Methods section header will be added automatically.
+
+\begin{materials}
+Suspendisse viverra eleifend nulla at facilisis. Nullam eget tellus orci. Cras sit amet lorem velit. Maecenas rhoncus pellentesque orci eget vulputate. Phasellus massa nisi, mattis nec elementum accumsan, blandit non neque. In ac enim elit, sit amet luctus ante. Cras feugiat commodo lectus, vitae convallis dui sagittis id. In in tellus lacus, sed lobortis eros. Phasellus sit amet eleifend velit. Duis ornare dapibus porttitor. Maecenas eros velit, dignissim at egestas in, tincidunt lacinia erat. Proin elementum mi vel lectus suscipit fringilla. Mauris justo est, ullamcorper in rutrum interdum, accumsan eget mi. Maecenas ut massa aliquet purus eleifend vehicula in a nisi. Fusce molestie cursus lacinia.
+
+\begin{definition}
+A bounded function $\theta$ is a weak solution of QG if for any
+$\phi\,\epsilon\,
+C_0^{\infty}(\fdb\times\mathbb{R}\times[0,\vep])$ we have
+\begin{eqnarray}
+&&  \int_{\mathbb{R}^+\times\fd\times\mathbb{R}} \hspace{-25pt}
+ \theta(x,y,t)\, \pr_t \phi
+\,(x,y,t) dy dx dt+\nonumber\\
+  & +&\int_{\mathbb{R}^+\times\fd\times\mathbb{R}}
+\hspace{-26pt} \theta\,(x,y,t) u(x,y,t)\cdot\nabla\phi\,(x,y,t)
+dydxdt = 0 \label{weaksol} \end{eqnarray}
+where $u$ is determined previously.
+\end{definition}
+
+Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Mauris eu sapien nunc, sit amet accumsan dui. Nulla ac diam ut nunc placerat semper eget et libero. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Cras hendrerit ullamcorper sapien vitae luctus. Quisque vel diam massa. Vestibulum dui nibh, facilisis vel vestibulum eu, viverra in quam.
+
+\begin{theorem}
+If the active scalar $\theta$ satisfies
+the equation \eqref{weaksol}, then $\varphi$ satisfies the equation
+\begin{eqnarray}
+\mfrac{\pr \varphi}{\pr t}(x,t)&=&\hspace{-2pt}\dst
+\int_{\fd}\mfrac{\mfrac{\pr \varphi}{\pr x}(x,t)-\mfrac{\pr
+\varphi}{\pr
+u}(u,t)}{[(x-u)^{2}+(\varphi(x,t)-\varphi(u,t))^{2}]^{\f12}}\nonumber\\
+&&
+\chi(x-u,\varphi(x,t)-\varphi(u,t)) du \hspace{3pt} +
+\nonumber\\
+&+&\dst \int_{\fd} \Big{[}\mfrac{\pr \varphi} {\pr
+x}(x,t)-\mfrac{\pr \varphi}{\pr u} (u,t)\Big{]}
+\nonumber\\&&
+\eta(x-u,\varphi(x,t)-\varphi(u,t)) du + Error
+\end{eqnarray}
+with $|Error|\leq C\, \delta | log\delta| $ where $C$ depends only
+on $\|\theta\|_{L^{\infty}}$ and $\|
+\nabla\varphi\|_{L^{\infty}}$.
+\end{theorem}
+
+Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Integer accumsan ornare tortor at varius. Phasellus ullamcorper blandit dolor sit amet tempus. Curabitur ligula urna, ultrices in iaculis eu, eleifend vel urna. Praesent ullamcorper imperdiet purus, ut interdum sem interdum dictum. Proin euismod volutpat eros ac mattis. Quisque sit amet massa ac tortor cursus malesuada at vitae nisi. Nam quis neque et nunc vehicula cursus sit amet at tellus.
+\end{materials}
+
+%----------------------------------------------------------------------------------------
+%	APPENDICES (OPTIONAL)
+%----------------------------------------------------------------------------------------
+
+% \appendix
+% An appendix without a title.
+
+\appendix[Reversible Reaction Scheme] \label{ap:abc}
+Here we derive the conditions for which the QSSA is valid and also
+show the existence of a structurally unidentifiable parameter. First
+we cast the system in matrix-vector form $\frac{d\mathrm{x}}{dt} =
+\mathrm{Ax}$ as
+
+\begin{align}
+\end{align}
+
+We see that the eigenvalues of $\mathrm{A}$ are given by
+
+\begin{align}
+\end{align}
+
+so that the solution to this initial value problem is given by
+
+\begin{align}
+\end{align}
+
+where $P$ is a matrix whose columns contain the eigenvectors of
+$\mathrm{A}$. Calculating this yields the final exact solution
+
+\begin{align}
+\end{align}
+
+Our first conclusion is that, as long as $B_0 = 0$, the component
+$C(t)$ only depends on $k_{-1}$, $k_1$ and $k_2$ through $\lambda_+$
+and $\lambda_-$. Thus, any combination of $k_{-1}$, $k_1$ and $k_2$
+that yields the same $\lambda_+$ and $\lambda_-$ will predict the same
+values for $C(t)$, even using the exact solution. This implies a
+structural non-identifiability leading to a one-dimensional manifold:
+the intersection of the level sets of $\lambda_+$ and
+$\lambda_-$. Observing $A(t)$ or $B(t)$ along with $C(t)$, or even
+letting $B_0 > 0$, removes this non-identifiability.
+
+Next we determine the conditions necessary for the solution
+Eq. (\ref{eq}) to exhibit a separation of timescales. First we rewrite
+the solution as
+
+\begin{align}
+\end{align}
+
+where the components in the left-hand-side are ordered from slowest to
+fastest. If we are observing the slow dynamics in an experimental
+setting, our data-collection times might start at $t_1 =
+1/2 |\lambda_+|$ at which point the slow exponential has already decayed
+by $\approx 40\%$. A separation of timescales implies that the fast
+component is effectively extinguished by this first time $t_1$. This
+can be expressed as $\hdots \ll \mathbb{1}$. When we only observe
+$C(t)$, this leads to 
+
+\begin{align}
+\end{align}
+
+Ignoring the leftmost term which depends algebraically on the
+eigenvalues, we see that timescale separation arises when $\delta
+\lambda / 2 |lambda_+| \gg 1$...
+
+%----------------------------------------------------------------------------------------
+%	ACKNOWLEDGEMENTS
+%----------------------------------------------------------------------------------------
+
+\begin{acknowledgments}
+This work was partially supported by NSF grant ...
+I.G.K. and A.Z. graciously acknowledge hosting by the Technical University of Munich.
+A.Z. additionally acknowledges hosting by Princeton University and access to research resources of the University of Twente.
+\end{acknowledgments}
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+%% PNAS does not support submission of supporting .tex files such as BibTeX.
+%% Instead all references must be included in the article .tex document. 
+%% If you currently use BibTeX, your bibliography is formed because the 
+%% command \verb+\bibliography{}+ brings the <filename>.bbl file into your
+%% .tex document. To conform to PNAS requirements, copy the reference listings
+%% from your .bbl file and add them to the article .tex file, using the
+%% bibliography environment described above.  
+
+%%  Contact pnas@nas.edu if you need assistance with your
+%%  bibliography.
+
+% Sample bibliography item in PNAS format:
+%% \bibitem{in-text reference} comma-separated author names up to 5,
+%% for more than 5 authors use first author last name et al. (year published)
+%% article title  {\it Journal Name} volume #: start page-end page.
+%% ie,
+% \bibitem{Neuhaus} Neuhaus J-M, Sitcher L, Meins F, Jr, Boller T (1991) 
+% A short C-terminal sequence is necessary and sufficient for the
+% targeting of chitinases to the plant vacuole. 
+% {\it Proc Natl Acad Sci USA} 88:10362-10366.
+
+
+%% Enter the largest bibliography number in the facing curly brackets
+%% following \begin{thebibliography}
+
+\begin{thebibliography}{10}
+\bibitem{BN}
+M.~Belkin and P.~Niyogi, {\em Using manifold structure for partially
+  labelled classification}, Advances in NIPS, 15 (2003).
+
+\bibitem{BBG:EmbeddingRiemannianManifoldHeatKernel}
+P.~B\'erard, G.~Besson, and S.~Gallot, {\em Embedding {R}iemannian
+  manifolds by their heat kernel}, Geom. and Fun. Anal., 4 (1994),
+  pp.~374--398.
+
+\bibitem{CLAcha1}
+R.R.~Coifman and S.~Lafon, {\em Diffusion maps}, Appl. Comp. Harm. Anal.,
+  21 (2006), pp.~5--30.
+
+\bibitem{DiffusionPNAS}
+R.R.~Coifman, S.~Lafon, A.~Lee, M.~Maggioni, B.~Nadler, F.~Warner, and
+  S.~Zucker, {\em Geometric diffusions as a tool for harmonic analysis and
+  structure definition of data. {P}art {I}: Diffusion maps}, Proc. of Nat.
+  Acad. Sci.,  (2005), pp.~7426--7431.
+
+\bibitem{Clementi:LowDimensionaFreeEnergyLandscapesProteinFolding}
+P.~Das, M.~Moll, H.~Stamati, L.~Kavraki, and C.~Clementi, {\em
+  Low-dimensional, free-energy landscapes of protein-folding reactions by
+  nonlinear dimensionality reduction}, P.N.A.S., 103 (2006), pp.~9885--9890.
+
+\bibitem{DoGri}
+D.~Donoho and C.~Grimes, {\em Hessian eigenmaps: new locally linear
+  embedding techniques for high-dimensional data}, Proceedings of the National
+  Academy of Sciences, 100 (2003), pp.~5591--5596.
+
+\bibitem{DoGri:WhenDoesIsoMap}
+D.~L. Donoho and C.~Grimes, {\em When does isomap recover natural
+  parameterization of families of articulated images?}, Tech. Report Tech. Rep.
+  2002-27, Department of Statistics, Stanford University, August 2002.
+
+\bibitem{GruterWidman:GreenFunction}
+M.~Gr\"uter and K.-O. Widman, {\em The {G}reen function for uniformly
+  elliptic equations}, Man. Math., 37 (1982), pp.~303--342.
+
+\bibitem{Simon:NeumannEssentialSpectrum}
+R.~Hempel, L.~Seco, and B.~Simon, {\em The essential spectrum of neumann
+  laplacians on some bounded singular domains}, 1991.
+
+\bibitem{1}
+Kadison, R.\ V.\ and Singer, I.\ M.\ (1959)
+Extensions of pure states, {\it Amer.\ J.\ Math.\ \bf
+81}, 383-400.
+
+\bibitem{2}
+Anderson, J.\ (1981) A conjecture concerning the pure states of
+$B(H)$ and a related theorem. in {\it Topics in Modern Operator
+Theory}, Birkha\"user, pp.\ 27-43.
+
+\bibitem{3}
+Anderson, J.\ (1979) Extreme points in sets of
+positive linear maps on $B(H)$. {\it J.\ Funct.\
+Anal.\
+\bf 31}, 195-217.
+
+\bibitem{4}
+Anderson, J.\ (1979) Pathology in the Calkin algebra. {\it J.\
+Operator Theory \bf 2}, 159-167.
+
+\bibitem{5}
+Johnson, B.\ E.\ and Parrott, S.\ K.\ (1972) Operators commuting
+with a von Neumann algebra modulo the set of compact operators.
+{\it J.\ Funct.\ Anal.\ \bf 11}, 39-61.
+
+\bibitem{6}
+Akemann, C.\ and Weaver, N.\ (2004) Consistency of a
+counterexample to Naimark's problem. {\it Proc.\ Nat.\ Acad.\
+Sci.\ USA \bf 101}, 7522-7525.
+
+\bibitem{TSL}
+J.~Tenenbaum, V.~de~Silva, and J.~Langford, {\em A global geometric
+  framework for nonlinear dimensionality reduction}, Science, 290 (2000),
+  pp.~2319--2323.
+
+\bibitem{ZhaZha}
+Z.~Zhang and H.~Zha, {\em Principal manifolds and nonlinear dimension
+  reduction via local tangent space alignement}, Tech. Report CSE-02-019,
+  Department of computer science and engineering, Pennsylvania State
+  University, 2002.
+\end{thebibliography}
+
+%----------------------------------------------------------------------------------------
+
+\end{article}
+
+%----------------------------------------------------------------------------------------
+%	FIGURES AND TABLES
+%----------------------------------------------------------------------------------------
+
+%% Adding Figure and Table References
+%% Be sure to add figures and tables after \end{article}
+%% and before \end{document}
+
+%% For figures, put the caption below the illustration.
+%%
+%% \begin{figure}
+%% \caption{Almost Sharp Front}\label{afoto}
+%% \end{figure}
+
+% \begin{figure}[h]
+% \centerline{\includegraphics[width=0.4\linewidth]{placeholder.jpg}}
+% \caption{Figure caption}\label{placeholder}
+% \end{figure}
+
+%% For Tables, put caption above table
+%%
+%% Table caption should start with a capital letter, continue with lower case
+%% and not have a period at the end
+%% Using @{\vrule height ?? depth ?? width0pt} in the tabular preamble will
+%% keep that much space between every line in the table.
+
+%% \begin{table}
+%% \caption{Repeat length of longer allele by age of onset class}
+%% \begin{tabular}{@{\vrule height 10.5pt depth4pt  width0pt}lrcccc}
+%% table text
+%% \end{tabular}
+%% \end{table}
+
+\begin{table}[h]
+\caption{Table caption}\label{sampletable}
+\begin{tabular}{l l l}
+\hline
+\textbf{Treatments} & \textbf{Response 1} & \textbf{Response 2}\\
+\hline
+Treatment 1 & 0.0003262 & 0.562 \\
+Treatment 2 & 0.0015681 & 0.910 \\
+Treatment 3 & 0.0009271 & 0.296 \\
+\hline
+\end{tabular}
+\end{table}
+
+%% For two column figures and tables, use the following:
+
+%% \begin{figure*}
+%% \caption{Almost Sharp Front}\label{afoto}
+%% \end{figure*}
+
+%% \begin{table*}
+%% \caption{Repeat length of longer allele by age of onset class}
+%% \begin{tabular}{ccc}
+%% table text
+%% \end{tabular}
+%% \end{table*}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}

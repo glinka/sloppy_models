@@ -1,0 +1,107 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq,
+  setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand{\ps}{\mathrm{\Theta}}
+\newcommand{\p}{\theta}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+% \captionsetup{labelformat=empty,labelsep=none} 
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{Opening of contours in parameter space}
+
+\begin{document}
+\maketitle
+
+The system is the incredibly basic, singularly perturbed ODE
+
+\begin{align}
+  y' = -\frac{1}{\epsilon} y
+  \label{eq:sp}
+\end{align}
+
+We allow $y_0$ and $\epsilon$ to vary and measure
+
+\begin{align}
+  \mu(\theta) = \begin{bmatrix} y_0 \exp(-\frac{t_1}{\epsilon}) \\ \\ y_0
+    \exp(-\frac{t_2}{\epsilon}) \\ \\ y_0
+    \exp(-\frac{t_3}{\epsilon}) \end{bmatrix}
+  \label{eq:mr}
+\end{align}
+
+As $\frac{1}{\epsilon} \rightarrow 0$ we see that $y(t) = y_0 \;
+\forall t$ corresponding to a model manifold boundary at $y_1 = y_2 =
+y_3$. For $\frac{1}{\epsilon} \rightarrow \infty$ we have
+$y(t) \rightarrow 0 \; \forall \; t$ which corresponds to a boundary
+of $y_2 = y_3 = 0$. We can understand the second boundary by
+considering that for any $\frac{1}{\epsilon} > 0$, we can find a $y_0$
+such that $y(t_1)$ achieves any desired value. This still holds as
+$\frac{1}{\epsilon} \rightarrow \infty$, but in this regime $y_2
+\rightarrow y_3 \rightarrow 0$. These boundaries are clearly visible
+in Fig (\ref{fig:lmm}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./model-manifold/linear-sing-pert-mm}
+  \caption{Model manifold $\mathcal{M}$ for dynamical
+    system~\eqref{eq:sp} and model response~\eqref{eq:mr}.
+(Left) Parameter plane with lines of constant $\eps$ and coloring by $y_0$.
+(Right) $3$D data space with embedded $2$D model surface.
+Each pair $(\eps,y_0)$ is mapped to a point on $\mathcal{M}$ through $\mathbf{f}$.
+The coloring is also by $y_0$ and lines emanating from the origin have constant $\eps$ along them.
+The surface is bounded by the diagonal $f_1=f_2=f_3$ ($\eps\to\infty$)
+and the $f_1-$axis ($\eps\downarrow0$) but unbounded along lines
+$\eps=constant$. The mirror image of the surface through the origin (not shown) also
+belongs to $\mathcal{M}$ ($y_0<0$), as does the grey part above the
+diagonal ($\eps<0$). \label{fig:lmm}}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\linewidth]{./model-manifold/lsp-paramspace-ii}
+  \caption{Examining level curves in parameter space. We choose a
+    point on the model manifold close to the $f_1$ axis and look at
+    what parameters are some distance $\delta$ from that point (using
+    Euclidean distance in parameter space and not distance along the
+    manifold). At first we see ellipsoidal curves, as expected for
+    small $\delta$, but once we cross the model manifold boundary
+    at larger $\delta$ the curves open up. \label{fig:lmm-lc} }
+\end{figure}
+
+
+\end{document}

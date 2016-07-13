@@ -21,7 +21,7 @@ import sys
 import colormaps
 import dmaps
 import plot_dmaps
-from dmaps_kernels import data_kernel
+from dmaps_kernels import Data_Kernel
 from util_fns import progress_bar
 from rawlings_model.main import dmaps_param_set
 from rawlings_model.model import Rawlings_Model
@@ -36,14 +36,31 @@ from pca import pca
 def linear_sing_pert_param_space_fig():
     """plots output from auto goodly"""
     # load pre-computed data
-    lcsplus = np.load('c-code/linearlc-fullplus.pkl')
-    lcsminus = np.load('c-code/linearlc-fullminus.pkl')
+    lcsplus_large = np.load('c-code/linearlc-fullplus-largedelta.pkl')
+    lcsminus_large = np.load('c-code/linearlc-fullminus-largedelta.pkl')
+    lcsplus_small = np.load('c-code/linearlc-fullplus-smalldelta.pkl')
+    lcsminus_small = np.load('c-code/linearlc-fullminus-smalldelta.pkl')
+
+    # # combine datasets into just two arrays for plus and minus curves
+    # plus branches
+    npl = lcsplus_large.shape[0]
+    nps = lcsplus_small.shape[0]
+    lcsplus = np.empty((nps + npl, lcsplus_large.shape[1]))
+    lcsplus[:nps] = lcsplus_small
+    lcsplus[nps:] = lcsplus_large
+    # minus branches
+    nml = lcsminus_large.shape[0]
+    nms = lcsminus_small.shape[0]
+    lcsminus = np.empty((nms + nml, lcsminus_large.shape[1]))
+    lcsminus[:nms] = lcsminus_small
+    lcsminus[nms:] = lcsminus_large
+
     lcsplus[:,3] = np.log10(lcsplus[:,3])
     lcsminus[:,3] = np.log10(lcsminus[:,3])
 
     colornorm = colors.Normalize(-9.24, np.max(lcsminus[:,3]))
     colormap = cm.ScalarMappable(norm=colornorm)
-    print np.min(lcsminus[:,3]), np.max(lcsminus[:,3])
+    print 'min obj fn value:', np.min(lcsminus[:,3]), 'max obj fn value:', np.max(lcsminus[:,3])
 
     # loop through each unique value of lcs[:,3], the delta value
 
@@ -57,8 +74,9 @@ def linear_sing_pert_param_space_fig():
             current_delta = lcsplus[i,3]
             start = i
     branches.append(lcsplus[start:npts])
+    nbranches = len(branches)
 
-    print 'have', len(branches), 'branches'
+    print 'have', nbranches, 'branches'
         
     # # # remove any branches for which 1/eps goes below zero
     # kept_pts = np.empty((npts, 4))
@@ -75,18 +93,34 @@ def linear_sing_pert_param_space_fig():
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    axins = inset_axes(ax, 7, 6, bbox_to_anchor=(0.5, 0.95), bbox_transform=ax.transAxes)
+    axins = inset_axes(ax, 11, 6, bbox_to_anchor=(0.7, 0.95), bbox_transform=ax.transAxes)
 
     # # plot each branch
     # first the 'plus' branches
     lw = 3
     lw_inset = 1
     bslice = 50
-    custom_indices = [0, 18, 100, 200]
+    custom_indices = [0, 18, 200, 210] # [0, 18, 100, 200, 209] # for smalldelta data
     for i in custom_indices:
         branch = branches[i]
         ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
-        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw_inset)
+
+
+    # # now do some svd and stretch the shortest axis of the the smallest two branches and plot these in the inset so that their actual ellipsoidal nature is clear
+    branch0 = branches[0][:,:2]
+    col_avgs = np.average(branch0, axis=0)
+    u, s, v = np.linalg.svd(branch0 - col_avgs, full_matrices=False)
+    scale = 10
+
+    # now scale the other branches in the same direction
+    for i in range(2):
+        branch = branches[custom_indices[i]][:,:2]
+        # col_avgs = np.average(branch, axis=0)
+        y = np.dot(branch - col_avgs, np.transpose(v))
+        y[:,1] = scale*y[:,1]
+        branch = np.dot(y, v) + col_avgs
+        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branches[custom_indices[i]][0,3]))
+
 
     # second, the 'minus' branches
     branches = []
@@ -103,22 +137,183 @@ def linear_sing_pert_param_space_fig():
     for i in custom_indices:
         branch = branches[i]
         ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
-        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw_inset)
+
+    # now scale the other branches in the same direction
+    for i in range(2):
+        branch = branches[custom_indices[i]][:,:2]
+        # col_avgs = np.average(branch, axis=0)
+        y = np.dot(branch - col_avgs, np.transpose(v))
+        y[:,1] = scale*y[:,1]
+        branch = np.dot(y, v) + col_avgs
+        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branches[custom_indices[i]][0,3]))
+
+
 
     # # tidy up
     ax.set_xlabel(r'$1/\epsilon$')
-    ax.set_ylabel(r'$y_0$')
-    ax.set_ylim((0,60))
-    ax.set_xlim((2,9))
+    ax.set_ylabel(r'$x_0$')
+    ax.set_ylim((0,120))
+    ax.set_xlim((-1,11))
     fig.subplots_adjust(bottom=0.15)
 
     # add an inset marker
-    # axins.set_xlim((4.99, 5.01))
-    # axins.set_ylim((0.99, 1.01))
     axins.set_xlim((4.9, 5.1))
     axins.set_ylim((0.9, 1.1))
     axins.tick_params(axis='both', which='major', labelsize=0)
     mark_inset(ax, axins, loc1=4, loc2=3, fc='none', ec='0.5', zorder=3)
+
+    plt.show()
+
+
+def linear_sing_pert_param_space_log_fig():
+    """plots output from auto goodly"""
+    # load pre-computed data
+    lcsplus_large = np.load('c-code/linearlc-fullplus-largedelta.pkl')
+    lcsminus_large = np.load('c-code/linearlc-fullminus-largedelta.pkl')
+    lcsplus_small = np.load('c-code/linearlc-fullplus-smalldelta.pkl')
+    lcsminus_small = np.load('c-code/linearlc-fullminus-smalldelta.pkl')
+
+    # # combine datasets into just two arrays for plus and minus curves
+    # plus branches
+    npl = lcsplus_large.shape[0]
+    nps = lcsplus_small.shape[0]
+    lcsplus = np.empty((nps + npl, lcsplus_large.shape[1]))
+    lcsplus[:nps] = lcsplus_small
+    lcsplus[nps:] = lcsplus_large
+    # minus branches
+    nml = lcsminus_large.shape[0]
+    nms = lcsminus_small.shape[0]
+    lcsminus = np.empty((nms + nml, lcsminus_large.shape[1]))
+    lcsminus[:nms] = lcsminus_small
+    lcsminus[nms:] = lcsminus_large
+
+    lcsplus[:,3] = np.log10(lcsplus[:,3])
+    lcsminus[:,3] = np.log10(lcsminus[:,3])
+
+    # loop through each unique value of lcs[:,3], the delta value
+
+    branches = []
+    current_delta = lcsplus[0,3]
+    start = 0
+    npts = lcsplus.shape[0]
+    for i in range(npts):
+        if lcsplus[i,3] != current_delta:
+            branches.append(lcsplus[start:i])
+            current_delta = lcsplus[i,3]
+            start = i
+    branches.append(lcsplus[start:npts])
+    nbranches = len(branches)
+
+    print 'have', nbranches, 'branches'
+        
+    # # # remove any branches for which 1/eps goes below zero
+    # kept_pts = np.empty((npts, 4))
+    # nkept_branches = 0
+    # for i in range(nbranches):
+    #     branch = lcs[i*npts_per_branch:(i+1)*npts_per_branch]
+    #     if branch[branch < 0].shape[0] == 0:
+    #         kept_pts[nkept_branches*npts_per_branch:(nkept_branches+1)*npts_per_branch] = np.copy(lcs[i*npts_per_branch:(i+1)*npts_per_branch])
+    #         nkept_branches = nkept_branches + 1
+    # # relabel kept pts
+    # nbranches = nkept_branches
+    # lcs = kept_pts
+    # npts = lcs.shape[0]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    # axins = inset_axes(ax, 11, 6, bbox_to_anchor=(0.7, 0.95), bbox_transform=ax.transAxes)
+
+    # # plot each branch
+    # first the 'plus' branches
+    lw = 3
+    lw_inset = 1
+    bslice = 50
+    custom_indices = [0, 10, 20, 40] # [0, 18, 100, 200, 209] # for smalldelta data
+
+    # set up colormap
+    colornorm = colors.Normalize(branches[custom_indices[0]][0,3], branches[custom_indices[-1]][0,3])
+    colormap = cm.ScalarMappable(norm=colornorm)
+
+    vT = None
+    scale = None
+    center = None
+
+    print branches[0].shape
+    for i in custom_indices:
+        branch = branches[i] 
+        branch[:,1] = np.log(branch[:,1])
+
+        if i == custom_indices[0]:
+            center = np.average(branch[:,:2], axis=0)
+            u, s, vT = np.linalg.svd(branch[:,:2] - center, full_matrices=False)
+            scale = s[1]
+
+        vcomps = np.dot(branch[:,:2] - center, vT.T)
+        vcomps[:,0] = scale*vcomps[:,0]
+        branch[:,:2] = np.dot(vcomps, vT) + center
+        ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
+
+    # # # now do some svd and stretch the shortest axis of the the smallest two branches and plot these in the inset so that their actual ellipsoidal nature is clear
+    # branch0 = branches[0][:,:2]
+    # col_avgs = np.average(branch0, axis=0)
+    # u, s, v = np.linalg.svd(branch0 - col_avgs, full_matrices=False)
+    # scale = 10
+
+    # # now scale the other branches in the same direction
+    # for i in range(1):
+    #     branch = branches[custom_indices[i]][:,:2]
+    #     # col_avgs = np.average(branch, axis=0)
+    #     y = np.dot(branch - col_avgs, np.transpose(v))
+    #     y[:,1] = scale*y[:,1]
+    #     branch = np.dot(y, v) + col_avgs
+    #     # axins.plot(branch[:,0], np.log(branch[:,1]), color=colormap.to_rgba(branches[custom_indices[i]][0,3]))
+
+
+    # second, the 'minus' branches
+    branches = []
+    current_delta = lcsminus[0,3]
+    npts = lcsminus.shape[0]
+    start = 0
+    for i in range(npts):
+        if lcsminus[i,3] != current_delta:
+            branches.append(lcsminus[start:i])
+            current_delta = lcsminus[i,3]
+            start = i
+    branches.append(lcsminus[start:npts])
+
+    for i in custom_indices:
+        branch = branches[i] 
+        branch[:,1] = np.log(branch[:,1])
+
+        vcomps = np.dot(branch[:,:2] - center, vT.T)
+        vcomps[:,0] = scale*vcomps[:,0]
+        branch[:,:2] = np.dot(vcomps, vT) + center
+        ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
+
+    # # now scale the other branches in the same direction
+    # for i in range(1):
+    #     branch = branches[custom_indices[i]][:,:2]
+    #     # col_avgs = np.average(branch, axis=0)
+    #     y = np.dot(branch - col_avgs, np.transpose(v))
+    #     y[:,1] = scale*y[:,1]
+    #     branch = np.dot(y, v) + col_avgs
+    #     # axins.plot(branch[:,0], np.log(branch[:,1]), color=colormap.to_rgba(branches[custom_indices[i]][0,3]))
+
+
+
+    # # tidy up
+    ax.set_xlabel(r'$1/\epsilon^*$')
+    ax.set_ylabel(r'$\log(x_0)^*$')
+    ax.set_ylim((-0.03,0.06))
+    ax.set_xlim((4.97,5.07))
+    plt.locator_params(nbins=6)
+    fig.subplots_adjust(bottom=0.15, left=0.15)
+
+    # # add an inset marker
+    # # axins.set_xlim((4.9, 5.1))
+    # # axins.set_ylim((0.9, 1.1))
+    # # axins.tick_params(axis='both', which='major', labelsize=0)
+    # # mark_inset(ax, axins, loc1=4, loc2=3, fc='none', ec='0.5', zorder=3)
 
     plt.show()
 
@@ -360,14 +555,19 @@ def transformed_param_space_fig():
             npts = x2_y2_of.shape[0]
             print 'Performing analysis on', npts, 'points found through optimization'
 
+            print np.max(np.log10(x2_y2_of[:,2]))
+
+            colornorm = colors.Normalize(vmin=np.min(np.log10(x2_y2_of[:,2])), vmax=5) # colors.Normalize(vmin=np.min(embeddings), vmax=np.max(embeddings))
+            colormap = cm.ScalarMappable(norm=colornorm, cmap='viridis_r')
+
             # # plot output
             scatter_size = 50
             # plot x2, y2 colored by obj. fn.
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=scatter_size)
+            ax.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=colormap.to_rgba(np.log10(x2_y2_of[:,2])), s=scatter_size)
             axins = inset_axes(ax, 6, 5, bbox_to_anchor=(0.45, 0.9), bbox_transform=ax.transAxes)
-            axins.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=np.log10(x2_y2_of[:,2]), s=scatter_size)
+            axins.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=colormap.to_rgba(np.log10(x2_y2_of[:,2])), s=scatter_size)
             axins.set_xlim((-0.5, 1.25))
             axins.set_ylim((0, 0.35))
             axins.tick_params(axis='both', which='major', labelsize=0)
@@ -383,7 +583,7 @@ def transformed_param_space_fig():
             gspec = gs.GridSpec(gsize, gsize)
             fig = plt.figure()
             ax = fig.add_subplot(gspec[:,:37])
-            cbar = ax.scatter(lam, alpha, c=np.log10(x2_y2_of[:,2]), s=scatter_size)
+            cbar = ax.scatter(lam, alpha, c=colormap.to_rgba(np.log10(x2_y2_of[:,2])), s=scatter_size)
             ax.set_xlabel(r'$\lambda$')
             ax.set_ylabel(r'$\alpha$')
             fig.subplots_adjust(bottom=0.15)
@@ -2552,24 +2752,42 @@ def linear_sing_pert_model_manifold_fig():
     tris = tri.Triangulation(xkept, ykept).triangles
     triangle_vertices = np.array([np.array((xyz[T[0]], xyz[T[1]], xyz[T[2]])) for T in tris]) # plot in k1, k-1, k2
     # create polygon collections that will be plotted (seems impossible to completely erase edges)
-    coll_y0 = Poly3DCollection(triangle_vertices, facecolors=y0s_colormap.to_rgba(calc_tri_avg(tris, y0s_transformed)), linewidths=0, edgecolors='w')
+
+    # # first attempt to define the two-variable colormap (y0 -> color, eps -> alpha)
+    # face_colors = y0s_colormap.to_rgba(calc_tri_avg(tris, y0s_transformed))
+    # face_colors = colors.rgb_to_hsv(face_colors[:,:3])
+
+    # saturation_values = calc_tri_avg(tris, epss_transformed)
+    # saturation_values = 0.3 + 0.6*saturation_values/np.max(saturation_values)
+    # face_colors[:,1] = saturation_values
+    # face_colors[:,2] = 1
+    # face_colors = colors.hsv_to_rgb(face_colors)
+    # coll_y0 = Poly3DCollection(triangle_vertices, linewidths=0, alpha=0.75)
+    # coll_y0.set_facecolor(face_colors)
+    # coll_y0.set_edgecolor(face_colors)
+    # # end attempt
+
+    face_colors = y0s_colormap.to_rgba(calc_tri_avg(tris, y0s_transformed))
+    coll_y0 = Poly3DCollection(triangle_vertices, linewidths=0)
+    coll_y0.set_facecolor(face_colors)
+    coll_y0.set_edgecolor(face_colors)
     # coll_eps = Poly3DCollection(triangle_vertices, facecolors=eps_colormap.to_rgba(calc_tri_avg(tris, epss_transformed)), linewidths=0, edgecolors='w')
     
     # plot surface
     fig = plt.figure()
-    ax = fig.add_subplot(gspec[:,gsize/2:gsize-1], projection='3d')
+    ax = fig.add_subplot(gspec[:,gsize/2:gsize-2], projection='3d')
     ax.add_collection(coll_y0)
 
     ax_cb = fig.add_subplot(gspec[:,gsize-1])
     cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=y0s_colornorm, ticks=[0,1.], label=r'$x_0$')
-    cb.ax.set_yticklabels([r'$0$', r'$\infty$'])
+    cb.ax.set_yticklabels([r'$0$', r'$\vdots$'])
 
     # add lines of constant epsilon
     epss_samples = np.array((1e-3, 1, 3.5, 10, 1e3)) # hand picked for nice visuals
     eps_colornorm = colors.Normalize(vmin=np.min(np.log10(epss_samples)), vmax=1.5*np.max(np.log10(epss_samples))) # scale vmax by 1.5 to remove whiter part of cmap from use
     eps_colormap = cm.ScalarMappable(norm=eps_colornorm, cmap='Oranges_r')
-    eps_colors = ['#000000', '#0000cc', '#0099ff', '#cc00ff', '#ff0000']
-    lw = 3
+    eps_colors = ['#002255', '#0044aa', '#0066ff', '#5599ff', '#aaccff'] # ['#000000', '#0000cc', '#0099ff', '#cc00ff', '#ff0000']
+    lw = 4
     for i, eps in enumerate(epss_samples):
         xss = np.linspace(0,1,npts)
         yss = xss*np.exp((t1 - t2)/eps)
@@ -2677,18 +2895,40 @@ def linear_sing_pert_model_manifold_fig():
     epss = np.logspace(logeps_min, logeps_max, npts)
     epsg, y0g = np.meshgrid(epss, y0s)
 
+    # # (attempt to) set up two-dimensional color grid
+    # y0s_colornorm = colors.Normalize(vmin=0, vmax=y0max)
+    # y0s_colormap = cm.ScalarMappable(norm=y0s_colornorm, cmap=cmap)
+    # color_grid = np.empty((npts, npts, 4))
+    # alpha = 0.8
+    # for i in range(npts):
+    #     for j in range(npts):
+    #         custom_color = y0s_colormap.to_rgba(y0g[i,j])
+    #         custom_color = colors.rgb_to_hsv(custom_color[:3])
+    #         custom_color[1] = 0.25 + 0.75*(np.log10(epsg[i,j]) - logeps_min)/(logeps_max - logeps_min)
+    #         custom_color[2] = 1
+    #         color_grid[i,j,:3] = colors.hsv_to_rgb(custom_color)
+    #         color_grid[i,j,3] = alpha
+    # ax.imshow(color_grid, extent=(1e-3,1e3,0,2))
+    # # end attempt
+
+
     ax = fig.add_subplot(gspec[:,:gsize/2-2])
     lw = 5
     ax.imshow(np.tanh(y0g), extent=(1e-3,1e3,0,2), cmap='viridis', norm=y0s_colornorm) # show coloring of y0
     # add lines of constant eps
     for i, eps in enumerate(epss_samples):
-        ax.plot(eps*np.ones(npts), y0s, lw=lw, color=eps_colors[i])#eps_colormap.to_rgba(np.log10(eps)))
+        if i == 0 or i == epss_samples.shape[0]-1:
+            ax.plot(eps*np.ones(npts), y0s, lw=2.5*lw, color=eps_colors[i])
+        else:
+            ax.plot(eps*np.ones(npts), y0s, lw=lw, color=eps_colors[i])
 
     ax.set_yticks([0,1,2])
+    ax.set_yticklabels(['0', '1', r'$\vdots$'])
     ax.set_xscale('log')
     ax.set_xticks([1e-3, 1e0, 1e3])
     ax.set_xlabel(r'$\epsilon$')
     ax.set_ylabel(r'$x_0$')
+    ax.tick_params(axis='x', pad=10) # padding for xticks
 
     fig.subplots_adjust(bottom=0.13, left=0.06)
 
@@ -2740,7 +2980,7 @@ def outlier_plot():
     ax = fig.add_subplot(gspec[:,:18])
     ax.scatter(keff, data[:,0], c=eigvects[:,1], s=100)
     ax.set_xlabel(r'$k_{eff}$')
-    ax.set_ylabel(r'$\| \mu(\theta) - \mu(\theta^*) \|$')
+    ax.set_ylabel(r'$\| \mu(\theta) - \mu(\theta^*) \|^2$')
     ax.set_xlim((0.46, 0.55))
     ax.set_ylim((0,0.001))
     axcb = fig.add_subplot(gspec[:,19])
@@ -2753,7 +2993,7 @@ def outlier_plot():
     ax = fig.add_subplot(111)
     ax.scatter(keff, data[:,0], c='b', s=100)
     ax.set_xlabel(r'$k_{eff}$')
-    ax.set_ylabel(r'$\| \mu(\theta) - \mu(\theta^*) \|$')
+    ax.set_ylabel(r'$\| \mu(\theta) - \mu(\theta^*) \|^2$')
     ax.set_xlim((0.46, 0.55))
     ax.set_ylim((0,0.001))
     plt.show()
@@ -2764,10 +3004,10 @@ def outlier_plot():
     tothrow = tokeep == False
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.scatter(keff[tothrow], data[tothrow,0], c='r', s=100)
     ax.scatter(keff[tokeep], data[tokeep,0], c='b', s=100)
+    ax.scatter(keff[tothrow], data[tothrow,0], c='r', s=100)
     ax.set_xlabel(r'$k_{eff}$')
-    ax.set_ylabel(r'$\| \mu(\theta) - \mu(\theta^*) \|$')
+    ax.set_ylabel(r'$\| \mu(\theta) - \mu(\theta^*) \|^2$')
     ax.set_xlim((0.46, 0.55))
     ax.set_ylim((0,0.001))
     plt.show()
@@ -2902,9 +3142,10 @@ def data_dmaps_rawlings_fig():
         epsilon = 10
         lam = 1
         k = 12
-        kernel = DMAPS_Data_Kernel(epsilon, lam)
-        print 'starting data dmaps'
+        kernel = Data_Kernel(epsilon, lam)
+        print 'starting data dmaps on', log_data.shape[0], 'points'
         eigvals, eigvects = dmaps.embed_data_customkernel(full_data, k, kernel)
+        # eigvals, eigvects = dmaps.embed_data(log_data[:,1:], k, epsilon=epsilon)
         print 'completed data dmaps'
         eigvals.dump('./data/tempeigvals.pkl')
         eigvects.dump('./data/tempeigvects.pkl')
@@ -2944,7 +3185,7 @@ def data_dmaps_rawlings_fig():
     # colored by phi1
     fig = plt.figure()
     ax = fig.add_subplot(gspec[:,:37], projection='3d')
-    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,1])
+    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,3])
     axcb = fig.add_subplot(gspec[:,39])
     colornorm = colors.Normalize(vmin=np.min(eigvects[:,1]), vmax=np.max(eigvects[:,1]))
     colorbar.ColorbarBase(axcb, norm=colornorm, ticks=np.linspace(-0.03, 0.03, 5), format='%1.3f', label=r'$\Phi_1$')
@@ -3075,16 +3316,21 @@ def rawlings_keff_fig():
     # set up colorbar based on log(keff)
     keffmin, keffmax = np.min(keff), np.max(keff)
     print 'keff range:', keffmin, keffmax
-    colornorm = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
+    colornorm = colors.Normalize(vmin=np.min(log_data[:,0]), vmax=np.max(log_data[:,0])) # colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
     cmap = 'viridis'
     colormap = cm.ScalarMappable(norm=colornorm, cmap=cmap)
+
+    colornorm_keff = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
+    colormap_keff = cm.ScalarMappable(norm=colornorm_keff, cmap=cmap)
+
 
     gsize = 10
     gspec = gs.GridSpec(gsize,gsize)
     fig = plt.figure()
     ax = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
     slice = data.shape[0]/20000
-    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.5)
+    # scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.5)
+    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(log_data[::slice,0]), alpha=0.5)
     
 
     # now plot transparencies of keff = constant
@@ -3098,15 +3344,15 @@ def rawlings_keff_fig():
     kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
     nkeffs = 2
     alpha = 0.5
-    for keff in np.logspace(np.log10(keffmin) + 0.1*(np.log10(keffmax) - np.log10(keffmin)), np.log10(keffmax) - 0.2*(np.log10(keffmax) - np.log10(keffmin)), nkeffs):
+    for keff in np.logspace(np.log10(keffmin), np.log10(keffmax), nkeffs):
         k1s = keff*(kinvs + k2s)/k2s
         # kinvs = k1s*k2s/keff - k2s
-        cs = np.ones((npts, npts, 4))*colormap.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
+        cs = np.ones((npts,npts,4))*np.array((204./255.,0,0,alpha)) # np.ones((npts, npts, 4))*colormap_keff.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
         for i in range(npts):
             for j in range(npts):
                 # if kinvs[i,j] < 10: # np.log10(kinvs[i,j] < 1): # but have kinvs < 0
                 #     cs[i,j,3] = 0
-                if k1s[i,j] > .99:
+                if k1s[i,j] > .099:
                     cs[i,j,3] = 0
 
         # fig = plt.figure()
@@ -3122,9 +3368,10 @@ def rawlings_keff_fig():
     ax.set_ylabel('\n\n' + r'$\log(k_{-1})$')
     ax.set_zlabel('\n\n' + r'$\log(k_2)$')
     ax_cb = fig.add_subplot(gspec[:,gsize-1])
-    ax_cb.text(0.2, 1.05, r'$k_{eff}$', transform=ax_cb.transAxes, fontsize=48)
-    colornorm = colors.Normalize(vmin=keffmin, vmax=keffmax)
-    colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colornorm, ticks=np.linspace(keffmin, keffmax, 5), format='%1.2f')#, label=r'$k_{eff}$')
+    ax_cb.text(-0.1, 1.05, r'$\log(\delta(\theta))$', transform=ax_cb.transAxes, fontsize=48) # r'$k_{eff}$', transform=ax_cb.transAxes, fontsize=48)
+    # colornorm = colors.Normalize(vmin=keffmin, vmax=keffmax)
+    print np.linspace(np.min(log_data[:,0]), np.max(log_data[:,0]), 5)
+    colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colornorm, ticks=np.linspace(np.min(log_data[:,0]), np.max(log_data[:,0]), 5), format='%1d')#, label=r'$k_{eff}$')
     plt.show()
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -3140,14 +3387,17 @@ def rawlings_keff_fig():
     # set up colorbar based on log(keff)
     keffmin, keffmax = np.min(keff), np.max(keff)
     print 'keff range:', keffmin, keffmax
-    colornorm = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
-    cmap = 'viridis'
+    colornorm = colors.Normalize(vmin=np.min(log_data[:,0]), vmax=np.max(log_data[:,0]))
     colormap = cm.ScalarMappable(norm=colornorm, cmap=cmap)
+
+    colornorm_keff = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
+    colormap_keff = cm.ScalarMappable(norm=colornorm, cmap=cmap)
 
     fig = plt.figure()
     ax = fig.add_subplot(gspec[:,:gsize-1], projection='3d')
     slice = 1
-    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.2)
+    # scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(np.log10(keff[::slice])), alpha=0.2)
+    scatter = ax.scatter(log_data[::slice,1], log_data[::slice,2], log_data[::slice,3], c=colormap.to_rgba(log_data[::slice,0]), alpha=0.2)
     
 
     # now plot transparencies of keff = keff_true
@@ -3157,17 +3407,18 @@ def rawlings_keff_fig():
     true_data = data[np.argsort(data[:,0])[0]] # pull out parameter combo that has minimum obj. fn. value
     keff_true = true_data[1]*true_data[3]/(true_data[2] + true_data[3])
     npts = 100
-    stride = 2
+    stride = 1
     kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
     alpha = 0.2
     # hard coded keff for nice color
-    keff = 0.502
     # kinvs = k1s*k2s/keff - k2s
+    keff = 0.502
     k1s = keff_true*(kinvs + k2s)/k2s
-    cs = np.ones((npts, npts, 4))*colormap.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
+    cs = np.ones((npts,npts,4))*np.array((204./255.,0,0,alpha))
+    # cs = np.ones((npts, npts, 4))*colormap.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
     for i in range(npts):
         for j in range(npts):
-            if k1s[i,j] > .99:
+            if k1s[i,j] > .099:
                 cs[i,j,3] = 0
 
 
@@ -3182,10 +3433,60 @@ def rawlings_keff_fig():
     ax.set_ylabel('\n\n' + r'$\log(k_{-1})$')
     ax.set_zlabel('\n\n' + r'$\log(k_2)$')
     ax_cb = fig.add_subplot(gspec[:,gsize-1])
-    colornorm = colors.Normalize(vmin=keffmin, vmax=keffmax)
-    ax_cb.text(0.2, 1.05, r'$k_{eff}$', transform=ax_cb.transAxes, fontsize=48)
-    colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colornorm, ticks=np.linspace(keffmin, keffmax, 5), format='%1.3f')
+    # colornorm = colors.Normalize(vmin=keffmin, vmax=keffmax)
+    ax_cb.text(-0.1, 1.05, r'$\log(\delta(\theta))$', transform=ax_cb.transAxes, fontsize=48)
+    # ax_cb.text(0.2, 1.05, r'$k_{eff}$', transform=ax_cb.transAxes, fontsize=48)
+    colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colornorm, ticks=np.linspace(np.min(log_data[:,0]), np.max(log_data[:,0]), 5), format='%1d')#, label=r'$k_{eff}$') # colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=colornorm, ticks=np.linspace(keffmin, keffmax, 5), format='%1.3f')
     plt.show()
+
+
+def gear_data_dmaps():
+    """trying to show that at the appropriate scale, model manifold appears one-dimensional, or at least the skinny second dimension is pushed further down in the DMAPS spectrum"""
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # constants are from rawlings_model/main.py sampling routine, take care to match them manually
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    A0 = 1.0 # initial concentration of A
+    k1_true = 0.1
+    kinv_true = 1000.0
+    k2_true = 1000.0
+    eigval_plus_true = 0.5*(-(kinv_true + k1_true + k2_true) + np.sqrt(np.power(k1_true + kinv_true + k2_true, 2) - 4*k1_true*k2_true))
+    dt = 0.5/np.abs(eigval_plus_true)
+    # start at dt, end at 5*dt
+    ntimes = 5 # somewhat arbitrary
+    times = np.linspace(dt, 5*dt, ntimes)
+    model = Rawlings_Model(times, A0, k1_true, kinv_true, k2_true, using_sympy=False)
+
+    data = np.load('../rawlings_model/data/params-ofevals.pkl')
+    ofs = [1e-5, 1e-3, 1e-1]
+    npts = 4000
+    labels = ['a', 'b', 'c']
+    for i, of in enumerate(ofs):
+
+        # calculate dmap
+        trimmed_data = data[data[:,0] < of]
+        slice = trimmed_data.shape[0]/npts
+        # slice data and remove obj. fn. evals in first column
+        trimmed_data = trimmed_data[::slice,1:]
+        npts = trimmed_data.shape[0]
+        trajs = np.empty((npts, ntimes))
+        for j, k in enumerate(trimmed_data):
+            trajs[j] = model.gen_timecourse(k[0], k[1], k[2])
+        print 'calculating DMAP for index', i
+        ndims = 50
+        eigvals, eigvects = dmaps.embed_data(trajs, k=ndims, epsilon = np.sqrt(of)/8)
+        eigvects.dump('./data/temp' + str(i) + '.pkl')
+        # eigvects = np.load('./data/temp' + str(i) + '.pkl')
+
+        keffs = trimmed_data[:,0]*trimmed_data[:,2]/(trimmed_data[:,1] + trimmed_data[:,2])
+        print keffs.shape, trimmed_data.shape, eigvects.shape
+        keffs.dump('./data/tempkeff' + str(i) + '.pkl')
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.hold(False)
+        # for j in range(2,ndims-1):
+        #     ax.scatter(eigvects[:,1], eigvects[:,j], c=keffs)
+        #     plt.savefig('./figs/temp/dmap' + labels[i] + str(j) + '.png')
 
 
 def main():
@@ -3213,9 +3514,11 @@ def main():
     # sing_pert_contours_fig2()
     # test()
     # temp_fig()
-    # linear_sing_pert_model_manifold_fig()
-    linear_sing_pert_param_space_fig()
+    linear_sing_pert_model_manifold_fig()
+    # linear_sing_pert_param_space_log_fig()
+    # linear_sing_pert_param_space_fig()
     # outlier_plot()
+    # gear_data_dmaps()
     
 if __name__=='__main__':
     main()

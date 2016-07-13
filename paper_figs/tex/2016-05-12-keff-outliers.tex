@@ -43,13 +43,53 @@
 \begin{document}
 \maketitle
 
+\section{Model measurements}
+
+Given the reaction
+
+\begin{align*}
+  A \xrightleftharpoons[k_{-1}]{k_1} B, \; B \xrightarrow[]{k_2} C
+\end{align*}
+
+for a given set of $\theta = \{k_1, k_{-1}, k_2\}$ we measure the concentration
+of $C$ at five times, giving
+
+\begin{align*}
+  \mu(\theta) = \begin{bmatrix} C(0) \\ \\ C(\frac{1}{k_{eff}}) \\ \\
+    C(\frac{2}{k_{eff}}) \\ \\ C(\frac{3}{k_{eff}}) \\ \\
+    C(\frac{4}{k_{eff}}) \end{bmatrix}
+\end{align*}
+
+We fix $A(0) = 1$ and $B(0) = C(0) = 0$, so we could equivalently define
+
+\begin{align*}
+  \mu(\theta) = \begin{bmatrix} C(\frac{1}{k_{eff}}) \\ \\
+    C(\frac{2}{k_{eff}}) \\ \\ C(\frac{3}{k_{eff}}) \\ \\
+    C(\frac{4}{k_{eff}}) \end{bmatrix}
+\end{align*}
+
+as $C(0)$ is constant. \\
+
+To generate a dataset in parameter space, we set true parameter values
+of 
+
+\begin{align*}
+  k_1^* &= 1 \\
+  k_{-1}^* = k_2^* &= 1000 \\
+\end{align*}
+
+and measure the \textbf{squared} distance $\| \mu(theta) -
+\mu(\theta^*) \|^2$ corresponding to a least-squares objective
+function. We keep points for which this distance falls beneath some
+tolerance (here $10^{-3}$).
+
 \section{Intermediate mixed kernel}
 
 We investigate the DMAPS kernel
 
 \begin{align}
-  k(\theta_i, \theta_j) = \exp \bigg( -\frac{1}{\lambda^2} \bigg( \frac{\|\theta_i
-  - \theta_j\|^2}{\epsilon^2} + \|\mu(\theta_i) -
+  k(\theta_i, \theta_j) = \exp \bigg( -\frac{1}{\lambda^2} \bigg( \frac{\|\log(\theta_i)
+  - \log(\theta_j)\|^2}{\epsilon^2} + \|\mu(\theta_i) -
   \mu(\theta_j)\|^2\bigg) \bigg)
   \label{eqn1}
 \end{align}

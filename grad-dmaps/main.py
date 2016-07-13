@@ -20,7 +20,7 @@ from time import time
 
 import dmaps
 import plot_dmaps
-from dmaps_kernels import data_kernel
+from dmaps_kernels import Data_Kernel
 from util_fns import progress_bar
 from rawlings_model.main import dmaps_param_set
 from zagaris_model import Z_Model as ZM
@@ -161,6 +161,29 @@ def tempfig2():
     ax.legend()
     plt.show()
     
+
+def zxy_kernel():
+    """Examines kernel eigenvectors for z(x,y) given on a uniform rectangle"""
+    sqrt_npts = 50
+    npts = sqrt_npts*sqrt_npts
+    xgrid, ygrid = np.meshgrid(np.linspace(-1, 1, sqrt_npts), np.linspace(0, 1, sqrt_npts))
+    xydata = np.array((xgrid.flatten(), ygrid.flatten())).T
+    # z = x^3
+    zdata = np.power(xydata[:,0], 3)
+
+    fulldata = zip(xydata, zdata)
+
+    k = 20
+    epsilon = 5e-2
+    lam = 1
+    kernel = Data_Kernel(epsilon, lam)
+    eigvals, eigvects = dmaps.embed_data_customkernel(fulldata, k, kernel, symmetric=True)
+    print 'dun'
+
+    
+
+    
+
 
 def nonuniform_sampling_lambda_fig():
     """varying lambda (allowing density along curve to change)"""

@@ -107,13 +107,14 @@ def sample_param_grid_mpi():
 
     # set up base model
     A0 = 1.0 # initial concentration of A
-    k1_true = 1.0
+    k1_true = 0.1
     kinv_true = 1000.0
     k2_true = 1000.0
-    decay_rate = k1_true*k2_true/(kinv_true + k2_true) # effective rate constant that governs exponential growth rate
-    # start at t0 = 0, end at tf*decay_rate = 4
-    ntimes = 5 # arbitrary
-    times = np.linspace(0, 4/decay_rate, ntimes)
+    eigval_plus_true = 0.5*(-(kinv_true + k1_true + k2_true) + np.sqrt(np.power(k1_true + kinv_true + k2_true, 2) - 4*k1_true*k2_true))
+    dt = 0.5/np.abs(eigval_plus_true)
+    # start at dt, end at 5*dt
+    ntimes = 5 # somewhat arbitrary
+    times = np.linspace(dt, 5*dt, ntimes)
     model = Rawlings_Model(times, A0, k1_true, kinv_true, k2_true, using_sympy=False)
 
     # plot analytical results vs. qssa
@@ -124,26 +125,12 @@ def sample_param_grid_mpi():
         ax.plot(times, A0*(1 - np.exp(-k1_true*k2_true*times/(kinv_true + k2_true))))
         plt.show()
 
-    # set up samples of k1, kinv, and k2
-    # nk1s = 150
-    # k1s = np.power(10, np.random.uniform(-2, 2, nk1s))
-    # nkinvs = 150
-    # kinvs = np.power(10, np.random.uniform(0, 5, nkinvs)
-    # nk2s = 150
-    # k2s = np.logspace(0, 5, nk2s)
-
     nks = 10000000
-    # k1, kinv \in [10^{-4}, 10^0],    k2 \in [10^1, 10^4]
-    ks = np.power(10, np.random.uniform(size=(nks, 3))*np.array((4, 3, 3)) - np.array((4, -1, -1)))
-
-    # nks = nk1s*nkinvs*nk2s # total number of parameter space samples
+    # k1 \in [10^{-4}, 10^{-1}],    kinv, k2 \in [10^1, 10^4]
+    ks = np.power(10, np.random.uniform(size=(nks, 3))*np.array((3, 3, 3)) - np.array((4, -1, -1)))
     nks_per_proc = nks/nprocs + 1 # add one to avoid rounding errors
-    # iterate over all possible combinations of parameters and record obj. fn. eval
     params_and_of_evals = np.empty((nks_per_proc, 4))
     count = 0
-    # for k1 in uf.parallelize_iterable(k1s, rank, nprocs):
-    #     for kinv in kinvs:
-    #         for k2 in k2s:
     for k in uf.parallelize_iterable(ks, rank, nprocs):
         params_and_of_evals[count] = model.lsq_of(k[0], k[1], k[2]), k[0], k[1], k[2]
         count = count + 1
@@ -378,8 +365,8 @@ def test_sympy_of():
 
 def do_the_right_thing():
     """A completely unecesssary function that does the right thing"""
-    # sample_param_grid_mpi()
-    dmaps_param_set()
+    sample_param_grid_mpi()
+    # dmaps_param_set()
     # test_sympy_of()
     # dmaps_param_set_grad_kernel()
     # dmaps_param_set()

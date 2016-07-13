@@ -1,0 +1,63 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+yellow points in the upper right part of the point
+cloud. Theoretically the points should vary smoothly from purple to
+yellow. We find this with the new sample in Fig. (2) where we have
+reduced the region of $k_{-1}$ that we sample from $\log(k_{-1}) \in
+[-4, 0]$ to $\log(k_{-1}) \in [-4, -1]$ so as to obey the inequality
+introduced above. Now the direction of changing $k_{eff}$ matches the
+direction of changing model response.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{keff-large-delta-A2}
+  \caption{Old sample with spurious values of $k_{eff}$. Changing
+    values of $k_{eff}$ do not necessarily correspond to changing
+    model response. \textbf{Here we color by $k_{eff}$}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{keff-large-new}
+  \caption{New sample in which $k_{eff}$ and $\delta(\theta)$ change
+    in the same directions. \textbf{Here we color by
+      $\log(\delta(\theta))$}. The two red planes represent the
+    minimum and maximum values of $k_{eff}$ present in the dataset,
+    and they closely match the boundaries of the point cloud as expected.}
+\end{figure}
+
+
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

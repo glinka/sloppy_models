@@ -1,0 +1,382 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq,
+  setspace, lscape}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand{\ps}{\mathrm{\Theta}}
+\newcommand{\p}{\theta}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+% \captionsetup{labelformat=empty,labelsep=none} 
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{Current figures}
+
+\begin{document}
+\maketitle
+
+Below is a brief overview of the various models we could employ to display different varieties of sloppiness.
+
+\section{Singularly perturbed}
+
+We have two singularly perturbed systems: the first is an ODE
+constructed to have a nonlinear dataspace, the second arises from a
+basic, reversible reaction mechanism involving three components: A, B
+and C.
+
+\subsection{1D Singularly perturbed ODE}
+
+This is the most basic example we present in the paper: a linear ODE
+given by
+
+\begin{align}
+  y' = -\frac{1}{\epsilon} y
+  \label{1D-model}
+\end{align}
+
+We allow $y_0$ and $\epsilon$ to vary and measure
+
+\begin{align*}
+  \mu(\theta) = \begin{bmatrix} y_0 \exp(-\frac{t_1}{\epsilon}) \\ \\ y_0
+    \exp(-\frac{t_2}{\epsilon}) \\ \\ y_0 \exp(-\frac{t_3}{\epsilon}) \end{bmatrix}
+\end{align*}
+
+As $\frac{1}{\epsilon} \rightarrow 0$ we see that $y(t) = y_0 \;
+\forall t$ corresponding to a model manifold boundary at $y_1 = y_2 =
+y_3$. For $\frac{1}{\epsilon} \rightarrow \infty$ we have
+$y(t) \rightarrow 0 \; \forall \; t$ which corresponds to a boundary
+of $y_2 = y_3 = 0$. We can understand the second boundary by
+considering that for any $\frac{1}{\epsilon} > 0$, we can find a $y_0$
+such that $y(t_1)$ achieves any desired value. This still holds as
+$\frac{1}{\epsilon} \rightarrow \infty$, but in this regime $y_2
+\rightarrow y_3 \rightarrow 0$. These boundaries are clearly visible
+in Fig (\ref{fig:lmm}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./model-manifold/linear-sing-pert-mm}
+  \caption{Model manifold $\mathcal{M}$ for dynamical system~\eqref{1D-model} and monitoring function~\eqref{1D-pf}.
+(Left) Parameter plane with lines of constant $\eps$ and coloring by $y_0$.
+(Right) $3$D data space with embedded $2$D model surface.
+Each pair $(\eps,y_0)$ is mapped to a point on $\mathcal{M}$ through $\mathbf{f}$.
+The coloring is also by $y_0$ and lines emanating from the origin have constant $\eps$ along them.
+The surface is bounded by the diagonal $f_1=f_2=f_3$ ($\eps\to\infty$)
+and the $f_1-$axis ($\eps\downarrow0$) but unbounded along lines
+$\eps=constant$. The mirror image of the surface through the origin (not shown) also
+belongs to $\mathcal{M}$ ($y_0<0$), as does the grey part above the
+diagonal ($\eps<0$). \label{fig:lmm}}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\linewidth]{./model-manifold/lsp-paramspace-ii}
+  \caption{Examining level curves in parameter space. We choose a
+    point on the model manifold close to the $f_1$ axis and look at
+    what parameters are some distance $\delta$ from that point (using
+    Euclidean distance in parameter space and not distance along the
+    manifold). At first we see ellipsoidal curves, as expected for
+    small $\delta$, but once we cross the model manifold boundary
+    at larger $\delta$ the curves open up. \label{fig:lmm-lc} }
+\end{figure}
+
+
+\subsection{2D Singularly perturbed ODE, sloppy initial conditions}
+
+The system takes the form
+
+\be
+\begin{array}{rcl}
+ \dot{x} &=& y - \lambda x ,
+\vspace*{1mm}\\
+ \eps \dot{y} &=& \eps x - \displaystyle\left(1+\frac{10}{1.5-\sin y}\right) y ,
+\end{array}
+\ \mbox{supplemented with} \
+\begin{array}{rcl}
+ x(0) &=& x_0 ,
+\vspace*{1mm}\\
+ y(0) &=& y_0 .
+\end{array}
+\label{elem-ODE}
+\ee
+
+This model has a unique, globally attracting steady state at the
+origin whose stability specifics are controlled by $\eps$ and
+$\lambda$.  All four of $(\eps,\lambda,x_0,y_0)$ can be viewed as
+parameters, but we reduce their number to $M=2$ by setting
+$\p = (\eps,y_0)$ and fixing $\lambda= 2$ and $x_0 = 1$.  For our
+observed model response, we choose
+
+\be
+ \mu(\p) = \big( y(t_1;\p) \,,\, y(t_2;\p) \,,\, y(t_3;\p) \big) ,
+\ \mbox{for fixed time instants} \
+ 0 < t_1 < t_2 < t_3 .
+\label{elem-mu}
+\ee
+
+It follows that the $2-$D observed model manifold is embedded in $3-$D
+Euclidean space ($N=3$).  A segment of this highly nonlinear manifold
+is plotted in Fig.~\ref{f.elem.ex.1}. \\
+
+Depending on our parameter values, we may encounter parameter
+sloppiness in both $\eps$ and $y_0$. This reveals itself by examining
+level sets of the objective function. Close enough to the minimum, we
+necessarily have elliptical contours in parameter space. However, in a
+sloppy regime, these ellipses quickly become unbounded regions that
+appear as noses. Essentially, as $\eps$ decreases, a larger and larger
+span of $y_0$ values fit the data within some given
+tolerance. Fig.~\ref{f.noses} shows this phenomenon.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{./model-manifold/mm-fig-v3}
+  \caption{Depiction of mapping between model- and
+    parameter-space. When the model manifold is two-dimensional, the
+    ball is mapped to a relatively small, ellipsoidal region in
+    parameter space. However, when the model manifold becomes
+    zero-dimensional ($\frac{1}{\epsilon} \rightarrow \infty$), we
+    find parameter sloppiness and the ball maps to an unbounded region
+    in parameter space.}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{./model-manifold/levelsets-small-eps}
+  \caption{Level curves for the nonlinear singularly perturbed
+    system, analagous to Fig. (\ref{fig:lmm-lc}). Once again, for
+    small $\delta$ the curves are ellipsoidal, while at larger delta
+    they are unbounded. \label{f.noses} }
+\end{figure}
+
+
+\subsection{ABC Reaction}
+
+Given the reaction
+
+\begin{align*}
+  A \xrightleftharpoons[k_{-1}]{k_1} B, \; B \xrightarrow[]{k_2} C
+\end{align*}
+
+for a given set of $\theta = \{k_1, k_{-1}, k_2\}$ we measure the concentration
+of $C$ at five times, giving
+
+\begin{align*}
+  \mu(\theta) = \begin{bmatrix} C(0) \\ \\ C(\frac{1}{k_{eff}}) \\ \\
+    C(\frac{2}{k_{eff}}) \\ \\ C(\frac{3}{k_{eff}}) \\ \\
+    C(\frac{4}{k_{eff}}) \end{bmatrix}
+\end{align*}
+
+We fix $A(0) = 1$ and $B(0) = C(0) = 0$, so we could equivalently define
+
+\begin{align*}
+  \mu(\theta) = \begin{bmatrix} C(\frac{1}{k_{eff}}) \\ \\
+    C(\frac{2}{k_{eff}}) \\ \\ C(\frac{3}{k_{eff}}) \\ \\
+    C(\frac{4}{k_{eff}}) \end{bmatrix}
+\end{align*}
+
+as $C(0)$ is constant. \\
+
+To generate a dataset in parameter space, we set true parameter values
+of 
+
+\begin{align*}
+  k_1^* &= 1 \\
+  k_{-1}^* = k_2^* &= 1000 \\
+\end{align*}
+
+and measure the \textbf{squared} distance $\| \mu(theta) -
+\mu(\theta^*) \|^2$ corresponding to a least-squares objective
+function. We keep points for which this distance falls beneath some
+tolerance (here $10^{-3}$).
+
+\subsubsection{Intermediate mixed kernel}
+
+We investigate the DMAPS kernel
+
+\begin{align}
+  k(\theta_i, \theta_j) = \exp \bigg( -\frac{1}{\lambda^2} \bigg( \frac{\|\log(\theta_i)
+  - \log(\theta_j)\|^2}{\epsilon^2} + \|\mu(\theta_i) -
+  \mu(\theta_j)\|^2\bigg) \bigg)
+  \label{eqn1}
+\end{align}
+
+with parameter values $\epsilon = 10$ and $\lambda = 1$. This smaller
+value of $\lambda$ biases the diffusion along directions in which
+$\mu(\theta)$ changes, i.e. along important parameter
+directions. However, $\epsilon$ is not so large as to completely
+remove the effects of $\| \theta_i - \theta_j \|$ on the DMAPS
+results, and as a result, we find that the first two eigenvectors
+$\Phi_1$ and $\Phi_2$ parameterize the sloppy directions while
+$\Phi_3$ parameterizes the important direction in which $k_{eff}$
+changes. This is shown in Figs. (\ref{fig1}-\ref{fig3}) below. \\
+
+As a reminder, we have sampled the three-dimensional parameter space
+$\{k_1, k_{-1}, k_2 \}$ around some true values $k_1 = 1$,
+$k_{-1} = 1000$ and $k_2 = 1000$, keeping those parameter combinations that
+predict a concentration profile of species $C$ within some error
+tolerance (here we require $\| \mu(\theta) - \mu(\theta^*) \| <
+10^{-3}$). This leaves us with the slightly thick parameter set shown
+in Fig. (\ref{fig0}), which we then apply Eqn. (\ref{eqn1}) to.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./rawlings/keff-large-delta}
+  \caption{The dataset we will be applying DMAPS to, colored by
+    $k_{eff}$. \label{fig0}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./outliers/phi1}
+  \caption{Dataset colored by $\Phi_1$, parameterizing a sloppy
+    direction. \label{fig1}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./outliers/phi2}
+  \caption{Dataset colored by $\Phi_2$, parameterizing another sloppy
+    direction. \label{fig2}}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./outliers/phi3}
+  \caption{Dataset colored by $\Phi_3$, parameterizing the important
+    direction, $k_{eff}$. \label{fig3}}
+\end{figure}
+
+
+\section{Singularly and regularly perturbed}
+
+Here we turn to Antonios' model which includes all varieties of sloppiness we wish to show: singular and regular perturbation parameters and sloppy initial conditions. This system is ideal for a nonlinear transformation of parameters.
+
+\subsection{Antonios' Model}
+
+We start with the linear ODEs
+
+\begin{align*}
+  X &= -\lambda X \\
+  \epsilon Y &= -Y
+\end{align*}
+
+and then transform it into nonlinear $(x, y)$ via 
+
+\begin{align*}
+  x &= X + \phi(y) \\
+  y &= Y + \mu(x) \\
+\end{align*}
+
+We are free to choose $\phi(y)$ and $\mu(x)$, which control the shape of the fast and slow manifold, respectively. Thus, if we set $\mu = a x^2$ and $\phi = b y^2$ we find parabolic slow and fast manifolds, and additionally we've introduced a sloppy regular perturbation parameter $b$. Additionally, initial conditions lying along a given fast manifold will be sloppy. Sloppiness in $\epsilon$/$\lambda$, $a$/$b$ and $x_0$/$y_0$ are shown in the three figures below.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./zagaris/sing-pert-init-cond-contours}
+  \caption{$x_0$/$y_0$ plane colored by objective function value. The contours follow the fast manifold $x=y^2$.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./zagaris/sing-pert-phase-plane}
+  \caption{The phase plane showing parabolic fast and slow
+    trajectories on their approach to the stable steady state at the origin.}
+\end{figure}
+
+
+\subsubsection{Nonlinear parameter transformation}
+
+By holding the sloppy parameters $(\epsilon, b)$ constant we are left
+with a system in which both remaining parameters, $\lambda$ and $a$
+are not sloppy. If we apply two iterations of the H\'{e}non map to a
+set of $(\lambda, a)$ values that fit some base model within a given
+tolerance, we can make the transformed parameters $(\theta_1,
+\theta_2)$ appear sloppy.
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./transformed-params/x1-x2-fromopt}
+    \subcaption{Parameter values found through repeated fitting of
+      the model with parameters transformed via the H\`{e}non map. \label{f.henon}}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./transformed-params/inverted-params}
+    \subcaption{Original parameter values found by inverting the
+      collection in the left panel.  \label{f.henon-inverse}}
+  \end{subfigure} %
+  \caption{The set $\ps_\delta$ corresponding to the point
+    $(\alpha_*,\lambda_*) = (1,1)$. The absence of
+    sloppiness is evident in the right panel, in which $\ps_\delta$ is
+    plotted in terms of the original parameter set
+    $(\alpha,\lambda)$. To the contrary, the same domain plotted in
+    terms of the transformed parameters $(\p_1,\p_2)$ appears bent and
+    sloppy. \label{f.transf-params}}
+\end{figure}
+
+\subsubsection{Two effective parameters, one neutral}
+
+We can also hold $b$ constant to obtain a model with two effective
+parameters $\lambda$ and $a$, and one neutral, $\epsilon$. This gives
+us another context in which we can demonstrate the advantage the mixed DMAPS
+kernel offers over the standard gaussian. Here, we uncover both
+effective parameters $\lambda$ and $a$ in the first two DMAPS
+eigenvectors despite the much larger variation in $\eps$.
+
+
+\begin{figure}[ht!]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./two-effective-one-neutral/dmaps-phi1}
+    \subcaption{Coloring sloppy parameter combinations by $\Phi_1$}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./two-effective-one-neutral/dmaps-phi2}
+    \subcaption{Coloring sloppy parameter combinations by $\Phi_2$}
+  \end{subfigure} %
+  \caption{The set $\ps_\delta$ corresponding to the point
+    $(\alpha_*,\lambda_*) = (1,1)$. The absence of
+    sloppiness is evident in the right panel, in which $\ps_\delta$ is
+    plotted in terms of the original parameter set
+    $(\alpha,\lambda)$. To the contrary, the same domain plotted in
+    terms of the transformed parameters $(\p_1,\p_2)$ appears bent and
+    sloppy. \label{f.transf-params}}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

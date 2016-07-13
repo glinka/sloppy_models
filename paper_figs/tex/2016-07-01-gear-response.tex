@@ -1,0 +1,175 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+% \captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/temp/} }
+
+\title{Dimensionality of model manifold}
+
+\begin{document}
+\maketitle
+
+\section{Background}
+
+The hypothesis being tested is that, while the model manifold is
+indeed two-dimensional as Prof. Gear claims, it is characterized by
+disparate scales. This is not unlike the model manifold ribbon
+explanation given by Sethna and Transtrum. Thus, the system still
+exhibits sloppiness despite retaining its two-dimensional model
+manifold. \\
+
+If the system truly had two significant parameters in the region of
+interest, we would expect a model manifold that looks something like
+that in Fig. (1). If we choose a point on this manifold and look at
+its intersection with a growing ball, we would consistently find a
+two-dimensional sub-manifold which spans a consistent ratio of
+parameters $\frac{\theta_1}{\theta_2}$. However, if instead we had one
+sloppy parameter, we would still find a two-dimensional model manifold
+but it would would be characterized by disparate lengths along the
+important and sloppy parameter directions. This is depicted in
+Fig. (2). In this case, as we examine the intersection of the manifold
+with a growing ball, the shorter, sloppy direction shrinks in
+comparison to the important paramter direction. It increasingly
+\textit{appears} one-dimensional. \\
+
+To determine which of these descriptions applies to our current
+setting, we can perform DMAPS on samples of the model manifold taken
+in growing $B_\delta$ around some fixed point. If the second dimension
+is pushed down the spectrum as we examine balls of increasing radius,
+it indicates that the characteristic lengths of the two dimensions are
+not similar, suggesting sloppiness. \\
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../model-manifold/non-sloppy-illustration}
+  \caption{Illustration of non-sloppy two-dimensional model
+    manifold. Two-dimensional structure is retained at all scales.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../model-manifold/sloppy-illustration}
+  \caption{Illustration of sloppy two-dimensional model manifold. As
+    the ball radius increases, the shorter dimension appears
+    diminished with respect to the long axis.}
+\end{figure}
+
+\clearpage
+\section{Experimental setup}
+
+We choose as base parameters:
+
+\begin{itemize}
+  \item $k_1 = 10^{-1}$
+  \item $k_{-1} = 10^3$
+  \item $k_2 = 10^3$
+\end{itemize}
+
+with $A_0 = 1$, $B_0 = C_0 = 0$. Our model response consists of
+
+\begin{align*}
+  f(\theta) = \begin{bmatrix} C(t_1) \\ C(t_2) \\ \vdots \\
+    C(t_5) \end{bmatrix}
+\end{align*}
+
+where $t_i = i/(2 | \lambda_+ |)$ as recommended in Antonios' latest
+notes. This ensures we capture the slow timescale, while damping out
+the fast dynamics ($\frac{k_1 k_2}{(k_1 + k_{-1} + k_2)^2} \approx
+10^{-4}$). Then we sample parameter space in the region
+
+\begin{itemize}
+  \item $\log(k_1) \in [-4, -1]$
+  \item $\log(k_{-1}) \in [1, 4]$
+  \item $\log(k_2) \in [1, 4]$
+\end{itemize}
+
+and record the squared error at each point $\delta(\theta) = \|
+f(\theta) - f(\theta^*) \|^2$. We then repeat the following for the
+three values of $\delta^* = [10^{-5}, 10^{-3}, 10^{-1}]$:
+
+\begin{enumerate}
+  \item Randomly select 4000 points such that $\delta(\theta) <
+    \delta^*$
+  \item Perform DMAPS on the resulting dataset with $\epsilon =
+    \frac{\delta^*}{8}$
+  \item Record which two eigenvectors, if any, create a
+    two-dimensional embedding of the data
+\end{enumerate}
+
+We did uncover two-dimensional embeddings at each $\delta^*$, but the
+eigenvectors that parameterized these directions were located
+increasingly deep in the eigendecomposition. The following lists which
+eigenvectors yielded this embedding for each $\delta^*$
+
+\begin{itemize}
+  \item $\delta^* = 10^{-5} \rightarrow v_1$ and $v_{14}$
+  \item $\delta^* = 10^{-3} \rightarrow v_1$ and $v_{27}$
+  \item $\delta^* = 10^{-1} \rightarrow v_1$ and $v_{36}$
+\end{itemize}
+
+\section{Summary}
+Thus the eigenvector parameterizing the smaller length of the manifold
+was pushed lower and lower as $\delta^*$ increased. The actual
+embeddings are presented in Figs. (3)-(5) below. The color denotes
+$k_{eff}$, and we see that in cases $k_{eff}$ aligns with the first eigenvector. Overall, I believe
+this offers good evidence of sloppiness despite the fact that we do
+identify a two-dimensional manifold at all scales.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmapa14}
+  \caption{$\phi_{14}$ vs $\phi_{1}$ for $\delta^* = 10^{-5}$, colored
+  by $k_{eff}$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmapb27}
+  \caption{$\phi_{27}$ vs $\phi_{1}$ for $\delta^* = 10^{-3}$, colored
+  by $k_{eff}$}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./dmapc36}
+  \caption{$\phi_{36}$ vs $\phi_{1}$ for $\delta^* = 10^{-1}$, colored
+  by $k_{eff}$}
+\end{figure}
+
+% \bibliographystyle{plain}
+% \bibliography{literature.bib}
+
+\end{document}

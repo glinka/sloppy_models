@@ -8,7 +8,7 @@ for pt in sln2():
 
 # save output
 save(sln3,'linearlc-fullminus')
-np.array(sln3.toArray()).dump('./linearlc-fullminus.pkl')
+np.array(sln3.toArray()).dump('./linearlc-fullminus-largedelta.pkl')
 
 sln3 = []
 for pt in sln2():
@@ -16,7 +16,7 @@ for pt in sln2():
 
 # save output
 save(sln3,'linearlc-fullplus')
-np.array(sln3.toArray()).dump('./linearlc-fullplus.pkl')
+np.array(sln3.toArray()).dump('./linearlc-fullplus-largedelta.pkl')
 
 print "\n***Clean the directory***"
 cl()
