@@ -2,8 +2,8 @@
 import numpy as np
 # scipy
 from scipy.optimize import minimize
-# PyDSTool
-import PyDSTool as pc
+# # PyDSTool
+# import PyDSTool as pc
 # matplotlib
 from matplotlib import colors, colorbar, cm, pyplot as plt, gridspec as gs, tri
 from mpl_toolkits.mplot3d import Axes3D
@@ -18,7 +18,7 @@ from mpi4py import MPI
 import os
 import sys
 
-import colormaps
+# import colormaps
 import dmaps
 import plot_dmaps
 from dmaps_kernels import Data_Kernel
@@ -33,136 +33,303 @@ from algorithms.Derivatives import gradient
 import util_fns as uf
 from pca import pca
 
-def linear_sing_pert_param_space_fig():
-    """plots output from auto goodly"""
-    # load pre-computed data
-    lcsplus_large = np.load('c-code/linearlc-fullplus-largedelta.pkl')
-    lcsminus_large = np.load('c-code/linearlc-fullminus-largedelta.pkl')
-    lcsplus_small = np.load('c-code/linearlc-fullplus-smalldelta.pkl')
-    lcsminus_small = np.load('c-code/linearlc-fullminus-smalldelta.pkl')
+class TwoD_CMAP:
+    """Implements a sort of two-dimensional colormap where color = x*c1 + y *c2. Remains to be proven that the colors thus generated are unique on the x/y plane. Meh.
 
-    # # combine datasets into just two arrays for plus and minus curves
-    # plus branches
-    npl = lcsplus_large.shape[0]
-    nps = lcsplus_small.shape[0]
-    lcsplus = np.empty((nps + npl, lcsplus_large.shape[1]))
-    lcsplus[:nps] = lcsplus_small
-    lcsplus[nps:] = lcsplus_large
-    # minus branches
-    nml = lcsminus_large.shape[0]
-    nms = lcsminus_small.shape[0]
-    lcsminus = np.empty((nms + nml, lcsminus_large.shape[1]))
-    lcsminus[:nms] = lcsminus_small
-    lcsminus[nms:] = lcsminus_large
 
-    lcsplus[:,3] = np.log10(lcsplus[:,3])
-    lcsminus[:,3] = np.log10(lcsminus[:,3])
+    Attributes:
+        xcolor: color along x axis. assumed to start at with white at xmin and transition linearly to xcolor at xmax
+        xmin: min value of x data
+        xmax: max value of x data
 
-    colornorm = colors.Normalize(-9.24, np.max(lcsminus[:,3]))
-    colormap = cm.ScalarMappable(norm=colornorm)
-    print 'min obj fn value:', np.min(lcsminus[:,3]), 'max obj fn value:', np.max(lcsminus[:,3])
+    y variables similarly defined
 
-    # loop through each unique value of lcs[:,3], the delta value
+    """
 
-    branches = []
-    current_delta = lcsplus[0,3]
-    start = 0
-    npts = lcsplus.shape[0]
-    for i in range(npts):
-        if lcsplus[i,3] != current_delta:
-            branches.append(lcsplus[start:i])
-            current_delta = lcsplus[i,3]
-            start = i
-    branches.append(lcsplus[start:npts])
-    nbranches = len(branches)
+    def __init__(self, xcolor, xmin, xmax, ycolor, ymin, ymax):
+        self._xcolor = xcolor
+        self._xmin = xmin
+        self._xmax = xmax
+        self._xspan = xmax - xmin
 
-    print 'have', nbranches, 'branches'
+        self._ycolor = ycolor
+        self._ymin = ymin
+        self._ymax = ymax
+        self._yspan = ymax - ymin
+
+    def to_rgba(self, xdata, ydata):
+        """Converts (n, m) xdata and ydata arrays into a (n, m, 4) rgba color array based on class attributes"""
+        rgba_colors = None
+        n = xdata.shape[0]
+        # if only have length-n vector, return length-n vector of colors
+        if len(xdata.shape) is 1:
+            rgba_colors = np.empty((n, 4))
+            for i in range(n):
+                rgba_colors[i] = self._xcolor*(xdata[i] - self._xmin)/self._xspan + self._ycolor*(ydata[i] - self._ymin)/self._yspan
+        # else if given grid of x and y points, return grid of colors
+        else:
+            m = xdata.shape[1]
+            rgba_colors = np.empty((n, m, 4))
+            for i in range(n):
+                for j in range(m):
+                    rgba_colors[i,j] = self._xcolor*(xdata[i,j] - self._xmin)/self._xspan + self._ycolor*(ydata[i,j] - self._ymin)/self._yspan
+        return rgba_colors/np.max(rgba_colors, axis=(0,1))
         
-    # # # remove any branches for which 1/eps goes below zero
-    # kept_pts = np.empty((npts, 4))
-    # nkept_branches = 0
-    # for i in range(nbranches):
-    #     branch = lcs[i*npts_per_branch:(i+1)*npts_per_branch]
-    #     if branch[branch < 0].shape[0] == 0:
-    #         kept_pts[nkept_branches*npts_per_branch:(nkept_branches+1)*npts_per_branch] = np.copy(lcs[i*npts_per_branch:(i+1)*npts_per_branch])
-    #         nkept_branches = nkept_branches + 1
-    # # relabel kept pts
-    # nbranches = nkept_branches
-    # lcs = kept_pts
-    # npts = lcs.shape[0]
+
+
+def rgb_square_cmap(xvals, yvals):
+    """attempt to figure out Illustrator's 'mix' option"""
+    blue = np.array((0,0,1,0.5))
+    red = np.array((1,0,0,0.5))
+    npts = 500
+    xgrid, ygrid = np.meshgrid(np.linspace(0,1,npts), np.linspace(0,1,npts))
+    cs = np.empty((npts,npts,4))
+    for i in range(npts):
+        for j in range(npts):
+            cs[i,j] = xgrid[i,j]*blue + ygrid[i,j]*red
+            cs[i,j,3] = np.power((xgrid[i,j] + ygrid[i,j])/2.0, 0.5) #(np.power(xgrid[i,j], 2) + np.power(ygrid[i,j], 2))/2.0
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    axins = inset_axes(ax, 11, 6, bbox_to_anchor=(0.7, 0.95), bbox_transform=ax.transAxes)
-
-    # # plot each branch
-    # first the 'plus' branches
-    lw = 3
-    lw_inset = 1
-    bslice = 50
-    custom_indices = [0, 18, 200, 210] # [0, 18, 100, 200, 209] # for smalldelta data
-    for i in custom_indices:
-        branch = branches[i]
-        ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
-
-
-    # # now do some svd and stretch the shortest axis of the the smallest two branches and plot these in the inset so that their actual ellipsoidal nature is clear
-    branch0 = branches[0][:,:2]
-    col_avgs = np.average(branch0, axis=0)
-    u, s, v = np.linalg.svd(branch0 - col_avgs, full_matrices=False)
-    scale = 10
-
-    # now scale the other branches in the same direction
-    for i in range(2):
-        branch = branches[custom_indices[i]][:,:2]
-        # col_avgs = np.average(branch, axis=0)
-        y = np.dot(branch - col_avgs, np.transpose(v))
-        y[:,1] = scale*y[:,1]
-        branch = np.dot(y, v) + col_avgs
-        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branches[custom_indices[i]][0,3]))
-
-
-    # second, the 'minus' branches
-    branches = []
-    current_delta = lcsminus[0,3]
-    npts = lcsminus.shape[0]
-    start = 0
-    for i in range(npts):
-        if lcsminus[i,3] != current_delta:
-            branches.append(lcsminus[start:i])
-            current_delta = lcsminus[i,3]
-            start = i
-    branches.append(lcsminus[start:npts])
-
-    for i in custom_indices:
-        branch = branches[i]
-        ax.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branch[0,3]), lw=lw)
-
-    # now scale the other branches in the same direction
-    for i in range(2):
-        branch = branches[custom_indices[i]][:,:2]
-        # col_avgs = np.average(branch, axis=0)
-        y = np.dot(branch - col_avgs, np.transpose(v))
-        y[:,1] = scale*y[:,1]
-        branch = np.dot(y, v) + col_avgs
-        axins.plot(branch[:,0], branch[:,1], color=colormap.to_rgba(branches[custom_indices[i]][0,3]))
+    ax.imshow(cs)
+    plt.show()
 
 
 
-    # # tidy up
-    ax.set_xlabel(r'$1/\epsilon$')
-    ax.set_ylabel(r'$x_0$')
-    ax.set_ylim((0,120))
-    ax.set_xlim((-1,11))
-    fig.subplots_adjust(bottom=0.15)
+def rawlings_keff_delta_figs():
+    """Produces set of images that attempt to clearly illustrate how increasing \delta(\theta) radius leads to wider range of k_{eff}, and also that the direction of changing \delta(\theta) is exactly the direction of changing k_{eff}"""
+    data = np.load('../rawlings_model/data/params-ofevals.pkl')
 
-    # add an inset marker
-    axins.set_xlim((4.9, 5.1))
-    axins.set_ylim((0.9, 1.1))
-    axins.tick_params(axis='both', which='major', labelsize=0)
-    mark_inset(ax, axins, loc1=4, loc2=3, fc='none', ec='0.5', zorder=3)
+    gsize = 40
+    gspec = gs.GridSpec(gsize,gsize)
+    goffset = 5 # due to the large amount of unecessary whitespace included in the 3d plots, we must shrink the axes of the line plots to align nicely: this offset serves that purpose
+    fontsize = 72
+
+    # plot points that fall some delta for three distinct delta values
+    logdelta_min = -5
+    logdelta_max = -3
+    ndeltas = 3
+    deltas = np.logspace(logdelta_min, logdelta_max, ndeltas)
+
+    npts_to_plot = 3000
+    scatter_alpha = 0.07
+    logdelta_line_min = -6 # min delta for 1d line plot showing delta range
+    nline_pts = 100
+
+    # constants for eventual surface plots
+    k1min, k1max = np.min(data[:,1]), np.max(data[:,1])
+    kinvmin, kinvmax = np.min(data[:,2]), np.max(data[:,2])
+    k2min, k2max = np.min(data[:,3]), np.max(data[:,3])
+    npts = 200
+    stride = 2
+    kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
+    surface_alpha = 0.5
+
+    xlims = None; ylims = None; zlims = None;
+
+    # calculate max range for keff for keff line plot
+    temp_data = data[data[:,0] < deltas[-1]]
+    temp_keffs = temp_data[:,1]*temp_data[:,3]/(temp_data[:,2] + temp_data[:,3])
+    keffmin, keffmax = np.min(temp_keffs), np.max(temp_keffs)
+    keff_ticks = np.linspace(keffmin, keffmax, 5)
+
+    # # set various linewidth constants
+    lw_adjustment_factor = 1.002 # if you use 1.0 as would normally be expected, matplotlib's line exceeds its actual limits and it appears as though a slightly different range of data is being plotted (-5 to -3.9 instead of -5 to -4), scaling the larger number by this small amount adjusts for this discrepancy
+    data_lw = 20 # lw of actual plotted line
+    xaxis_lw = 3 # lw of xaxis
+    major_tick_lw = 3
+    minor_tick_lw = 2
+    major_tick_length = 20
+    minor_tick_length = 10
+
+    red_value = 204./255 # r-value for surfaces
+
+    figs = []
+    axs = []
+    axlines = []    
+        
+    for i, delta in enumerate(deltas):
+        # # # plot data
+        fig1 = plt.figure()
+        figs.append(fig1)
+
+        # # plot data points in 3d
+        ax1 = fig1.add_subplot(gspec[:gsize-3,:], projection='3d')
+        axs.append(ax1)
+        
+        logdata = np.log10(data[data[:,0] < delta])
+        slice = np.max((logdata.shape[0]/npts_to_plot, 1)) # slice should always be at least 1
+        ax1.scatter(logdata[:,1], logdata[:,2], logdata[:,3], alpha=scatter_alpha)
+
+
+        # # line plot showing log(delta) range
+        axline1 = fig1.add_subplot(gspec[gsize-3:,goffset:gsize-goffset])
+        axlines.append(axline1)
+
+        axline1.set_xscale('log')
+
+        # plot data on xaxis (y=0), so have yaxis range be (-0.5, 0.5)
+        delta_data = np.logspace(lw_adjustment_factor*np.log10(delta), logdelta_line_min, nline_pts)
+        axline1.plot(delta_data, 0.0*np.ones(nline_pts), lw=data_lw)
+
+        # do some formatting and labelling
+        axline1.set_xlim(np.power(10, (logdelta_line_min, logdelta_max)))
+        axline1.set_xlabel(r'$\log(\delta(\theta))$')
+        axline1.text(np.power(10, logdelta_line_min - 0.2), -0.06, r'$\ldots$', fontsize=72) # pretty fragile text placement as usual
+        axline1.tick_params(labelsize=72)
+        
+
+
+        # first time through, grab lims to keep consistent through all plots
+        if xlims is None:
+            xlims = ax1.get_xlim()
+            ylims = ax1.get_ylim()
+            zlims = ax1.get_zlim()
+
+
+        # # # plot keff surface
+        fig2 = plt.figure()
+        figs.append(fig2)
+
+        # # plot data points in 3d
+        ax2 = fig2.add_subplot(gspec[:gsize-3,:], projection='3d')
+        axs.append(ax2)
+
+        # calculate k1, k2, kinv values on surf and plot
+        trimmed_data = data[data[:,0] < delta]
+        keffs = trimmed_data[:,1]*trimmed_data[:,3]/(trimmed_data[:,2] + trimmed_data[:,3])
+        keff_surfs = [np.min(keffs), np.max(keffs)]
+        for keff in keff_surfs:
+            k1s = keff*(kinvs + k2s)/k2s
+            cs = np.ones((npts,npts,4))*np.array((red_value,0,0,surface_alpha)) # change color and alpha
+            for j in range(npts):
+                for k in range(npts):
+                    if k1s[j,k] > 0.99*k1max:
+                        cs[j,k,3] = 0
+            ax2.plot_surface(np.log10(k1s), np.log10(kinvs), np.log10(k2s), linewidth=0, facecolors=cs, edgecolors=np.array((0,0,0,0)), shade=False, cstride=stride, rstride=stride, antialiased=True)
+
+        # # line plot showing keff range
+        axline2 = fig2.add_subplot(gspec[gsize-3:,goffset:gsize-goffset])
+        axlines.append(axline2)
+
+        keff_data = np.linspace(np.min(keffs), np.max(keffs), nline_pts)
+
+        # plot data on xaxis (y=0), so have yaxis range be (-0.5, 0.5)
+        axline2.plot(keff_data, 0.0*np.ones(nline_pts), lw=data_lw, color=(red_value,0,0,1))
+
+        # set xticks
+        axline2.set_xticks(keff_ticks) # silly matplotlib insists on adding two additional intermediate ticks
+        axline2.set_xticklabels(['%1.3f' % k for k in keff_ticks])
+        axline2.tick_params(labelsize=72)
+
+        # fatten and lengthen xaxis ticks
+        axline2.set_xlabel(r'$k_{eff}$')
+        axline2.set_xlim((keffmin, keffmax))
+
+        # # # if on largest delta, plot both data and keff on same plot WITH LABELS
+        if i == 100: #ndeltas-1:
+            # don't format fig3 with other figures
+            fig3 = plt.figure()
+            fig3.subplots_adjust(bottom=0.11, left=0.07, right=0.93)
+
+            # don't format ax3 with the other 3d axes
+            ax3 = fig3.add_subplot(111, projection='3d')
+            ax3.scatter(logdata[:,1], logdata[:,2], logdata[:,3], alpha=scatter_alpha)
+            for keff in keff_surfs:
+                k1s = keff*(kinvs + k2s)/k2s
+                cs = np.ones((npts,npts,4))*np.array((red_value,0,0,surface_alpha)) # change color and alpha
+                for i in range(npts):
+                    for j in range(npts):
+                        if k1s[i,j] > 0.99*k1max:
+                            cs[i,j,3] = 0
+                ax3.plot_surface(np.log10(k1s), np.log10(kinvs), np.log10(k2s), linewidth=0, facecolors=cs, edgecolors=np.array((0,0,0,0)), shade=False, cstride=stride, rstride=stride, antialiased=True)
+
+            # format 3d axis
+            ax3.view_init(elev=240, azim=70)
+            ax3.set_xlim(xlims)
+            # hardcoded axes ticks!
+            ax3.set_xticks(np.linspace(-1, -1.2, 3))
+            ax3.set_xlabel('\n\n' + r'$\log(k_1)$')
+            ax3.set_ylim(ylims)
+            ax3.set_yticks(np.linspace(1, 4, 3))
+            ax3.set_zlim(zlims)
+            ax3.set_ylabel('\n\n' + r'$\log(k_{-1})$') 
+            ax3.set_zticks(np.linspace(1, 4, 3))
+            ax3.set_zlabel('\n\n' + r'$\log(k_2)$')
+
+
+            fig4 = plt.figure()
+            axline3_delta = fig4.add_subplot(111)
+            axlines.append(axline3_delta)
+            axline3_delta.set_xscale('log')
+
+            axline3_delta.plot(delta_data, 0.0*np.ones(nline_pts), lw=data_lw)
+            # do some formatting and labelling
+            axline3_delta.set_xlim(np.power(10, (logdelta_line_min, logdelta_max)))
+            axline3_delta.set_xlabel(r'$\log(\delta(\theta))$')
+            axline3_delta.text(np.power(10, logdelta_line_min - 0.12), 0.0, r'$\ldots$') # pretty fragile text placement as
+
+            fig5 = plt.figure()
+            axline3_keff = fig5.add_subplot(111)
+            axlines.append(axline3_keff)
+
+            # plot data on xaxis (y=0), so have yaxis range be (-0.5, 0.5)
+            axline3_keff.plot(keff_data, 0.0*np.ones(nline_pts), lw=data_lw, color=(red_value,0,0,1))
+
+            # set xticks
+            axline3_keff.set_xticks(keff_ticks) # silly matplotlib insists on adding two additional intermediate ticks
+            axline3_keff.set_xticklabels(['%1.3f' % k for k in keff_ticks])
+
+            # fatten and lengthen xaxis ticks
+            axline3_keff.set_xlabel(r'$k_{eff}$')
+            axline3_keff.set_xlim((keffmin, keffmax))
+            
+
+        # # # format figures
+        for ax in axs:
+            # show grid
+            ax.grid(True)
+            # hide labels
+            ax.set_xticklabels([]) 
+            ax.set_yticklabels([])
+            ax.set_zticklabels([])
+            # hide tick labels
+            ax.tick_params(color=(0,0,0,0))
+            # set 3d viewing angle
+            ax.view_init(elev=240, azim=70)
+            # set consistent axis limits
+            ax.set_xlim(xlims)
+            ax.set_ylim(ylims)
+            ax.set_zlim(zlims)
+
+        for ax in axlines:
+            # set yaxis limits and hide actual axis
+            ax.set_ylim((-0.5, 0.5))
+            ax.yaxis.set_visible(False)
+
+            # hide left, right and top spines, only adjust bottom by moving to middle of plot and fattening
+            ax.spines['bottom'].set_position('zero')
+            ax.spines['bottom'].set_color('k')
+            ax.spines['bottom'].set_linewidth(xaxis_lw)
+            ax.spines['top'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+            ax.xaxis.set_ticks_position('bottom') # not sure why this is necessary but it is
+
+            # hide white background
+            ax.patch.set_alpha(0) 
+
+            # fatten and lengthen xaxis ticks
+            ax.tick_params(axis='x', which='major', pad=25, width=major_tick_lw, length=major_tick_length, direction='inout')
+            ax.tick_params(axis='x', which='minor', pad=25, width=minor_tick_lw, length=minor_tick_length, direction='inout')
+
+        for fig in figs:
+            # center plot left/right, push it up to see bottom label
+            fig.subplots_adjust(bottom=0.24, left=0.07, right=0.93, top=1.0)
 
     plt.show()
+
 
 
 def linear_sing_pert_param_space_log_fig():
@@ -428,7 +595,7 @@ def transformed_param_space_fig():
     if nprocs > 1:
 
         # perform optimization in transformed parameter space
-        do_transformed_optimization = False
+        do_transformed_optimization = True
         if do_transformed_optimization:
             if rank == 0:
                 print 'running in parallel, generating transformed x2, y2 parameters through repeated optimization'
@@ -557,8 +724,8 @@ def transformed_param_space_fig():
 
             print np.max(np.log10(x2_y2_of[:,2]))
 
-            colornorm = colors.Normalize(vmin=np.min(np.log10(x2_y2_of[:,2])), vmax=5) # colors.Normalize(vmin=np.min(embeddings), vmax=np.max(embeddings))
-            colormap = cm.ScalarMappable(norm=colornorm, cmap='viridis_r')
+            colornorm = colors.Normalize(vmin=np.min(np.log10(x2_y2_of[:,2])), vmax=np.max(np.log10(x2_y2_of[:,2]))) # colors.Normalize(vmin=np.min(embeddings), vmax=np.max(embeddings))
+            colormap = cm.ScalarMappable(norm=colornorm, cmap='viridis')
 
             # # plot output
             scatter_size = 50
@@ -568,14 +735,13 @@ def transformed_param_space_fig():
             ax.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=colormap.to_rgba(np.log10(x2_y2_of[:,2])), s=scatter_size)
             axins = inset_axes(ax, 6, 5, bbox_to_anchor=(0.45, 0.9), bbox_transform=ax.transAxes)
             axins.scatter(x2_y2_of[:,0], x2_y2_of[:,1], c=colormap.to_rgba(np.log10(x2_y2_of[:,2])), s=scatter_size)
-            axins.set_xlim((-0.5, 1.25))
-            axins.set_ylim((0, 0.35))
+            axins.set_xlim((0, 1.2))
+            axins.set_ylim((0.1, 0.3))
             axins.tick_params(axis='both', which='major', labelsize=0)
             ax.set_xlabel(r'$\theta_1$')
             ax.set_ylabel(r'$\theta_2$')
             fig.subplots_adjust(bottom=0.15)
             mark_inset(ax, axins, 1, 4 , fc='none', ec='0.5', zorder=3)
-            plt.show()
 
             # # investigate where points lie in (alpha, lambda) space, color by of
             lam, alpha = henon_inv(x2_y2_of[:,0], x2_y2_of[:,1], nhenon_transforms, 1.3, b)
@@ -583,15 +749,15 @@ def transformed_param_space_fig():
             gspec = gs.GridSpec(gsize, gsize)
             fig = plt.figure()
             ax = fig.add_subplot(gspec[:,:37])
-            cbar = ax.scatter(lam, alpha, c=colormap.to_rgba(np.log10(x2_y2_of[:,2])), s=scatter_size)
+            cbar = ax.scatter(lam, alpha, c=np.log10(x2_y2_of[:,2]), cmap='viridis', norm=colornorm, s=scatter_size)
             ax.set_xlabel(r'$\lambda$')
             ax.set_ylabel(r'$\alpha$')
-            fig.subplots_adjust(bottom=0.15)
 
             ax_cb = fig.add_subplot(gspec[:,38:])
             cb = fig.colorbar(cbar, ax_cb)
             cb.set_ticks((-1.8, -1, -.1))
             cb.set_label(r'$\log(c(\theta))$')
+            fig.subplots_adjust(left=0.12, right=0.86)
 
             plt.show()
 
@@ -2706,13 +2872,19 @@ def linear_sing_pert_model_manifold_fig():
     """Plotting model manifold of y' = -1/eps * y"""
 
     cmap ='viridis'
+
+    gray_color = np.array((0.05, 0.05, 0.05, 0.1))
     
     gsize = 40
     gspec = gs.GridSpec(gsize, gsize)
 
     t1, t2, t3 = (1.,2.,6.)# np.linspace(1,3,3)
+    # constants for parameter space plot, also needed when making model manifold
+    y0max = 2
+    logeps_min = -3
+    logeps_max = 3
 
-    npts = 100
+    npts = 200
     xss = np.linspace(0,1,npts)
     yss = np.linspace(0,1,npts)
     xg, yg = np.meshgrid(xss,yss)
@@ -2722,9 +2894,9 @@ def linear_sing_pert_model_manifold_fig():
     origin = None
     for i in range(npts):
         for j in range(npts):
-            if yg[i,j] <= xg[i,j]:
+            if yg[i,j] <= xg[i,j] and xg[i,j] <= y0max*np.exp(-t1*np.log(y0max/yg[i,j])/t2):
                 # keep track of which point is the origin for subsequent settings of y0, eps and z to 0 or inf
-                if xg[i,j] == 0:
+                if xg[i,j] == 0 and yg[i,j] == 0:
                     origin = count
                 xkept[count] = xg[i,j]
                 ykept[count] = yg[i,j]
@@ -2746,7 +2918,8 @@ def linear_sing_pert_model_manifold_fig():
 
     xyz = np.array((xkept, ykept, z)).T
 
-    y0s_colornorm = colors.Normalize(vmin=np.min(y0s_transformed), vmax=np.max(y0s_transformed))
+    # y0s_colornorm = colors.Normalize(vmin=np.min(y0s_transformed), vmax=np.max(y0s_transformed))
+    y0s_colornorm = colors.Normalize(vmin=0, vmax=y0max)
     y0s_colormap = cm.ScalarMappable(norm=y0s_colornorm, cmap=cmap)
 
     tris = tri.Triangulation(xkept, ykept).triangles
@@ -2767,29 +2940,73 @@ def linear_sing_pert_model_manifold_fig():
     # coll_y0.set_edgecolor(face_colors)
     # # end attempt
 
-    face_colors = y0s_colormap.to_rgba(calc_tri_avg(tris, y0s_transformed))
+    face_colors = y0s_colormap.to_rgba(calc_tri_avg(tris, y0s))
+
     coll_y0 = Poly3DCollection(triangle_vertices, linewidths=0)
     coll_y0.set_facecolor(face_colors)
     coll_y0.set_edgecolor(face_colors)
     # coll_eps = Poly3DCollection(triangle_vertices, facecolors=eps_colormap.to_rgba(calc_tri_avg(tris, epss_transformed)), linewidths=0, edgecolors='w')
-    
-    # plot surface
-    fig = plt.figure()
-    ax = fig.add_subplot(gspec[:,gsize/2:gsize-2], projection='3d')
-    ax.add_collection(coll_y0)
 
-    ax_cb = fig.add_subplot(gspec[:,gsize-1])
-    cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=y0s_colornorm, ticks=[0,1.], label=r'$x_0$')
-    cb.ax.set_yticklabels([r'$0$', r'$\vdots$'])
+    # add greyed-area that doesn't correspond to region in parameter space
+    xkept = np.empty(npts*npts)
+    ykept = np.empty(npts*npts)
+    count = 0
+    origin = None
+    arb_tol = 0.00
+    for i in range(npts):
+        for j in range(npts):
+            if yg[i,j] <= xg[i,j] and xg[i,j] >= y0max*np.exp(-t1*np.log(y0max/yg[i,j])/t2) - arb_tol:
+                # keep track of which point is the origin for subsequent settings of y0, eps and z to 0 or inf
+                if xg[i,j] == 0 and yg[i,j] == 0:
+                    origin = count
+                xkept[count] = xg[i,j]
+                ykept[count] = yg[i,j]
+                count = count + 1
+    xkept = xkept[:count]
+    ykept = ykept[:count]
+
+    # plt.scatter(xkept, ykept)
+    # plt.show()
+
+    z = np.power(xkept, (t2 - t3)/(t2 - t1))*np.power(ykept, (t3 - t1)/(t2 - t1))
+    z[origin] = 0 # z(0,0) = 0
+
+    xyz = np.array((xkept, ykept, z)).T
+    tris = tri.Triangulation(xkept, ykept).triangles
+    triangle_vertices = np.array([np.array((xyz[T[0]], xyz[T[1]], xyz[T[2]])) for T in tris]) # plot in k1, k-1, k2
+
+    face_colors_grey = np.ones((tris.shape[0],4))*gray_color
+    face_y1s = calc_tri_avg(tris, xkept)
+    face_y2s = calc_tri_avg(tris, ykept)
+    arb_tol = 0.00
+    for i in range(tris.shape[0]):
+        if face_y1s[i] < y0max*np.exp(-t1*np.log(y0max/face_y2s[i])/t2) - arb_tol:
+            face_colors_grey[i] = 0
+
+    coll_y0_grey = Poly3DCollection(triangle_vertices, linewidths=0)
+    coll_y0_grey.set_facecolor(face_colors_grey)
+    # coll_y0_grey.set_edgecolor((1,1,1,1))
+    # coll_y0_grey.set_edgecolor(gray_color)
+
+    
+    # plot both greyed and colored surface
+    fig = plt.figure()
+    ax = fig.add_subplot(gspec[:,gsize/2:], projection='3d')
+    ax.add_collection(coll_y0)
+    ax.add_collection(coll_y0_grey)
+
+    # ax_cb = fig.add_subplot(gspec[:,gsize-1])
+    # cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=y0s_colornorm, ticks=[0,1.,y0max], label=r'$x_0$')
+    # cb.ax.set_yticklabels(['0', '1', str(y0max)])
 
     # add lines of constant epsilon
     epss_samples = np.array((1e-3, 1, 3.5, 10, 1e3)) # hand picked for nice visuals
-    eps_colornorm = colors.Normalize(vmin=np.min(np.log10(epss_samples)), vmax=1.5*np.max(np.log10(epss_samples))) # scale vmax by 1.5 to remove whiter part of cmap from use
-    eps_colormap = cm.ScalarMappable(norm=eps_colornorm, cmap='Oranges_r')
+    # eps_colornorm = colors.Normalize(vmin=np.min(np.log10(epss_samples)), vmax=1.5*np.max(np.log10(epss_samples))) # scale vmax by 1.5 to remove whiter part of cmap from use
+    # eps_colormap = cm.ScalarMappable(norm=eps_colornorm, cmap='Oranges_r')
     eps_colors = ['#002255', '#0044aa', '#0066ff', '#5599ff', '#aaccff'] # ['#000000', '#0000cc', '#0099ff', '#cc00ff', '#ff0000']
     lw = 4
     for i, eps in enumerate(epss_samples):
-        xss = np.linspace(0,1,npts)
+        xss = np.linspace(0,np.min((1, y0max*np.exp(-t1/eps))),npts)
         yss = xss*np.exp((t1 - t2)/eps)
         zss = np.power(xss, (t2 - t3)/(t2 - t1))*np.power(yss, (t3 - t1)/(t2 - t1))
         ax.plot(xss, yss, zss, lw=lw, color=eps_colors[i])#eps_colormap.to_rgba(np.log10(eps)))
@@ -2798,10 +3015,13 @@ def linear_sing_pert_model_manifold_fig():
     ax.set_ylabel('\n' + r'$f_2$')
     ax.set_zlabel('\n' + r'$f_3$')
     formatter = FormatAxis(ax)
-    formatter.format('x', xkept, '%1.0f', nticks=2)
-    formatter.format('y', ykept, '%1.0f', nticks=2)
-    formatter.format('z', z[::-1], '%1.0f', nticks=2)
-    ax.invert_zaxis()
+    ax.set_xticks((0,1))
+    ax.set_yticks((0,1))
+    ax.set_zticks((0,1))
+    # formatter.format('x', xkept, '%1.0f', nticks=2)
+    # formatter.format('y', ykept, '%1.0f', nticks=2)
+    # formatter.format('z', z[::-1], '%1.0f', nticks=2)
+    # ax.invert_zaxis()
     ax.invert_yaxis()
 
 
@@ -2887,10 +3107,7 @@ def linear_sing_pert_model_manifold_fig():
     # # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     # plot y0, eps plane
-    npts = 50
-    y0max = 2
-    logeps_min = -3
-    logeps_max = 3
+    npts = 1000
     y0s = np.linspace(y0max,0,npts) # reverse ordering to get meshgrid output correctly oriented
     epss = np.logspace(logeps_min, logeps_max, npts)
     epsg, y0g = np.meshgrid(epss, y0s)
@@ -2914,25 +3131,226 @@ def linear_sing_pert_model_manifold_fig():
 
     ax = fig.add_subplot(gspec[:,:gsize/2-2])
     lw = 5
-    ax.imshow(np.tanh(y0g), extent=(1e-3,1e3,0,2), cmap='viridis', norm=y0s_colornorm) # show coloring of y0
+
+    # lightly shade region that is not actually shown in model manifold
+    alpha = 0.0
+    y0s_colors = y0s_colormap.to_rgba(y0g)
+    for i in range(npts):
+        for j in range(npts):
+            if y0g[i,j] > np.exp(t1/epsg[i,j]):
+                y0s_colors[i,j] = gray_color
+
+
+    # ax.imshow(np.tanh(y0g), extent=(1e-3,1e3,0,2), cmap='viridis', norm=y0s_colornorm) # show coloring of y0
+    ax.imshow(y0s_colors, extent=(1e-3,1e3,0,2)) # show coloring of y0
     # add lines of constant eps
     for i, eps in enumerate(epss_samples):
+        # only plot up to boundary
+        count = y0s[y0s < np.exp(t1/eps)].shape[0]
         if i == 0 or i == epss_samples.shape[0]-1:
-            ax.plot(eps*np.ones(npts), y0s, lw=2.5*lw, color=eps_colors[i])
+            ax.plot(eps*np.ones(count), y0s[-count:], lw=2.5*lw, color=eps_colors[i])
         else:
-            ax.plot(eps*np.ones(npts), y0s, lw=lw, color=eps_colors[i])
+            ax.plot(eps*np.ones(count), y0s[-count:], lw=lw, color=eps_colors[i])
 
     ax.set_yticks([0,1,2])
-    ax.set_yticklabels(['0', '1', r'$\vdots$'])
+    ax.set_yticklabels(['0', '1', str(y0max)])
     ax.set_xscale('log')
     ax.set_xticks([1e-3, 1e0, 1e3])
     ax.set_xlabel(r'$\epsilon$')
     ax.set_ylabel(r'$x_0$')
     ax.tick_params(axis='x', pad=10) # padding for xticks
 
-    fig.subplots_adjust(bottom=0.13, left=0.06)
+    fig.subplots_adjust(bottom=0.15, left=0.07, right=0.93)
 
     plt.show()
+
+
+def linear_sing_pert_twod_cmap_fig():
+    """Plotting model manifold of y' = -1/eps * y"""
+
+    cmap ='viridis'
+
+    gray_color = np.array((0.05, 0.05, 0.05, 0.1))
+    
+    gsize = 40
+    gspec = gs.GridSpec(gsize, gsize)
+
+    t1, t2, t3 = (1.,2.,6.)# np.linspace(1,3,3)
+    # constants for parameter space plot, also needed when making model manifold
+    y0max = 2
+
+    npts = 200
+    xss = np.linspace(0,1,npts)
+    yss = np.linspace(0,1,npts)
+    xg, yg = np.meshgrid(xss,yss)
+    xkept = np.empty(npts*npts)
+    ykept = np.empty(npts*npts)
+    count = 0
+    origin = None
+    for i in range(npts):
+        for j in range(npts):
+            if yg[i,j] <= xg[i,j] and xg[i,j] <= y0max*np.exp(-t1*np.log(y0max/yg[i,j])/t2):
+                # keep track of which point is the origin for subsequent settings of y0, eps and z to 0 or inf
+                if xg[i,j] == 0 and yg[i,j] == 0:
+                    origin = count
+                xkept[count] = xg[i,j]
+                ykept[count] = yg[i,j]
+                count = count + 1
+    xkept = xkept[:count]
+    ykept = ykept[:count]
+
+    z = np.power(xkept, (t2 - t3)/(t2 - t1))*np.power(ykept, (t3 - t1)/(t2 - t1))
+    z[origin] = 0 # z(0,0) = 0
+
+    epss = (t2 - t1)/np.log(xkept/ykept)
+    epss[np.isnan(epss)] = np.inf # eps(0,0,0) = inf
+    # log_epssinv = np.log10(1./epss)
+    epss_transformed = np.tanh(epss)
+
+    y0s = xkept*np.power(xkept/ykept, t1/(t2 - t1))
+    y0s[origin] = 0 # y0(origin) = 0
+    # y0s[np.isnan(y0s)] = np.inf
+    y0s_transformed = np.tanh(y0s)
+
+    # construct two-dim colormap
+    twod_cmap = TwoD_CMAP(np.array((0.,0.,1.,0.5)), np.min(epss_transformed), np.max(epss_transformed), np.array((1.,0.,0.,0.5)), np.min(y0s), np.max(y0s))
+    # print np.min(log_epssinv), np.max(log_epssinv), np.array((1.,0.,0.,0.5)), np.min(y0s), np.max(y0s)
+
+    xyz = np.array((xkept, ykept, z)).T
+
+    tris = tri.Triangulation(xkept, ykept).triangles
+    triangle_vertices = np.array([np.array((xyz[T[0]], xyz[T[1]], xyz[T[2]])) for T in tris]) # plot in k1, k-1, k2
+
+    y0s_avg = calc_tri_avg(tris, y0s)
+    epss_transformed_avg = calc_tri_avg(tris, epss_transformed)
+    face_colors = twod_cmap.to_rgba(epss_transformed_avg, y0s_avg)
+
+    coll_y0 = Poly3DCollection(triangle_vertices, linewidths=0)
+    coll_y0.set_facecolor(face_colors)
+    coll_y0.set_edgecolor(face_colors)
+    # coll_eps = Poly3DCollection(triangle_vertices, facecolors=eps_colormap.to_rgba(calc_tri_avg(tris, epss_transformed)), linewidths=0, edgecolors='w')
+
+    # add greyed-area that doesn't correspond to region in parameter space
+    xkept = np.empty(npts*npts)
+    ykept = np.empty(npts*npts)
+    count = 0
+    origin = None
+    arb_tol = 0.00
+    for i in range(npts):
+        for j in range(npts):
+            if yg[i,j] <= xg[i,j] and xg[i,j] >= y0max*np.exp(-t1*np.log(y0max/yg[i,j])/t2) - arb_tol:
+                # keep track of which point is the origin for subsequent settings of y0, eps and z to 0 or inf
+                if xg[i,j] == 0 and yg[i,j] == 0:
+                    origin = count
+                xkept[count] = xg[i,j]
+                ykept[count] = yg[i,j]
+                count = count + 1
+    xkept = xkept[:count]
+    ykept = ykept[:count]
+
+    # plt.scatter(xkept, ykept)
+    # plt.show()
+
+    z = np.power(xkept, (t2 - t3)/(t2 - t1))*np.power(ykept, (t3 - t1)/(t2 - t1))
+    z[origin] = 0 # z(0,0) = 0
+
+    xyz = np.array((xkept, ykept, z)).T
+    tris = tri.Triangulation(xkept, ykept).triangles
+    triangle_vertices = np.array([np.array((xyz[T[0]], xyz[T[1]], xyz[T[2]])) for T in tris]) # plot in k1, k-1, k2
+
+    face_colors_grey = np.ones((tris.shape[0],4))*gray_color
+    face_y1s = calc_tri_avg(tris, xkept)
+    face_y2s = calc_tri_avg(tris, ykept)
+    arb_tol = 0.00
+    for i in range(tris.shape[0]):
+        if face_y1s[i] < y0max*np.exp(-t1*np.log(y0max/face_y2s[i])/t2) - arb_tol:
+            face_colors_grey[i] = 0
+
+    coll_y0_grey = Poly3DCollection(triangle_vertices, linewidths=0)
+    coll_y0_grey.set_facecolor(face_colors_grey)
+    # coll_y0_grey.set_edgecolor((1,1,1,1))
+    # coll_y0_grey.set_edgecolor(gray_color)
+
+    
+    # plot both greyed and colored surface
+    fig = plt.figure()
+    ax = fig.add_subplot(gspec[:,gsize/2:], projection='3d')
+    ax.add_collection(coll_y0)
+    ax.add_collection(coll_y0_grey)
+
+    # ax_cb = fig.add_subplot(gspec[:,gsize-1])
+    # cb = colorbar.ColorbarBase(ax_cb, cmap=cmap, norm=y0s_colornorm, ticks=[0,1.,y0max], label=r'$x_0$')
+    # cb.ax.set_yticklabels(['0', '1', str(y0max)])
+
+    # add lines of constant epsilon
+    epss_samples = np.array((np.min(epss), 1, 3.5, 10, 1e3)) # hand picked for nice visuals
+    # eps_colornorm = colors.Normalize(vmin=np.min(np.log10(epss_samples)), vmax=1.5*np.max(np.log10(epss_samples))) # scale vmax by 1.5 to remove whiter part of cmap from use
+    # eps_colormap = cm.ScalarMappable(norm=eps_colornorm, cmap='Oranges_r')
+    eps_colors = ['#002255', '#0044aa', '#0066ff', '#5599ff', '#aaccff'] # ['#000000', '#0000cc', '#0099ff', '#cc00ff', '#ff0000']
+    lw = 4
+    for i, eps in enumerate(epss_samples):
+        xss = np.linspace(0,np.min((1, y0max*np.exp(-t1/eps))),npts)
+        yss = xss*np.exp((t1 - t2)/eps)
+        zss = np.power(xss, (t2 - t3)/(t2 - t1))*np.power(yss, (t3 - t1)/(t2 - t1))
+        ax.plot(xss, yss, zss, lw=lw, color=eps_colors[i])#eps_colormap.to_rgba(np.log10(eps)))
+
+    ax.set_xlabel('\n' + r'$f_1$')
+    ax.set_ylabel('\n' + r'$f_2$')
+    ax.set_zlabel('\n' + r'$f_3$')
+    formatter = FormatAxis(ax)
+    ax.set_xticks((0,1))
+    ax.set_yticks((0,1))
+    ax.set_zticks((0,1))
+    # formatter.format('x', xkept, '%1.0f', nticks=2)
+    # formatter.format('y', ykept, '%1.0f', nticks=2)
+    # formatter.format('z', z[::-1], '%1.0f', nticks=2)
+    # ax.invert_zaxis()
+    ax.invert_yaxis()
+
+
+    # # plot y0, eps plane
+    npts = 1000
+    y0s = np.linspace(y0max,0,npts) # reverse ordering to get meshgrid output correctly oriented
+    logeps_min = np.log10(np.min(epss))
+    logeps_max = 3
+    epss = np.logspace(logeps_min, logeps_max, npts)
+    epsg, y0g = np.meshgrid(epss, y0s)
+
+    ax = fig.add_subplot(gspec[:,:gsize/2-2])
+    lw = 5
+
+    # lightly shade region that is not actually shown in model manifold
+    alpha = 0.0
+    # y0s_colors = y0s_colormap.to_rgba(y0g)
+    grid_colors = twod_cmap.to_rgba(np.tanh(epsg), y0g)
+    for i in range(npts):
+        for j in range(npts):
+            if y0g[i,j] > np.exp(t1/epsg[i,j]):
+                grid_colors[i,j] = gray_color
+
+
+    ax.imshow(grid_colors, extent=(np.min(epss),np.max(epss),np.min(y0s),np.max(y0s))) # show coloring of y0
+    # add lines of constant eps
+    for i, eps in enumerate(epss_samples):
+        # only plot up to boundary
+        count = y0s[y0s < np.exp(t1/eps)].shape[0]
+        if i == 0 or i == epss_samples.shape[0]-1:
+            ax.plot(eps*np.ones(count), y0s[-count:], lw=2.5*lw, color=eps_colors[i])
+        else:
+            ax.plot(eps*np.ones(count), y0s[-count:], lw=lw, color=eps_colors[i])
+
+    ax.set_yticks(np.linspace(0,y0max,3))
+    # ax.set_yticklabels(['0', '1', str(y0max)])
+    ax.set_xscale('log')
+    ax.set_xticks(np.logspace(0,3,4))
+    ax.set_xlim(left=np.min(epss))
+    ax.set_xlabel(r'$\epsilon$')
+    ax.set_ylabel(r'$x_0$')
+    ax.tick_params(axis='x', pad=10) # padding for xticks
+
+    fig.subplots_adjust(bottom=0.15, left=0.07)
+
+    plt.show()    
 
 
 class DMAPS_Data_Kernel:
@@ -3102,13 +3520,16 @@ def data_dmaps_rawlings_fig():
     # calculate trajectories at all the kept points
     # settings taken from sample_param_grid_mpi in rawlings_model
     A0 = 1.0 # initial concentration of A
-    k1_true = 1.0
+    k1_true = 0.1
     kinv_true = 1000.0
     k2_true = 1000.0
     decay_rate = k1_true*k2_true/(kinv_true + k2_true) # effective rate constant that governs exponential growth rate
     # start at t0 = 0, end at tf*decay_rate = 4
-    ntimes = 5 # arbitrary
-    times = np.linspace(0, 4/decay_rate, ntimes)
+    eigval_plus_true = 0.5*(-(kinv_true + k1_true + k2_true) + np.sqrt(np.power(k1_true + kinv_true + k2_true, 2) - 4*k1_true*k2_true))
+    dt = 0.5/np.abs(eigval_plus_true)
+    # start at dt, end at 5*dt
+    ntimes = 5 # somewhat arbitrary
+    times = np.linspace(dt, 5*dt, ntimes)
     model = Rawlings_Model(times, A0, k1_true, kinv_true, k2_true, using_sympy=False)
     trajectories = np.empty((npts, ntimes))
     print 'computing trajectories'
@@ -3139,8 +3560,8 @@ def data_dmaps_rawlings_fig():
         # epsilon = 100
         # lam = 1
         # also working settings (recovers all three relevant directions!)
-        epsilon = 10
-        lam = 1
+        epsilon = 50
+        lam = 0.1
         k = 12
         kernel = Data_Kernel(epsilon, lam)
         print 'starting data dmaps on', log_data.shape[0], 'points'
@@ -3153,13 +3574,13 @@ def data_dmaps_rawlings_fig():
     # # first straight up plot phi1 vs keff
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.scatter(eigvects[:,1], keff, c=eigvects[:,1])
+    ax.scatter(eigvects[:,1], keff, s=100)
     ax.set_xlabel(r'$\Phi_1$')
     ax.set_ylabel(r'$k_{eff}$')
-    ax.set_ylim((0.46, 0.55))
-    ax.set_xlim((-0.035, 0.035))
-    ax.set_xticks(np.linspace(-0.03, 0.03, 5))
-    fig.subplots_adjust(bottom=0.15)
+    ax.set_ylim((0.045, 0.055))
+    ax.set_xlim((-0.04, 0.04))
+    # ax.set_xticks(np.linspace(-0.03, 0.03, 5))
+    # fig.subplots_adjust(bottom=0.15)
 
     # # now do the 3d stuff
     keffmin = np.min(keff)
@@ -3185,42 +3606,42 @@ def data_dmaps_rawlings_fig():
     # colored by phi1
     fig = plt.figure()
     ax = fig.add_subplot(gspec[:,:37], projection='3d')
-    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,3])
+    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,1], s=100)
     axcb = fig.add_subplot(gspec[:,39])
     colornorm = colors.Normalize(vmin=np.min(eigvects[:,1]), vmax=np.max(eigvects[:,1]))
     colorbar.ColorbarBase(axcb, norm=colornorm, ticks=np.linspace(-0.03, 0.03, 5), format='%1.3f', label=r'$\Phi_1$')
 
 
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # now plot transparencies of keff = constant
-    colornorm = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
-    colormap = cm.ScalarMappable(norm=colornorm, cmap='autumn')
-    k1min, k1max = np.min(data[:,1]), np.max(data[:,1])
-    kinvmin, kinvmax = np.min(data[:,2]), np.max(data[:,2])
-    k2min, k2max = np.min(data[:,3]), np.max(data[:,3])
-    true_data = data[np.argsort(data[:,0])[0]] # pull out parameter combo that has minimum obj. fn. value
-    keff_true = true_data[1]*true_data[3]/(true_data[2] + true_data[3])
-    npts = 200
-    stride = 2
-    kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
-    nkeffs = 2
-    alpha = 0.3
-    orange = np.array((255., 170., 18., alpha*255.))/255
-    red = np.array((255., 97., 18., alpha*255.))/255
-    orange_red = np.array((red, orange))
-    for k, keff in enumerate(np.logspace(np.log10(keffmin) + 0.1*(np.log10(keffmax) - np.log10(keffmin)), np.log10(keffmax) - 0.2*(np.log10(keffmax) - np.log10(keffmin)), nkeffs)):
-        k1s = keff*(kinvs + k2s)/k2s
-        # kinvs = k1s*k2s/keff - k2s
-        cs = np.ones((npts, npts, 4))*orange_red[k] # np.ones((npts, npts, 4))*colormap.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
-        for i in range(npts):
-            for j in range(npts):
-                # if kinvs[i,j] < 10: # np.log10(kinvs[i,j] < 1): # but have kinvs < 0
-                #     cs[i,j,3] = 0
-                if k1s[i,j] > .99:
-                    cs[i,j,3] = 0
+    # # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # # now plot transparencies of keff = constant
+    # colornorm = colors.Normalize(vmin=np.log10(keffmin), vmax=np.log10(keffmax))
+    # colormap = cm.ScalarMappable(norm=colornorm, cmap='autumn')
+    # k1min, k1max = np.min(data[:,1]), np.max(data[:,1])
+    # kinvmin, kinvmax = np.min(data[:,2]), np.max(data[:,2])
+    # k2min, k2max = np.min(data[:,3]), np.max(data[:,3])
+    # true_data = data[np.argsort(data[:,0])[0]] # pull out parameter combo that has minimum obj. fn. value
+    # keff_true = true_data[1]*true_data[3]/(true_data[2] + true_data[3])
+    # npts = 200
+    # stride = 2
+    # kinvs, k2s = np.meshgrid(np.logspace(np.log10(kinvmin), np.log10(kinvmax), npts), np.logspace(np.log10(k2min), np.log10(k2max), npts))
+    # nkeffs = 2
+    # alpha = 0.3
+    # orange = np.array((255., 170., 18., alpha*255.))/255
+    # red = np.array((255., 97., 18., alpha*255.))/255
+    # orange_red = np.array((red, orange))
+    # for k, keff in enumerate(np.logspace(np.log10(keffmin) + 0.1*(np.log10(keffmax) - np.log10(keffmin)), np.log10(keffmax) - 0.2*(np.log10(keffmax) - np.log10(keffmin)), nkeffs)):
+    #     k1s = keff*(kinvs + k2s)/k2s
+    #     # kinvs = k1s*k2s/keff - k2s
+    #     cs = np.ones((npts, npts, 4))*orange_red[k] # np.ones((npts, npts, 4))*colormap.to_rgba(np.log10(keff))*np.array((1,1,1,alpha)) # change color and alpha
+    #     for i in range(npts):
+    #         for j in range(npts):
+    #             # if kinvs[i,j] < 10: # np.log10(kinvs[i,j] < 1): # but have kinvs < 0
+    #             #     cs[i,j,3] = 0
+    #             if k1s[i,j] > .99:
+    #                 cs[i,j,3] = 0
 
-        # ax.plot_surface(np.log10(k1s), np.log10(kinvs), np.log10(k2s), linewidth=0, facecolors=cs, edgecolors=np.array((0,0,0,0)), shade=False, cstride=stride, rstride=stride, antialiased=True)
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    #     # ax.plot_surface(np.log10(k1s), np.log10(kinvs), np.log10(k2s), linewidth=0, facecolors=cs, edgecolors=np.array((0,0,0,0)), shade=False, cstride=stride, rstride=stride, antialiased=True)
+    # # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
     formatter = FormatAxis(ax)
@@ -3239,12 +3660,14 @@ def dmaps_rawlings_fig():
     """Plotting dmaps output of rawlings model - AZ visit"""
     data = np.load('../rawlings_model/data/params-ofevals.pkl')
 
-    of_max = 1e-5
+    of_max = 1e-6
     data = data[data[:,0] < of_max]
     keff = data[:,1]*data[:,3]/(data[:,2] + data[:,3])
     log_data = np.log10(data)
     npts = 2500
     slicesize = log_data.shape[0]/npts
+    if slicesize <  1:
+        slicesize = 1
     data = data[::slicesize]
     log_data = log_data[::slicesize]
     keff = keff[::slicesize]
@@ -3252,10 +3675,10 @@ def dmaps_rawlings_fig():
     print 'have', npts, 'pts in dataset'
 
 
-    epsilon = 1.
+    epsilon = 3.0
     k = 12 # number of dimensions for embedding
 
-    have_data = False
+    have_data = True
     if have_data:
         print 'loading old data from ./temp.pkl'
         eigvects = np.load('./temp.pkl')
@@ -3266,22 +3689,23 @@ def dmaps_rawlings_fig():
         print 'completed dmaps'
 
 
+    alpha = 0.5
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,1], s=100)
+    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,1], s=100, alpha=alpha)
 
 
     formatter = FormatAxis(ax)
     formatter.format('x', log_data[:,1], '%1.1f', nticks=3)
     formatter.format('y', log_data[:,2], '%1.1f', nticks=3)
     formatter.format('z', log_data[:,3], '%1.1f', nticks=3)
-    ax.set_xlabel('\n\n' + r'$\log(k_1)$')
-    ax.set_ylabel('\n\n' + r'$\log(k_{-1})$')
+    ax.set_xlabel('\n\n\n' + r'$\log(k_1)$')
+    ax.set_ylabel('\n\n\n' + r'$\log(k_{-1})$')
     ax.set_zlabel('\n\n' + r'$\log(k_2)$')
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,2], s=100)
+    ax.scatter(log_data[:,1], log_data[:,2], log_data[:,3], c=eigvects[:,2], s=100, alpha=alpha)
 
 
 
@@ -3289,8 +3713,8 @@ def dmaps_rawlings_fig():
     formatter.format('x', log_data[:,1], '%1.1f', nticks=3)
     formatter.format('y', log_data[:,2], '%1.1f', nticks=3)
     formatter.format('z', log_data[:,3], '%1.1f', nticks=3)
-    ax.set_xlabel('\n\n' + r'$\log(k_1)$')
-    ax.set_ylabel('\n\n' + r'$\log(k_{-1})$')
+    ax.set_xlabel('\n\n\n' + r'$\log(k_1)$')
+    ax.set_ylabel('\n\n\n' + r'$\log(k_{-1})$')
     ax.set_zlabel('\n\n' + r'$\log(k_2)$')
 
     plt.show()
@@ -3298,6 +3722,7 @@ def dmaps_rawlings_fig():
 
 def rawlings_keff_fig():
     """Plots level sets/sloppy manifold of rawlings model when k1 << k2, k1 << kinv, showing that keff changes in a direction normal to the surface"""
+
     data = np.load('../rawlings_model/data/params-ofevals.pkl')
 
     gsize = 10
@@ -3510,15 +3935,18 @@ def main():
     # two_effective_one_neutral_dmaps_fig()
     # discretized_laplacian_dmaps()
     # transformed_param_space_fig()
+    rawlings_keff_delta_figs()
     # sing_pert_contours_fig1() # needs work perhaps, particularly to close the contour at 10^{-3}
     # sing_pert_contours_fig2()
     # test()
     # temp_fig()
-    linear_sing_pert_model_manifold_fig()
+    # linear_sing_pert_model_manifold_fig()
+    # linear_sing_pert_twod_cmap_fig()
     # linear_sing_pert_param_space_log_fig()
     # linear_sing_pert_param_space_fig()
     # outlier_plot()
     # gear_data_dmaps()
+    # rgb_square_test()
     
 if __name__=='__main__':
     main()

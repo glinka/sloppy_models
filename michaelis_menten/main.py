@@ -24,6 +24,21 @@ import tempfile
 
 from pca import pca
 
+def dmaps_sloppy_params():
+    """Performs normal DMAP on log-param data to find a parameterization of the sloppy surface. future work will add data dmaps to find important directions too"""
+    data = np.load('./data/input/param-sample-K-V-sig-eps-kap.pkl')
+    max_ofval = 10e-3
+    # take log and remove of val
+    logdata = np.log10(data[data[:,5] < max_ofval][:,:5])
+    print 'have', logdata.shape[0], 'points'
+
+    k = 12
+    eps = 0.3 # max range should be np.log10(3/2) - np.log10(1/2) \approx 0.5
+    eigvals, eigvects = dmaps.embed_data(logdata, k, eps)
+    
+
+
+
 # switch to nicer color scheme
 solarize('light')
 
@@ -674,6 +689,104 @@ def mm_contours():
     np.savetxt('./data/output/init_guesses_dK' + str(np.abs(dthird_param)) + '.csv', init_guesses, delimiter=',', header = file_header, comments='')
     np.savetxt('./data/output/contour_K_V_St_dK' + str(np.abs(dthird_param)) + '.csv', branches, delimiter=',', header=file_header, comments='')
 
+
+def sample_sloppy_params_ii():
+    """Uses mpi4py to parallelize the collection of sloppy parameter sets. The current, naive method is to sample over a noisy grid of points, discarding those whose objective function evaluation exceeds the set tolerance. The resulting sloppy parameter combinations are saved in './data/input'"""
+
+    # init MPI
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    nprocs = comm.Get_size()
+
+    # set up true system, basis for future objective function evaluations
+    K_true = 2.0; V_true = 1.0; St_true = 4.0; epsilon_true = 1e-3; kappa_true = 10.0 # from Antonios' writeup
+    sigma_true = St_true/K_true
+    true_params = np.array((K_true, V_true, sigma_true, epsilon_true, kappa_true))
+    nparams = true_params.shape[0]
+    transform_id = 't1'
+    # set init concentrations
+    S0_true = St_true; C0_true = 0.0; P0_true = 0.0 # init concentrations
+    concs0_true = np.array((S0_true, C0_true, P0_true))
+    # set times at which to collect data
+    tscale = (sigma_true + 1)*kappa_true/V_true # timescale of slow evolution
+    print tscale
+    npts = 10
+    times = np.linspace(tscale, 4*tscale, npts)
+    # use these params, concentrations and times to define the MM system
+    MM_system = MM.MM_System(concs0_true, times, true_params, transform_id)
+
+    # visualize concentration profiles
+    conc_profiles = MM_system.gen_profile(concs0_true, times, true_params)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(times, conc_profiles[:,0], label='S')
+    ax.plot(times, conc_profiles[:,1], label='C')
+    ax.plot(times, conc_profiles[:,2], label='P')
+    # ax.plot(times, MM_system._data[:,0], label='S')
+    # ax.plot(times, MM_system._data[:,1], label='C')
+    # ax.plot(times, MM_system._data[:,2], label='P')
+    ax.set_xlabel('times')
+    ax.set_ylabel('concentration (potentially dimensionless)')
+    ax.legend(loc=2)
+    plt.show(fig)
+
+    
+    # # sample params noisily in 5d space, 10 points per axis for a total of 10e5 points (too many?)
+    # # center each param at K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0
+
+    # npts_per_proc = 10000
+    # param_samples = true_params + np.random.uniform(-0.5, 0.5, size=(npts_per_proc, 5))*true_params # (Ks, Vs, sigmas, epsilons, kappas)
+
+    # output = np.empty((npts_per_proc, 6))
+    # count = 0
+
+    # for i in range(npts_per_proc):
+    #     ofval = None
+    #     try:
+    #         ofval = MM_system.of(param_samples[i])
+    #     except CustomErrors.IntegrationError:
+    #         continue
+    #     else:
+    #         output[count,:5] = param_samples[i]
+    #         output[count,5] = ofval
+    #         count = count + 1
+
+
+    # # # original sampling routine:
+    # # npts_per_axis = 12
+    # # # use these ranges as a guide for sampling (with true vals of K = 2.0; V = 1.0; St = 2.0; epsilon = 1e-3; kappa = 10.0):
+    # # in all cases, eps << 1 and sigma \approx O(1) so the QSSA should hold
+    # # Ks = np.power(10, np.random.uniform(-3, 3, npts_per_axis))
+    # # Vs = np.power(10, np.random.uniform(-3, 3, npts_per_axis))
+    # # sigmas = np.power(10, np.random.uniform(0, 2, npts_per_axis))
+    # # epsilons = np.power(10, np.random.uniform(-4, -1, npts_per_axis)) # little effect
+    # # kappas = np.power(10, np.random.uniform(-2, 2, npts_per_axis)) # little effect
+    # # npts_per_proc = np.power(npts_per_axis, 5)/nprocs + nprocs
+    # # output = np.empty((npts_per_proc, 6)) # storage for (K, V, sigma, eps, kappa, of_val)
+    # # count = 0
+    # # for Kval in uf.parallelize_iterable(Ks, rank, nprocs):
+    # #     for Vval in Vs:
+    # #         for sigmaval in sigmas:
+    # #             for epsval in epsilons:
+    # #                 for kappaval in kappas:
+    # #                     params = np.array((Kval, Vval, sigmaval, epsval, kappaval))
+    # #                     ofval = None
+    # #                     try:
+    # #                         ofval = MM_system.of(params)
+    # #                     except CustomErrors.IntegrationError:
+    # #                         continue
+    # #                     else:
+    # #                         output[count] = Kval, Vval, sigmaval, epsval, kappaval, ofval
+    # #                         count = count + 1
+    
+    # output = output[:count]
+    # output = comm.gather(output, root=0)
+
+    # if rank is 0:
+    #     output = np.concatenate(output)
+    #     output.dump('./data/input/param-sample-K-V-sig-eps-kap.pkl')
+
+    
 def sample_sloppy_params():
     """Uses mpi4py to parallelize the collection of sloppy parameter sets. The current, naive method is to sample over a noisy grid of points, discarding those whose objective function evaluation exceeds the set tolerance. The resulting sloppy parameter combinations are saved in './data/input'"""
 
@@ -847,10 +960,11 @@ if __name__=='__main__':
     # transform_contour()
     # slim_data()
     # sample_sloppy_params()
+    sample_sloppy_params_ii()
     # check_sloppiness()
     # mm_contour_grid()
     # mm_contour_grid_mpi()
     # test()
     # mm_contours()
     # dmaps_contour()
-    dmaps_test()
+    # dmaps_test()

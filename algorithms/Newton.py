@@ -1,7 +1,7 @@
 import CustomErrors
 import numpy as np
 import scipy.sparse.linalg as spla
-import Bisection_Method
+import BisectionMethod
 
 class Newton:
     """Solves :math:`f(x) = 0` using Newton's method with an analytical Jacobian and scipy`s GMRES linear solver

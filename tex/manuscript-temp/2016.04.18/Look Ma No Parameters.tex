@@ -93,7 +93,7 @@
 
 \usepackage{amssymb,amsfonts,amsmath}
 %% user-included, maybe not kosher
-\usepackage{subcaption, empheq, setspace, lscape}
+\usepackage{subcaption, empheq, setspace, lscape, dsfont}
 
 %------------------------------------------------
 % OPTIONAL MACRO FILES
@@ -306,7 +306,7 @@ Although this sort of sensitivity analysis is local, the footprint of sloppiness
 Such neutral sets are effectively lower-dimensional and roughly foliate parameter space, while effective system parameters remain approximately constant on them.
 
 \begin{figure}[h]
-\centerline{\includegraphics[width=1.0\linewidth]{f-1D-model}}
+\centerline{\includegraphics[width=1.0\linewidth]{linear-sing-pert-mm-ii}}
 \caption{Model manifold $\mathcal{M}$ for dynamical system~\eqref{1D-model} and monitoring function~\eqref{1D-pf}.
 (Left) Parameter plane with lines of constant $\eps$ and coloring by $y_0$.
 (Right) $3$D data space with embedded $2$D model surface.
@@ -351,7 +351,7 @@ effective and two sloppy. This two-dimensional system is governed by
     X' &= -\lambda X \\
     \epsilon Y' &= -Y
     \label{eqn:sp}
-% \frac{d}{dt} \begin{bmatrix} x \\ y \end{bmatrix} = 
+% \frac{d}{dt} \begin{bmatrix} x \\ y \end{bmatrix} =  
   \end{aligned}
 \end{align}
 
@@ -576,7 +576,7 @@ naturally corresponds to the directions orthogonal to the sloppy
 manifold, but more importantly, the figure shows that it also matches
 the direction in which $k_{eff}$ changes. This follows from our
 previous result that, in this region of parameter space,
-$c(\theta) \approx c(\k_{eff})$.
+$c(\theta) \approx c(k_{eff})$.
 
 Note that, in fact, even when our parameters do not obey
 Eqns. (\ref{eq:ieq1} and \ref{eq:ieq2}), we will still be faced
@@ -589,12 +589,12 @@ details on this non-identifiable parameter are given in Appendix
 \begin{figure}[ht!]
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{keff-small-delta}
+    \includegraphics[width=\textwidth]{keff-small-new}
     \subcaption{ \label{fig:abc-keff-1}}
   \end{subfigure}
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{keff-large-delta-A2}
+    \includegraphics[width=\textwidth]{keff-large-new}
     \subcaption{ \label{fig:abc-keff-2}}
   \end{subfigure} %
   \caption{ \label{fig:abc-keff}}
@@ -665,9 +665,9 @@ points lie, and that if we can find this parameterization for some $k
 parameterization to achieve dimensionality reduction. 
 
 When we apply this method to our dataset shown in
-Fig. (\ref{fig:abc-keff-2}) we find that the eigenvectors $v_2$ and
+Fig. (\ref{fig:abc-keff-1}) we find that the eigenvectors $v_2$ and
 $v_3$ provide the desired coordinates on the nonlinear surface. This
-is illustrated in Fig. (\ref{fig:abc-dmaps-1}) in which the surface is
+is illustrated in Fig. (\ref{fig:abc-dmaps}) in which the surface is
 colored by $v_2$ and $v_3$ values. As these eigenvectors map out
 independent directions on the data, we may use them as an alternative
 coordinate system for our points. In effect, DMAPS has given us a
@@ -676,12 +676,12 @@ parameterization of the sloppiness in our model.
 \begin{figure}[ht!]
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{keff-small-delta}
+    \includegraphics[width=\textwidth]{dmaps-2d-phi1}
     \subcaption{ \label{fig:abc-dmaps-1}}
   \end{subfigure}
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{keff-large-delta-A2}
+    \includegraphics[width=\textwidth]{dmaps-2d-phi2}
     \subcaption{ \label{fig:abc-dmaps-2}}
   \end{subfigure} %
   \caption{ \label{fig:abc-dmaps}}
@@ -724,16 +724,8 @@ succeeded in uncovering both the important and sloppy directions in
 parameter space.
 
 \begin{figure}[ht!]
-  \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{keff-small-delta}
-    \subcaption{ \label{fig:abc-dmaps-mod-1}}
-  \end{subfigure}
-  \begin{subfigure}[t]{0.49\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{keff-large-delta-A2}
-    \subcaption{ \label{fig:abc-dmaps-mod-2}}
-  \end{subfigure} %
+    \includegraphics[width=0.49\textwidth]{dmaps-3d-keff-phi1}
   \caption{ \label{fig:abc-dmaps-mod}}
 \end{figure}
 
@@ -760,12 +752,12 @@ providing coordinates for both important and sloppy parameter directions.
 \begin{figure}[ht!]
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{keff-small-delta}
+    \includegraphics[width=\textwidth]{keff-small-new}
     \subcaption{ \label{fig:sp-dmaps-1}}
   \end{subfigure}
   \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{keff-large-delta-A2}
+    \includegraphics[width=\textwidth]{keff-large-new}
     \subcaption{ \label{fig:sp-dmaps-2}}
   \end{subfigure} %
   \caption{ \label{fig:sp-dmaps}}
@@ -847,23 +839,94 @@ we cast the system in matrix-vector form $\frac{d\mathrm{x}}{dt} =
 \mathrm{Ax}$ as
 
 \begin{align}
+ \frac{d}{dt}
+\left[\begin{array}{c}
+ A \\ B \\ C
+\end{array}\right]
+=
+\left[\begin{array}{ccc}
+ -k_1 & k_{-1} & 0 \\ k_1 & -(k_{-1}+k_2) & 0 \\ 0 & k_2 & 0
+\end{array}\right]
+%
+\left[\begin{array}{c}
+ A \\ B \\ C
+\end{array}\right] ,
+\end{align}
+
+subject to
+
+\begin{align}
+  \left[\begin{array}{c}
+          A(0) \\ B(0) \\ C(0)
+        \end{array}\right]
+  =
+  \left[\begin{array}{c}
+          A_0 \\ B_0 \\ C_0
+        \end{array}\right]
 \end{align}
 
 We see that the eigenvalues of $\mathrm{A}$ are given by
 
 \begin{align}
+ \lambda_\mp
+&=
+ \frac{1}{2}
+\left[
+ -(k_{-1}+k_1+k_2)
+\mp
+ \sqrt{(k_{-1}+k_1+k_2)^2 - 4 k_1 k_2}
+\right]
+  \\
+ \lambda_0 &= 0
 \end{align}
 
 so that the solution to this initial value problem is given by
 
 \begin{align}
+ \left[\begin{array}{c}
+ A(t) \\ B(t) \\ C(t)
+\end{array}\right]
+=
+ P
+\,
+ \mathrm{diag}(\mathrm{e}^{\lambda_- t},\mathrm{e}^{\lambda_+ t},1)
+\,
+ P^{-1}
+\,
+\left[\begin{array}{c}
+        A_0 \\ B_0 \\ C_0
+\end{array}\right]
 \end{align}
 
 where $P$ is a matrix whose columns contain the eigenvectors of
 $\mathrm{A}$. Calculating this yields the final exact solution
 
-\begin{align}
-\end{align}
+\begin{eqnarray*}
+\left[\begin{array}{c}
+ A(t) \\ B(t) \\ C(t)
+\end{array}\right]
+&=&
+ \frac{\lambda_+ A_0 + (\lambda_+ + k_2)B_0}{\Delta \lambda}
+\left[\begin{array}{ccc}
+ -(1+\lambda_-/k_2) \\ \lambda_-/k_2 \\ 1
+\end{array}\right]
+ \mathrm{e}^{\lambda_- t}
+\\
+&{}&
++
+ \frac{\lambda_- A_0 + (\lambda_- + k_2)B_0}{\Delta \lambda}
+\left[\begin{array}{ccc}
+ -(1+\lambda_+/k_2) \\ \lambda_+ / k_2 \\ 1
+\end{array}\right]
+ \mathrm{e}^{\lambda_+ t}
+\\
+&{}&
++
+ (A_0+B_0+C_0)
+\left[\begin{array}{ccc}
+ 0 \\ 0 \\ 1
+\end{array}\right] .
+\end{eqnarray*}
 
 Our first conclusion is that, as long as $B_0 = 0$, the component
 $C(t)$ only depends on $k_{-1}$, $k_1$ and $k_2$ through $\lambda_+$
@@ -880,23 +943,33 @@ Eq. (\ref{eq}) to exhibit a separation of timescales. First we rewrite
 the solution as
 
 \begin{align}
+   V_0 + V_+\,\mathrm{e}^{\lambda_+ t} + V_-\,\mathrm{e}^{\lambda_- t}
+  =
+  & V_0\\
+  + & V_+\,\mathrm{e}^{\lambda_+ t} \otimes \mathds{1} \\
+  + & (V_- \oslash V_+)\,\mathrm{e}^{-\Delta \lambda t} \\
 \end{align}
 
 where the components in the left-hand-side are ordered from slowest to
 fastest. If we are observing the slow dynamics in an experimental
-setting, our data-collection times might start at $t_1 =
-1/2 |\lambda_+|$ at which point the slow exponential has already decayed
-by $\approx 40\%$. A separation of timescales implies that the fast
-component is effectively extinguished by this first time $t_1$. This
-can be expressed as $\hdots \ll \mathbb{1}$. When we only observe
-$C(t)$, this leads to 
+setting, our data-collection times might start at
+$t_1 = 1/(2 |\lambda_+|)$ at which point the slow exponential has
+already decayed by $\approx 40\%$. A separation of timescales implies
+that the fast component is effectively extinguished by this first time
+$t_1$. When we only observe $C(t)$, this leads to
 
 \begin{align}
+ \left\vert \frac{\lambda_+ A_0 + (\lambda_++k_2)B_0}{\lambda_- A_0 + (\lambda_-+k_2)B_0} \right\vert 
+\,
+ \mathrm{e}^{-\Delta \lambda t_1}
+\ll
+ 1
 \end{align}
 
 Ignoring the leftmost term which depends algebraically on the
-eigenvalues, we see that timescale separation arises when $\delta
-\lambda / 2 |lambda_+| \gg 1$...
+eigenvalues, we see that timescale separation arises when $\Delta
+\lambda t_1 \gg 1$. 
+
 
 %----------------------------------------------------------------------------------------
 %	ACKNOWLEDGEMENTS

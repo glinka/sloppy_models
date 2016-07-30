@@ -40,7 +40,7 @@ class MM_System:
         self._integrator.set_integrator('lsoda')
         try:
             self._data = self.gen_profile(self._Cs0, self._times, self._true_param_dict.values())
-        except CustomErrors.IntegrationError:
+        except CustomErrors.IntegrationError('Failed to generate profile'):
             raise CustomErrors.InitialIntegrationError
         # self._integrator.set_integrator('vode', method='adams')
         
@@ -68,7 +68,7 @@ class MM_System:
         # check if enzyme_profile was succesfully computed
         try:
             enzyme_profile = self.gen_profile(Cs0, self._times, params)
-        except CustomErrors.IntegrationError:
+        except CustomErrors.IntegrationError('Failed to evaluate objective function'):
             raise
         else:
             of_eval = np.power(np.linalg.norm(enzyme_profile[:,2] - self._data[:,2]), 2) # squared 2-norm, i.e. least-squares
@@ -93,6 +93,7 @@ class MM_System:
         # profile = spint.odeint(self.enzyme_rhs, Cs0, times, args=tuple(self.inverse_transform_params(params)), atol=tol, rtol=tol)
         # new method with customized 'bdf' integrator
         # set up new initial conditions
+        self._integrator.set_integrator(integrator)
         self._integrator.set_initial_value(Cs0, 0.0)
         self._integrator.set_f_params(*self.inverse_transform_params(params))
         profile = np.empty((times.shape[0], 3))
@@ -108,9 +109,9 @@ class MM_System:
                     break
                 elif not self._integrator.successful():
                     print 'param values at vode (real bad):', params
-                    raise CustomErrors.IntegrationError
+                    raise CustomErrors.IntegrationError('Failed to generate profile')
         except CustomErrors.LSODA_Warning:
-            raise CustomErrors.IntegrationError
+            raise CustomErrors.IntegrationError('Failed to generate profile')
         self._integrator.set_integrator('lsoda')
         return profile
 
@@ -139,7 +140,7 @@ class MM_System:
         >>> times = tscale*np.linspace(1,npts,npts)/5.0
         >>> enzyme_data = MM.gen_profile(Cs0, times, params)
         >>> [plt.plot(times, enzyme_data[:,i]) for i in range(3)]
-            >>> plt.show()
+        >>> plt.show()
         """
         S = Cs[0]
         C = Cs[1]
@@ -163,6 +164,7 @@ class MM_System:
     #     transformed_params = self.inverse_transform_params(params)
     #     of_eval = self.of(transformed_params)
     #     return of_eval
+
 
     def inverse_transform_params(self, params):
         """Transforms params based on 'param_transform' from some transformed set to the intermediate (K, V, sigma, epsilon, kappa) and finally to (kinv, k1, k2, St, Et), or, if in original transformation simply return params"""

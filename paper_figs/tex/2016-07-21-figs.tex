@@ -1,0 +1,99 @@
+\documentclass[11pt]{article}
+
+\usepackage{graphicx, subcaption, amsfonts, amsmath, amsthm, empheq, setspace, lscape, xcolor}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+
+% define some commands
+% command to box formula
+\newcommand*\widefbox[1]{\fbox{\hspace{2em}#1\hspace{2em}}}
+\newlength\dlf
+\newcommand\alignedbox[2]{
+  % Argument #1 = before & if there were no box (lhs)
+  % Argument #2 = after & if there were no box (rhs)
+  &  % Alignment sign of the line
+  {
+    \settowidth\dlf{$\displaystyle #1$}  
+    % The width of \dlf is the width of the lhs, with a displaystyle font
+    \addtolength\dlf{\fboxsep+\fboxrule}  
+    % Add to it the distance to the box, and the width of the line of the box
+    \hspace{-\dlf}  
+    % Move everything dlf units to the left, so that & #1 #2 is aligned under #1 & #2
+    \boxed{#1 #2}
+    % Put a box around lhs and rhs
+  }
+}
+
+\newcommand\ER{Erd\H{o}s-R'{e}nyi}
+\newcommand{\Forall}{\; \forall \;}
+\DeclareMathOperator*{\argmin}{\arg\!\min}
+
+% change captions
+\captionsetup{width=0.8\textwidth}
+\captionsetup{labelformat=empty,labelsep=none}
+
+% set paragraph indent length
+\setlength\parindent{0pt}
+
+% set folder for imported graphics
+\graphicspath{ {../figs/} }
+
+\title{More paper figs}
+\author{}
+
+\begin{document}
+\maketitle
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./linear-sing-pert/traditional-mm}
+  \caption{Parameter space (left) and corresponding model manifold
+    (right) for the basic singularly perturbed example $x' =
+    x/\epsilon$. Here we indicate $x_0$ with color and $\epsilon$ with
+  vertical lines. Both parameter space and the model manifold are cut
+  so that the colored areas represent a (nearly) one-to-one mapping
+  between each other. Previous plots included regions in parameter
+  space that were not represented on the model manifold, and likewise
+  sections of the model manifold that weren't shown in parameter
+  space. Here the mapping is nearly one-to-one between left
+  and right figures.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./linear-sing-pert/twod-cmap-mm}
+  \caption{This is a very similar figure to that above, but now we use a sort of
+  two-dimensional colormap that indicates simultaneously the $x_0$ and
+  $\epsilon$ values.}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{./model-manifold/mm-ps-illustration}
+  \caption{Here we have an updated illustration of the parameter space
+    contours opening up to infinity when the model manifold boundary
+    is crossed. The gradient from white to color is meant to show the
+    correspondence between the two plots. I'm not sure this would be
+    necessary in the paper as we have a very simple, data-based
+    example in the singularly perturbed system mentioned above.}
+\end{figure}
+
+
+\begin{landscape}
+  
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{./rawlings/keff-delta-complete-v2}
+    \caption{An illustration of how the region in parameter space that
+    falls within increasing values of $\delta(\theta)$ and increasing
+    ranges of $k_{eff}$ match one another. From left to right
+    $\delta(\theta)$ increases, while the range of $k_{eff}$ also
+    grows. This is illustrated by the line plots underneath each 3d
+    figure. The final figure on the right overlays both
+    $\delta(\theta)$ and $k_{eff}$ revealing how closely they match,
+    thus showing that $\delta(\theta)$ changes with $k_{eff}$.}
+  \end{figure}
+  
+
+\end{landscape}
+
+\end{document}
